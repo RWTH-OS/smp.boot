@@ -1,0 +1,12 @@
+
+                                   multiboot
+                                   =========
+
+This is a small and simple kernel experiment to check a few things about
+multiboot [1]. It is based on Bran's Kernel Development Tutorial [2].
+
+
+[1] http://www.gnu.org/software/grub/manual/multiboot/multiboot.html
+[2] http://www.osdever.net/bkerndev/Docs/creatingmain.htm
+
+
