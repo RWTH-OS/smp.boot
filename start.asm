@@ -36,6 +36,7 @@ mboot:
 extern main
 
 stublet:
+    push ebx
     call main
     jmp $
 
