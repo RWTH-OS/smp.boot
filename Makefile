@@ -1,19 +1,33 @@
 
-default : kernel.bin
+CFILES=$(shell ls *.c)
+OFILES=$(CFILES:.c=.o)
 
-start.o : start.asm
-	nasm -f aout -o start.o start.asm
+CFLAGS=-c -O
+CFLAGS+=-Wall -Wno-main -O -fstrength-reduce -fomit-frame-pointer -finline-functions -nostdinc -fno-builtin -I .
 
-main.o : main.c system.h
-	gcc -m32 -Wall -Wno-main -O -fstrength-reduce -fomit-frame-pointer -finline-functions -nostdinc -fno-builtin -I . -c -o main.o main.c
+CC32=gcc -m32
 
-scrn.o : scrn.c system.h
-	gcc -m32 -Wall -O -fstrength-reduce -fomit-frame-pointer -finline-functions -nostdinc -fno-builtin -I . -c -o scrn.o scrn.c
+default : kernel32.bin
 
-kernel.bin : link.ld start.o main.o scrn.o
-	ld -T link.ld -m i386linux -o kernel.bin start.o main.o scrn.o
+debug :
+	@echo CFILES: $(CFILES)
+	@echo OFILES: $(OFILES)
+	@echo CFLAGS: $(CFLAGS)
 
-qemu : kernel.bin
-	qemu -kernel kernel.bin
+start32.o : start32.asm
+	nasm -f aout -o $@ $^
 
-.PHONY : default qemu
+$(OFILES) : %.o : %.c
+	$(CC32) $(CFLAGS) -o $@ $^
+
+kernel32.bin : link32.ld start32.o $(OFILES)
+	ld -T link32.ld -m i386linux -o $@ start32.o $(OFILES)
+
+qemu : kernel32.bin
+	qemu -kernel kernel32.bin
+
+
+clean :
+	rm *.o *.bin
+
+.PHONY : default debug qemu clean
