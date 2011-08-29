@@ -3,6 +3,8 @@
 
 void print_multiboot_info(multiboot_info_t *mbi) 
 {
+    char mem_type[][10] = {"avail.", "reserved"};
+
     printf("Multiboot-Flags: 0x%x\n", mbi->flags);
 
     if (mbi->flags & (1<<0)) {
@@ -38,26 +40,26 @@ void print_multiboot_info(multiboot_info_t *mbi)
         printf("flags[6] - mmap_length: %d  mmap_addr: 0x%x\n", mbi->mmap_length, mbi->mmap_addr);
         multiboot_memory_map_t* p = (multiboot_memory_map_t*)mbi->mmap_addr;
         for ( ; p < (multiboot_memory_map_t*)(mbi->mmap_addr+mbi->mmap_length); p = ((void*)p + p->size + 4)) {
-            printf("  mmap[0x%x] - base_addr: 0x%x %x  length: 0x%x %x   type: %d\n",
-                   p, p->addr, p->len, p->type);
+            printf("  mmap[0x%x] - base_addr: 0x%x  length: 0x%x  type: %d (%s)\n",
+                   p, (multiboot_uint32_t)(p->addr), (multiboot_uint32_t)(p->len), p->type, mem_type[p->type==1?0:1]);
         }
     }
+
+    /* more bits available in flags, but their display is not implemented, yet */
+    /* see: http://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format */
 }
 
 
-void main(multiboot_info_t *mbi)
+void main(multiboot_info_t *mbi, void *eip)
 {
     init_video();
 
     puts("my kernel is running in main now...\n");
 
+    printf("EIP of boot assembly: 0x%x\n", (unsigned)eip);
     print_multiboot_info(mbi);
 
     printf("The end.\n");
 
-    /* ...and leave this loop in. There is an endless loop in
-     *  'start.asm' also, if you accidentally delete this next line 
-     */
-    while (1) {};
 }
 		

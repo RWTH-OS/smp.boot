@@ -36,9 +36,16 @@ mboot:
 extern main
 
 stublet:
+    call nextline
+nextline:
+    ; leave EIP on stack as (rightmost) parameter
     push ebx
     call main
-    jmp $
+
+    ; when returning from main: go into endless halt loop
+endless:
+    hlt
+    jmp endless
 
 
 ; Shortly we will add code for loading the GDT right here!
