@@ -110,10 +110,11 @@ void main(multiboot_info_t *mbi)
     }
 
 
+    printf("The end.\n");
 
     /* ...and leave this loop in. There is an endless loop in
-    *  'start.asm' also, if you accidentally delete this next line */
-    printf("The end.\n");
+     *  'start.asm' also, if you accidentally delete this next line 
+     */
     for (;;);
 }
 		

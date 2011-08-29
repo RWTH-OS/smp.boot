@@ -16,7 +16,6 @@ extern void putch(unsigned char c);
 extern void puts(unsigned char *str);
 extern void settextcolor(unsigned char forecolor, unsigned char backcolor);
 extern void init_video();
-static void itoa (char *buf, int base, int d);
 void printf (const char *format, ...);
 
 #endif
