@@ -4,38 +4,27 @@
 ; are disabled at this point: More on interrupts later!
 [BITS 32]
 global start
-start:
-    mov esp, _sys_stack     ; This points the stack to our new stack area
-    jmp stublet
+extern Realm32
 
-; This part MUST be 4byte aligned, so we solve that issue using 'ALIGN 4'
+MODULEALIGN equ  1<<0
+MEMINFO     equ  1<<1
+FLAGS       equ  MODULEALIGN | MEMINFO
+MAGIC       equ  0x1BADB002
+CHECKSUM    equ  -(MAGIC + FLAGS)
+
+STACKSPACE  equ 0x4000                      ; initial Stack (16k)
+
+SECTION .text
 ALIGN 4
-mboot:
-    ; Multiboot macros to make a few lines later more readable
-    MULTIBOOT_PAGE_ALIGN	equ 1<<0
-    MULTIBOOT_MEMORY_INFO	equ 1<<1
-    MULTIBOOT_AOUT_KLUDGE	equ 1<<16
-    MULTIBOOT_HEADER_MAGIC	equ 0x1BADB002
-    MULTIBOOT_HEADER_FLAGS	equ MULTIBOOT_PAGE_ALIGN | MULTIBOOT_MEMORY_INFO | MULTIBOOT_AOUT_KLUDGE
-    MULTIBOOT_CHECKSUM	equ -(MULTIBOOT_HEADER_MAGIC + MULTIBOOT_HEADER_FLAGS)
-    EXTERN code, bss, end
-
-    ; This is the GRUB Multiboot header. A boot signature
-    dd MULTIBOOT_HEADER_MAGIC
-    dd MULTIBOOT_HEADER_FLAGS
-    dd MULTIBOOT_CHECKSUM
-    
-    ; AOUT kludge - must be physical addresses. Make a note of these:
-    ; The linker script fills in the data for these ones!
-    dd mboot
-    dd code
-    dd bss
-    dd end
-    dd start
-
+MultiBootHeader:
+    dd MAGIC
+    dd FLAGS
+    dd CHECKSUM
 mbi dd 0
 
-stublet:
+start:
+    mov esp, _sys_stack     ; This points the stack to our new stack area
+
     mov [mbi], ebx
     
     ; debug output
@@ -164,37 +153,9 @@ stublet:
     mov ax, 0x0F00+'4'
     mov [0xB8002], ax
 
-
-    ; load GDT
-    lgdt [GDT64.Pointer]
-    jmp GDT64.Code:Realm64      ; set code segment and enter 64-bit long mode
-
-[BITS 64]
-Realm64:
-    cli
-    mov ax, GDT64.Data
-    mov ds, ax
-    mov ex, ax
-    mov fs, ax
-    mov gs, ax
-
-
-    ;jmp endless
-
-    mov ax, 0x0F00+'0'
-    mov [0xB8000], ax
-    mov ax, 0x0F00+'4'
-    mov [0xB8002], ax
-
-    hlt
-
     mov ebx, [mbi]
 
-; TODO: switch to 64 bit; preserve multiboot_info!
-extern main
-
-    push ebx     ; ebx should be the pointer to the multiboot_info structure
-    call main
+    jmp Realm32
 
 endless:
     hlt
@@ -216,44 +177,11 @@ NoLongMode:
     jmp endless
 
 
-; Shortly we will add code for loading the GDT right here!
-
-GDT64:
-    .Null: epu $ - GDT64        ; the null descriptor
-    dw 0                        ; Limit (low)
-    dw 0                        ; Base (low)
-    db 0                        ; Base (middle)
-    db 0                        ; Access
-    db 0                        ; Granularity
-    db 0                        ; Base (high)
-    .Code : equ $ - GDT64
-    dw 0                        ; Limit (low)
-    dw 0                        ; Base (low)
-    db 0                         ; Base (middle)
-    db 10011000b                 ; Access.
-    db 00100000b                 ; Granularity.
-    db 0                         ; Base (high).
-    .Data: equ $ - GDT64         ; The data descriptor.
-    dw 0                         ; Limit (low).
-    dw 0                         ; Base (low).
-    db 0                         ; Base (middle)
-    db 10010000b                 ; Access.
-    db 00000000b                 ; Granularity.
-    db 0                         ; Base (high).
-    .Pointer:                    ; The GDT-pointer.
-    dw $ - GDT64 - 1             ; Limit.
-    dq GDT64                     ; Base.
-
-
-; In just a few pages in this tutorial, we will add our Interrupt
-; Service Routines (ISRs) right here!
-
-
 
 ; Here is the definition of our BSS section. Right now, we'll use
 ; it just to store the stack. Remember that a stack actually grows
 ; downwards, so we declare the size of the data before declaring
 ; the identifier '_sys_stack'
 SECTION .bss
-    resb 8192               ; This reserves 8KBytes of memory here
+    resb STACKSPACE               ; This reserves 8KBytes of memory here
 _sys_stack:
