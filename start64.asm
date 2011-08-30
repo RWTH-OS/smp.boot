@@ -12,7 +12,7 @@ FLAGS       equ  MODULEALIGN | MEMINFO
 MAGIC       equ  0x1BADB002
 CHECKSUM    equ  -(MAGIC + FLAGS)
 
-STACKSPACE  equ 0x4000                      ; initial Stack (16k)
+STACKSPACE  equ 0x10000                      ; initial Stack (16k)
 
 SECTION .text
 ALIGN 4
@@ -89,6 +89,7 @@ start:
 
     ; disable 32-bit paging (just in case it was activated...)
     mov eax, cr0
+    ;and eax, 0x7FFFFFFF  ;~(1<<31)
     and eax, ~(1<<31)
     mov cr0, eax
 
@@ -183,5 +184,6 @@ NoLongMode:
 ; downwards, so we declare the size of the data before declaring
 ; the identifier '_sys_stack'
 SECTION .bss
+_sys_stackend:
     resb STACKSPACE               ; This reserves 8KBytes of memory here
 _sys_stack:

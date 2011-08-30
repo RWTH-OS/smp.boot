@@ -15,7 +15,7 @@ SECTIONS{
         *(.data)
     }
 
-    .bss : {
+    .bss  : {
         sbss = .;
         *(COMMON)
         *(.bss)

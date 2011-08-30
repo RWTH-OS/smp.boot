@@ -233,7 +233,7 @@ printf (const char *format, ...)
             case 'd':
             case 'u':
             case 'x':
-              itoa (buf, c, *((int *) arg++));
+              itoa (buf, c, *((long *) arg++));
               p = buf;
               goto string;
               break;
@@ -249,9 +249,10 @@ printf (const char *format, ...)
               break;
 
             default:
-              putch (*((int *) arg++));
+              putch (*((long *) arg++));
               break;
             }
         }
     }
 }
+

@@ -23,6 +23,9 @@ Realm64:
     mov fs, ax
     mov gs, ax
     ; TODO: what about the stack?!
+    mov ss, ax
+    mov rsp, Realm32            ; all below is no more needed...
+                                ; (except multiboot_info_t, but the stack will not grow that fast...)
 
 
     mov ax, 0x0F00+'1'
@@ -30,13 +33,14 @@ Realm64:
     mov ax, 0x0F00+'1'
     mov [0xB8002], ax
 
-    
-
 
 ; switch to 64 bit; preserve multiboot_info!
 
+    call next
+next:
+    ; rip now on stack; leave it there as first (right-most) argument to main()
     push rbx     ; ebx should be the pointer to the multiboot_info structure
-    call main
+    call main    ; main(multiboot_info_t *mbi, void* eip)
 
 endless:
     hlt

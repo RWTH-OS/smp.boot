@@ -38,8 +38,8 @@ void print_multiboot_info(multiboot_info_t *mbi)
 
     if (mbi->flags & (1<<6)) {
         printf("flags[6] - mmap_length: %d  mmap_addr: 0x%x\n", mbi->mmap_length, mbi->mmap_addr);
-        multiboot_memory_map_t* p = (multiboot_memory_map_t*)mbi->mmap_addr;
-        for ( ; p < (multiboot_memory_map_t*)(mbi->mmap_addr+mbi->mmap_length); p = ((void*)p + p->size + 4)) {
+        multiboot_memory_map_t* p = (multiboot_memory_map_t*)(long)mbi->mmap_addr;
+        for ( ; p < (multiboot_memory_map_t*)(long)(mbi->mmap_addr+mbi->mmap_length); p = ((void*)p + p->size + 4)) {
             printf("  mmap[0x%x] - base_addr: 0x%x  length: 0x%x  type: %d (%s)\n",
                    p, (multiboot_uint32_t)(p->addr), (multiboot_uint32_t)(p->len), p->type, mem_type[p->type==1?0:1]);
         }
@@ -49,14 +49,33 @@ void print_multiboot_info(multiboot_info_t *mbi)
     /* see: http://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format */
 }
 
+static inline void stackdump(int from, int to)
+{
+    long *sp;
+    long *p;
+#   ifdef __X86_64__
+    asm volatile ("mov %%rsp, %%rax" : "=a"(sp));
+#   else
+    asm volatile ("mov %%esp, %%eax" : "=a"(sp));
+#   endif
+    printf("sp: %x\n", sp);
+    for (p = sp-to; p <= sp-from; p++) {
+        printf("[%x]   %x\n", p, *p);
+    }
+}
 
-void main(multiboot_info_t *mbi, void *eip)
+void main(multiboot_info_t *mbi, void *ip)
 {
     init_video();
 
     puts("my kernel is running in main now...\n");
+    //printf("mbi: %x  ip: %x\n", mbi, ip);
 
-    printf("EIP of boot assembly: 0x%x\n", (unsigned)eip);
+    printf("1 %d %x\n", (long)1);
+    printf("-1 %d %x\n", (long)-1);
+    //stackdump(-4, 4);
+
+    //printf("EIP of boot assembly: 0x%x\n", (unsigned)eip);
     print_multiboot_info(mbi);
 
     printf("The end.\n");
