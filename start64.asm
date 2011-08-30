@@ -150,7 +150,7 @@ start:
 
     mov ax, 0x0F00+'0'
     mov [0xB8000], ax
-    mov ax, 0x0F00+'4'
+    mov ax, 0x0F00+'5'
     mov [0xB8002], ax
 
     mov ebx, [mbi]

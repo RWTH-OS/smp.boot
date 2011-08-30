@@ -21,4 +21,10 @@ SECTIONS{
         *(.bss)
         ebss = .;
     }
+    
+    . = 0x140000;
+
+    .KERNEL64 : {
+        *(.text)
+    }
 }

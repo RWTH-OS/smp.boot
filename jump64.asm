@@ -1,8 +1,14 @@
 
+GLOBAL Realm32
+EXTERN main
 
 [BITS 32]
-GLOBAL Realm32
 Realm32:
+    mov ax, 0x0F00+'1'
+    mov [0xB8000], ax
+    mov ax, 0x0F00+'0'
+    mov [0xB8002], ax
+
     ; load GDT
     lgdt [GDT64.Pointer]
     jmp GDT64.Code:Realm64      ; set code segment and enter 64-bit long mode
@@ -18,23 +24,23 @@ Realm64:
     mov gs, ax
     ; TODO: what about the stack?!
 
-    ;jmp endless
 
-    mov ax, 0x0F00+'0'
+    mov ax, 0x0F00+'1'
     mov [0xB8000], ax
-    mov ax, 0x0F00+'4'
+    mov ax, 0x0F00+'1'
     mov [0xB8002], ax
 
     
 
 
-; TODO: switch to 64 bit; preserve multiboot_info!
-extern main
+; switch to 64 bit; preserve multiboot_info!
 
     push rbx     ; ebx should be the pointer to the multiboot_info structure
     call main
 
-
+endless:
+    hlt
+    jmp endless
 
 ; Shortly we will add code for loading the GDT right here!
 
