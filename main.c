@@ -69,13 +69,13 @@ void main(multiboot_info_t *mbi, void *ip)
     init_video();
 
     puts("my kernel is running in main now...\n");
-    //printf("mbi: %x  ip: %x\n", mbi, ip);
+    printf("mbi: %x  ip: %x\n", mbi, ip);
 
-    printf("1 %d %x\n", (long)1);
-    printf("-1 %d %x\n", (long)-1);
+    printf("1 %d %x\n", (long)1, (long)1);
+    printf("-1 %d %x\n", (long)-1, (long)-1);
     //stackdump(-4, 4);
+    
 
-    //printf("EIP of boot assembly: 0x%x\n", (unsigned)eip);
     print_multiboot_info(mbi);
 
     printf("The end.\n");

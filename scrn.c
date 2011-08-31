@@ -165,8 +165,7 @@ void init_video(void)
 /* Convert the integer D to a string and save the string in BUF. If
    BASE is equal to 'd', interpret that D is decimal, and if BASE is
    equal to 'x', interpret that D is hexadecimal. */
-static void
-itoa (char *buf, int base, int d)
+void itoa (char *buf, int base, int d)
 {
   char *p = buf;
   char *p1, *p2;
@@ -208,16 +207,18 @@ itoa (char *buf, int base, int d)
     }
 }
 
+
  /* Format a string and print it on the screen, just like the libc
    function printf. */
 void
 printf (const char *format, ...)
 {
-  char **arg = (char **) &format;
   int c;
   char buf[20];
+  long value;
+  __builtin_va_list ap;
 
-  arg++;
+  __builtin_va_start(ap, format);
 
   while ((c = *format++) != 0)
     {
@@ -233,13 +234,14 @@ printf (const char *format, ...)
             case 'd':
             case 'u':
             case 'x':
-              itoa (buf, c, *((long *) arg++));
+              value = __builtin_va_arg(ap, long);
+              itoa (buf, c, value);
               p = buf;
               goto string;
               break;
 
             case 's':
-              p = *arg++;
+              p = __builtin_va_arg(ap, char*);
               if (! p)
                 p = "(null)";
 
@@ -249,10 +251,12 @@ printf (const char *format, ...)
               break;
 
             default:
-              putch (*((long *) arg++));
+              value = __builtin_va_arg(ap, long);
+              putch (value);
               break;
             }
         }
     }
+    __builtin_va_end(ap);
 }
 

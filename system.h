@@ -16,6 +16,7 @@ void putch(char c);
 void puts(char *str);
 void settextcolor(unsigned char forecolor, unsigned char backcolor);
 void init_video();
+void itoa (char *buf, int base, int d);
 void printf (const char *format, ...);
 
 #endif

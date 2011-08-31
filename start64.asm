@@ -89,8 +89,8 @@ start:
 
     ; disable 32-bit paging (just in case it was activated...)
     mov eax, cr0
-    ;and eax, 0x7FFFFFFF  ;~(1<<31)
-    and eax, ~(1<<31)
+    and eax, 0x7FFFFFFF  ;~(1<<31)
+    ;and eax, ~(1<<31)
     mov cr0, eax
 
     mov ax, 0x0F00+'0'
