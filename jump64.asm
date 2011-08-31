@@ -22,8 +22,8 @@ Realm64:
     mov es, ax
     mov fs, ax
     mov gs, ax
-    ; TODO: what about the stack?!
-    mov ss, ax
+    
+    ;;mov ss, ax                 ; WARNING: everything crashes, when SS is loaded!!!
     mov rsp, Realm32            ; all below is no more needed...
                                 ; (except multiboot_info_t, but the stack will not grow that fast...)
 
@@ -33,6 +33,7 @@ Realm64:
     mov ax, 0x0F00+'1'
     mov [0xB8002], ax
 
+    ;jmp endless
 
 ; switch to 64 bit; preserve multiboot_info!
 
@@ -60,15 +61,15 @@ GDT64:
     dw 0                        ; Limit (low)
     dw 0                        ; Base (low)
     db 0                         ; Base (middle)
-    db 10011000b                 ; Access.
-    db 00100000b                 ; Granularity.
+    db 10011000b                 ; Access.       p=1  dpl=00  11  c=0  r=0  a=0  (code segment)
+    db 00100000b                 ; Granularity.  g=0  d=0  l=1  avl=0  seg.limit=0000    (l=1 -> 64 bit mode)
     db 0                         ; Base (high).
     .Data: equ $ - GDT64         ; The data descriptor.
     dw 0                         ; Limit (low).
     dw 0                         ; Base (low).
     db 0                         ; Base (middle)
-    db 10010000b                 ; Access.
-    db 00000000b                 ; Granularity.
+    db 10010000b                 ; Access.       p=1  dpl=00  10  e=0  w=0  a=0  (data segment)
+    db 00000000b                 ; Granularity.  g=0  d/b=0  0  avl=0  seg.limit=0000
     db 0                         ; Base (high).
     .Pointer:                    ; The GDT-pointer.
     dw $ - GDT64 - 1             ; Limit.

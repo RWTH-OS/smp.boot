@@ -12,7 +12,7 @@ FLAGS       equ  MODULEALIGN | MEMINFO
 MAGIC       equ  0x1BADB002
 CHECKSUM    equ  -(MAGIC + FLAGS)
 
-STACKSPACE  equ 0x10000                      ; initial Stack (16k)
+STACKSPACE  equ 0x4000                      ; initial Stack (16k)
 
 SECTION .text
 ALIGN 4

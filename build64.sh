@@ -11,8 +11,8 @@ KERNEL64_BASEADDRESS="0x00140000"
 KERNEL64EXPORT32_SYMBOLS="Realm32 Realm64 main"
  
  
-KERNEL64EXPORT32_LDSCRIPT=tmp1 #`mktemp`
-KERNEL64_SECTION=tmp2   #`mktemp`
+KERNEL64EXPORT32_LDSCRIPT=tmp_ld #`mktemp`
+KERNEL64_SECTION=tmp_section   #`mktemp`
  
 CFLAGS="-m64 -c -O -Wall -Wno-main -O -fstrength-reduce -fomit-frame-pointer -finline-functions -nostdinc -fno-builtin -I . -ffreestanding -mcmodel=large -nostdlib -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3 -mno-3dnow"
 
