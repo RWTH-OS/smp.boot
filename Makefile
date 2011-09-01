@@ -77,6 +77,9 @@ q32 : kernel32.bin
 q64 : kernel64.bin
 	qemu-system-x86_64 -kernel kernel64.bin
 
+smp : kernel64.bin
+	qemu-system-x86_64 -smp 2 -kernel kernel64.bin
+
 # housekeeping
 clean :
 	-rm *.o *.o32 *.o64 *.symbols *.section *.bin *.elf64

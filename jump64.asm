@@ -24,8 +24,9 @@ Realm64:
     mov gs, ax
     
     ;;mov ss, ax                 ; WARNING: everything crashes, when SS is loaded!!!
-    mov rsp, Realm32            ; all below is no more needed...
+    ;mov rsp, Realm32            ; all below is no more needed...
                                 ; (except multiboot_info_t, but the stack will not grow that fast...)
+    ; TODO: stupid! below 1MB is not RAM, but I/O...
 
 
     mov ax, 0x0F00+'1'
@@ -39,8 +40,12 @@ Realm64:
 
     call next
 next:
-    ; rip now on stack; leave it there as first (right-most) argument to main()
-    push rbx     ; ebx should be the pointer to the multiboot_info structure
+    ; rip now on stack; 
+    pop rsi      
+    mov rdi, rbx
+    ; 64 bit calling convention:
+    ;    1. parameter (left)  - mbi -> rdi
+    ;    2. parameter (right) - eip -> rsi
     call main    ; main(multiboot_info_t *mbi, void* eip)
 
 endless:

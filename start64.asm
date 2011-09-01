@@ -98,31 +98,45 @@ start:
     mov ax, 0x0F00+'3'
     mov [0xB8002], ax
 
-
     ; prepare page tables
     ; first, set entries to 0
     mov edi, 0x1000             ; page tables are put here. (TODO: Why?!)
     mov cr3, edi                ; set cr3 to the PML4T
     xor eax, eax
-    mov ecx, 4096               ; 4k 
-    rep stosd                   ; 4k * 4 = 16kB
+    mov ecx, 7*1024             ; x * 1k  ( x: number of pages for page tables needed)
+    rep stosd                   ; 4 * x * 1k   (4: storing dw's (4B))
 
     ; initialize identity paging (Flags: R/W (read and write), P (present))
     mov edi, cr3                ; edi = PML4T (0x1000)
     mov DWORD [edi], 0x2003     ; PML4T[0]=[0x1000] := 0x2003 (Frame 2; R/W, P)
     add edi, 0x1000             ; edi = PDPT (0x2000, Frame 2)
     mov DWORD [edi], 0x3003     ; PDPT[0]=[0x2000] := 0x3003 (Frame 3; R/W, P)
-    add edi, 0x1000             ; edi = PDT (0x3000, Frame 3)
-    mov DWORD [edi], 0x4003     ; PDT[0]=[0x3000] := 0x4003 (Frame 4, R/W, P)
+    mov DWORD [edi+3*8],0x4003  ; PDPT[3]=[0x2018] := 0x4003 (Frame 4; R/W, P)
+    add edi, 0x1000             ; edi = PDT.0 (0x3000, Frame 3)
+    mov DWORD [edi], 0x5003     ; PDT.0[0]=[0x3000] := 0x4003 (Frame 5, R/W, P)
+    add edi, 0x1000             ; edi = PDT.3 (0x4000, Frame 4)
+    mov DWORD [edi+0x1f6*8], 0x6003  ; PDT.3[0x1f6] := 0x6003 (Frame 6, R/W, P)
+    mov DWORD [edi+0x1f7*8], 0x7003  ; PDT.3[0x1f7] := 0x7003 (Frame 7, R/W, P)
 
-    add edi, 0x1000             ; edi = PTE (0x4000, Frame 4)
+    add edi, 0x1000             ; edi = PTE.0.0 (0x5000, Frame 5)
     mov ebx, 0x0000_0003        ; first frame (0)
-    mov ecx, 512
+    mov ecx, 512                ; loop over 512 entries
 .SetEntry:
     mov DWORD [edi], ebx
-    add ebx, 0x1000
-    add edi, 8
+    add ebx, 0x1000             ; next page: +4k
+    add edi, 8                  ; next entry: +8
     loop .SetEntry              ; counting ECX down (from 512)
+
+    ; for I/O APIC
+    mov edi, 0x6000             ; edi = PTE.3.1f6 (0x6000, Frame 6)
+    mov ebx, 0xfec0_0003        ; physical frame
+    mov DWORD [edi], ebx        ; set first entry
+
+    ; for local APIC
+    add edi, 0x1000             ; edi = PDE.3.1f7 (0x7000, Frame 7)
+    mov ebx, 0xfee0_0003        ; physical frame
+    mov DWORD [edi], ebx        ; set first entry
+
 
     ; enable PAE (cr4[5])
     mov eax, cr4
