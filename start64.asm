@@ -5,6 +5,8 @@
 [BITS 32]
 global start
 extern Realm32
+extern global_mbi
+extern global_mp
 
 MODULEALIGN equ  1<<0
 MEMINFO     equ  1<<1
@@ -20,12 +22,11 @@ MultiBootHeader:
     dd MAGIC
     dd FLAGS
     dd CHECKSUM
-mbi dd 0
 
 start:
-    mov esp, _sys_stack     ; This points the stack to our new stack area
+    mov esp, _sys_stack     ; This points the stack to our new stack area (reserved in .bss)
 
-    mov [mbi], ebx
+    mov [global_mbi], ebx          ; store pointer to multiboot_info for later
     
     ; debug output
     mov ax, 0x0F00+'0'
@@ -40,6 +41,23 @@ start:
     dec ecx
     mov [0xB8000+ecx*2], ax
     jnz .loop
+
+
+
+
+;void search_mp()
+    extern search_mp
+    call search_mp
+
+
+    ; debug output
+    mov ax, 0x0F00+'0'
+    mov [0xB8000], ax
+    mov ax, 0x0F00+'1'
+    mov [0xB8002], ax
+
+
+
 
 
     ; the following bootstrap code is taken from
@@ -65,9 +83,14 @@ start:
 
     mov ax, 0x0F00+'0'
     mov [0xB8000], ax
-    mov ax, 0x0F00+'1'
+    mov ax, 0x0F00+'2'
     mov [0xB8002], ax
     
+
+    extern cpu_features
+    call cpu_features
+
+
 
     ; check if ext'd CPUID function 8000_0001 is available
     mov eax, 0x8000_0000
@@ -83,7 +106,7 @@ start:
 
     mov ax, 0x0F00+'0'
     mov [0xB8000], ax
-    mov ax, 0x0F00+'2'
+    mov ax, 0x0F00+'3'
     mov [0xB8002], ax
     
 
@@ -95,7 +118,7 @@ start:
 
     mov ax, 0x0F00+'0'
     mov [0xB8000], ax
-    mov ax, 0x0F00+'3'
+    mov ax, 0x0F00+'4'
     mov [0xB8002], ax
 
     ; prepare page tables
@@ -146,7 +169,7 @@ start:
 
     mov ax, 0x0F00+'0'
     mov [0xB8000], ax
-    mov ax, 0x0F00+'4'
+    mov ax, 0x0F00+'5'
     mov [0xB8002], ax
 
     ; the switch from real-mode
@@ -165,10 +188,10 @@ start:
 
     mov ax, 0x0F00+'0'
     mov [0xB8000], ax
-    mov ax, 0x0F00+'5'
+    mov ax, 0x0F00+'6'
     mov [0xB8002], ax
 
-    mov ebx, [mbi]
+    mov ebx, [global_mbi]
 
     jmp Realm32
 

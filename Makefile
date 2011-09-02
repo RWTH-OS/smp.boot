@@ -1,5 +1,5 @@
 
-CFILES=$(shell ls *.c)
+CFILES=$(shell ls *.c | grep -v boot32.c)
 O32FILES=$(CFILES:.c=.o32)
 O64FILES=$(CFILES:.c=.o64)
 
@@ -13,7 +13,7 @@ CC32=gcc -m32
 CC64=gcc -m64
 
 # symbols from 64 bit kernel (kernel64.elf64) to be transferred to kernel64.bin
-KERNEL64_SYMBOLS="Realm32 Realm64 main"
+KERNEL64_SYMBOLS="Realm32 Realm64 main global_mbi global_mp cpuid_max_low cpuid_max_high cpuid_family"
 
 default : kernel64.bin
 
@@ -43,6 +43,9 @@ $(O32FILES) : %.o32 : %.c
 $(O64FILES) : %.o64 : %.c
 	$(CC64) $(C64FLAGS) -o $@ $^
 
+boot32.o : boot32.c
+	$(CC32) $(C32FLAGS) -o $@ $^
+
 # link 32 bit kernel (a.out-multiboot)
 kernel32.bin : link32.ld start32.o $(O32FILES)
 	ld -T link32.ld -m i386linux -o $@ start32.o $(O32FILES)
@@ -60,13 +63,13 @@ kernel64.symbols : kernel64.elf64
 	readelf -sW "kernel64.elf64" | python getsymbols.py $(KERNEL64_SYMBOLS) kernel64.symbols
 
 # add section .KERNEL64 with 64 bit code and data to 32 bit start code (will still be ELF32)
-start64_mix.o : start64.o kernel64.section
-	objcopy --add-section .KERNEL64="kernel64.section" --set-section-flag .KERNEL64=alloc,data,load,contents start64.o start64_mix.o
+kernel64.o : start64.o kernel64.section
+	objcopy --add-section .KERNEL64="kernel64.section" --set-section-flag .KERNEL64=alloc,data,load,contents start64.o kernel64.o
 
 # finally link 32 bit start code with implanted .KERNEL64 (opaque blob)
 # to a relocated ELF32-multiboot kernel image
-kernel64.bin : link_start64.ld kernel64.symbols start64_mix.o 
-	ld -melf_i386 -T link_start64.ld -T kernel64.symbols   start64_mix.o -o kernel64.bin 
+kernel64.bin : link_start64.ld kernel64.symbols kernel64.o boot32.o 
+	ld -melf_i386 -T link_start64.ld -T kernel64.symbols   kernel64.o boot32.o -o kernel64.bin 
 
 
 

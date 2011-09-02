@@ -1,5 +1,10 @@
 #include <system.h>
 #include <multiboot.h>
+#include <apic.h>
+
+u32 global_mbi;
+u32 global_mp;
+uint32_t cpuid_max_low, cpuid_max_high, cpuid_family;
 
 void print_multiboot_info(multiboot_info_t *mbi) 
 {
@@ -53,6 +58,10 @@ void cpuid(unsigned func, unsigned *eax, unsigned *ebx, unsigned *ecx, unsigned 
 {
     asm volatile ("cpuid" : "=a"(*eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(func));
 }
+void cpuid2(unsigned func, unsigned subfunc, unsigned *eax, unsigned *ebx, unsigned *ecx, unsigned *edx)
+{
+    asm volatile ("cpuid" : "=a"(*eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(func), "c"(subfunc));
+}
 void print_smp_info(void)
 {
     unsigned eax, ebx, ecx, edx;
@@ -62,12 +71,18 @@ void print_smp_info(void)
     cpuid(0x0B, &eax, &ebx, &ecx, &edx);
     printf("APIC ID from CPUID.0BH:EDX[31:0]: %d\n", edx);
 
-    register_apic_id = 0xFEE00000 + 0x20;
+    register_apic_id = (volatile unsigned *) (0xFEE00000 + 0x20);
     i = *register_apic_id;
     i = i >> 24;
     printf("local APIC ID from register: %d\n", i);
 
+    cpuid(0x01, &eax, &ebx, &ecx, &edx);
+    printf("support SMP: %d\n", edx & (1<<28));
+    printf("addressable logical processors: %d\n", (ebx>>16)&0xFF);
 
+    cpuid2(0x04, 0x00, &eax, &ebx, &ecx, &edx);
+    i = (eax>>26)+1;
+    printf("addressable processor cores: %d\n", i);
 }
 
 static inline void stackdump(int from, int to)
@@ -85,18 +100,24 @@ static inline void stackdump(int from, int to)
     }
 }
 
+
 void main(multiboot_info_t *mbi, void *ip)
 {
     init_video();
 
     puts("my kernel is running in main now...\n");
 
-    unsigned eax, ebx, ecx, edx;
-    cpuid(0x80000001, &eax, &ebx, &ecx, &edx);
-    printf("support 1 GB pages: %d\n", edx & (1<<26));
+    //unsigned eax, ebx, ecx, edx;
+    //cpuid(0x80000001, &eax, &ebx, &ecx, &edx);
+    //printf("support 1 GB pages: %d\n", edx & (1<<26));
+    
+    printf("mp: %x\n", global_mp);
+    printf("cpuid_max_low: 0x%x   cpuid_max_high: 0x%x\n", cpuid_max_low, cpuid_max_high);
+    printf("cpuid_family: 0x%x\n", cpuid_family);
 
-    //print_multiboot_info(mbi);
-    print_smp_info();
+
+    //print_multiboot_info(global_mbi);
+    //print_smp_iboot32.o nfo();
 
     printf("The end.\n");
 
