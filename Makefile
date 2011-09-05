@@ -13,7 +13,7 @@ CC32=gcc -m32
 CC64=gcc -m64
 
 # symbols from 64 bit kernel (kernel64.elf64) to be transferred to kernel64.bin
-KERNEL64_SYMBOLS="Realm32 Realm64 main global_mbi global_mp cpuid_max_low cpuid_max_high cpuid_family"
+KERNEL64_SYMBOLS="Realm32 Realm64 main global_mbi global_mp cpuid_max_low cpuid_max_high cpuid_family isr0 idt"
 
 default : kernel64.bin
 

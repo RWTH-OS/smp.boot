@@ -86,7 +86,17 @@ start:
     mov ax, 0x0F00+'2'
     mov [0xB8002], ax
     
+    mov eax, 1
+    cpuid               ; CPUID(1)
+    and edx, 1<<9       ; EDX[bit9] -> has localAPIC
+    jz NoLocalAPIC      ; we need a local APIC
+    ; local APIC is available
 
+    mov ax, 0x0F00+'0'
+    mov [0xB8000], ax
+    mov ax, 0x0F00+'3'
+    mov [0xB8002], ax
+    
     extern cpu_features
     call cpu_features
 
@@ -106,7 +116,7 @@ start:
 
     mov ax, 0x0F00+'0'
     mov [0xB8000], ax
-    mov ax, 0x0F00+'3'
+    mov ax, 0x0F00+'4'
     mov [0xB8002], ax
     
 
@@ -118,7 +128,7 @@ start:
 
     mov ax, 0x0F00+'0'
     mov [0xB8000], ax
-    mov ax, 0x0F00+'4'
+    mov ax, 0x0F00+'5'
     mov [0xB8002], ax
 
     ; prepare page tables
@@ -169,7 +179,7 @@ start:
 
     mov ax, 0x0F00+'0'
     mov [0xB8000], ax
-    mov ax, 0x0F00+'5'
+    mov ax, 0x0F00+'6'
     mov [0xB8002], ax
 
     ; the switch from real-mode
@@ -188,7 +198,7 @@ start:
 
     mov ax, 0x0F00+'0'
     mov [0xB8000], ax
-    mov ax, 0x0F00+'6'
+    mov ax, 0x0F00+'7'
     mov [0xB8002], ax
 
     mov ebx, [global_mbi]
@@ -200,17 +210,24 @@ endless:
     jmp endless
 
 
-NoCPUID:
+NoCPUID:                ; Error Code E1: CPUID instruction is not supported.
     mov eax, 'E'
     mov [0xB8000], eax
     mov eax, '1'
     mov [0xB8002], eax
     jmp endless
 
-NoLongMode:
+NoLocalAPIC:            ; Error Code E2: no local APIC available
     mov eax, 'E'
     mov [0xB8000], eax
     mov eax, '2'
+    mov [0xB8002], eax
+    jmp endless
+
+NoLongMode:             ; CPU does not support 64 bit long mode
+    mov eax, 'E'
+    mov [0xB8000], eax
+    mov eax, '3'
     mov [0xB8002], eax
     jmp endless
 

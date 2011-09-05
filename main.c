@@ -89,7 +89,7 @@ static inline void stackdump(int from, int to)
 {
     long *sp;
     long *p;
-#   ifdef __X86_64__
+#   ifdef __x86_64__
     asm volatile ("mov %%rsp, %%rax" : "=a"(sp));
 #   else
     asm volatile ("mov %%esp, %%eax" : "=a"(sp));
@@ -99,11 +99,43 @@ static inline void stackdump(int from, int to)
         printf("[%x]   %x\n", p, *p);
     }
 }
+#define TSC_PER_USEC (2666ul)
+#define TSC_PER_SEC (TSC_PER_USEC*1000ul*1000ul)
 
-
-void main(multiboot_info_t *mbi, void *ip)
+inline static uint64_t rdtsc(void)
 {
+	union {
+		uint64_t u64;
+		uint32_t u32[2];
+	} x;
+	asm volatile ("rdtsc" : "=a" (x.u32[0]), "=d"(x.u32[1]));
+	return x.u64;
+}
+void udelay(unsigned long us)
+{
+    uint64_t tsc_now, tsc_end;
+    tsc_now = rdtsc();
+    //printf("tsc %lu\n", tsc_now.u64);
+    tsc_end = tsc_now + us * TSC_PER_USEC;
+    while (tsc_now < tsc_end) {
+        tsc_now = rdtsc();
+        //printf("tsc %lu\n", tsc_now.u64);
+    }
+}
+
+
+void main(multiboot_info_t *mbi)
+{
+    *((uint32_t*)0xB8000) = 0x0F300F32;     /* "20" top left corner to say: "I've arrived in main()." */
     init_video();
+    puts("video initialized\n");
+    udelay(500000);
+    idt_install();
+    puts("idt installed\n");
+    udelay(500000);
+    isr_install();
+    puts("isr installed\n");
+    udelay(500000);
 
     puts("my kernel is running in main now...\n");
 
@@ -116,10 +148,34 @@ void main(multiboot_info_t *mbi, void *ip)
     printf("cpuid_family: 0x%x\n", cpuid_family);
 
 
-    //print_multiboot_info(global_mbi);
+    print_multiboot_info(mbi);
     //print_smp_iboot32.o nfo();
 
+    printf("DIV ZERO in 1 sec ");
+    udelay(100000);
+    printf("9");
+    udelay(100000);
+    printf("8");
+    udelay(100000);
+    printf("7");
+    udelay(100000);
+    printf("6");
+    udelay(100000);
+    printf("5");
+    udelay(100000);
+    printf("4");
+    udelay(100000);
+    printf("3");
+    udelay(100000);
+    printf("2");
+    udelay(100000);
+    printf("1");
+    udelay(100000);
+    printf("0");
+    udelay(100000);
+    printf("1/0 = %d", 1/0);
+    printf("\nafter DIV ZERO\n");
+    udelay(500000);
     printf("The end.\n");
-
 }
 		

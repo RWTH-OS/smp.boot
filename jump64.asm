@@ -10,14 +10,14 @@ Realm32:
     mov [0xB8002], ax
 
     ; load GDT
-    lgdt [GDT64.Pointer]
-    jmp GDT64.Code:Realm64      ; set code segment and enter 64-bit long mode
+    lgdt [GDT.Pointer]
+    jmp GDT.Code:Realm64      ; set code segment and enter 64-bit long mode
     
 [BITS 64]
 
 Realm64:
     cli
-    mov ax, GDT64.Data
+    mov ax, GDT.Data
     mov ds, ax
     mov es, ax
     mov fs, ax
@@ -26,7 +26,8 @@ Realm64:
     ;;mov ss, ax                 ; WARNING: everything crashes, when SS is loaded!!!
     ;mov rsp, Realm32            ; all below is no more needed...
                                 ; (except multiboot_info_t, but the stack will not grow that fast...)
-    ; TODO: stupid! below 1MB is not RAM, but I/O...
+    ; Realm32 is 0x140000 (0x40000 above 1MB).
+    ; Attention: below 1MB is I/O space (no RAM)
 
 
     mov ax, 0x0F00+'1'
@@ -38,15 +39,10 @@ Realm64:
 
 ; switch to 64 bit; preserve multiboot_info!
 
-    call next
-next:
-    ; rip now on stack; 
-    pop rsi      
     mov rdi, rbx
     ; 64 bit calling convention:
     ;    1. parameter (left)  - mbi -> rdi
-    ;    2. parameter (right) - eip -> rsi
-    call main    ; main(multiboot_info_t *mbi, void* eip)
+    call main    ; main(multiboot_info_t *mbi)
 
 endless:
     hlt
@@ -54,22 +50,22 @@ endless:
 
 ; Shortly we will add code for loading the GDT right here!
 
-GDT64:
-    .Null: equ $ - GDT64        ; the null descriptor
+GDT:
+    .Null: equ $ - GDT        ; the null descriptor
     dw 0                        ; Limit (low)
     dw 0                        ; Base (low)
     db 0                        ; Base (middle)
     db 0                        ; Access
     db 0                        ; Granularity
     db 0                        ; Base (high)
-    .Code : equ $ - GDT64
+    .Code : equ $ - GDT
     dw 0                        ; Limit (low)
     dw 0                        ; Base (low)
     db 0                         ; Base (middle)
     db 10011000b                 ; Access.       p=1  dpl=00  11  c=0  r=0  a=0  (code segment)
     db 00100000b                 ; Granularity.  g=0  d=0  l=1  avl=0  seg.limit=0000    (l=1 -> 64 bit mode)
     db 0                         ; Base (high).
-    .Data: equ $ - GDT64         ; The data descriptor.
+    .Data: equ $ - GDT         ; The data descriptor.
     dw 0                         ; Limit (low).
     dw 0                         ; Base (low).
     db 0                         ; Base (middle)
@@ -77,11 +73,154 @@ GDT64:
     db 00000000b                 ; Granularity.  g=0  d/b=0  0  avl=0  seg.limit=0000
     db 0                         ; Base (high).
     .Pointer:                    ; The GDT-pointer.
-    dw $ - GDT64 - 1             ; Limit.
-    dq GDT64                     ; Base.
+    dw $ - GDT - 1             ; Limit.
+    dq GDT                     ; Base.
 
+global GDT_Code
+GDT_Code : equ GDT.Code
 
 ; In just a few pages in this tutorial, we will add our Interrupt
 ; Service Routines (ISRs) right here!
+
+global idt_load
+extern idtp
+idt_load:
+    lidt [idtp]
+    ret
+
+; define two multiline macros for interrupt stubs
+; one with pushing a dummy error code,
+; the other without (because these exceptions push an error code themselves)
+%macro ISR_EXCEPTION_WITHOUT_ERRCODE 1
+    global isr %+ %1
+    isr %+ %1 :
+        push rax
+        mov ax, 0x0F00+'X'
+        mov [0xB8000], ax
+        mov ax, 0x0F00+'0' ;('0'+%1/10)
+        mov [0xB8002], ax
+        ;mov ax, 0x0F00+('0'+%1 % 10)
+        ;mov [0xB8004], ax
+        pop rax
+
+    .endless:
+        ;hlt
+        ;jmp .endless
+
+        push QWORD 0
+        push QWORD %1
+        jmp isr_common_stub
+%endmacro
+
+%macro ISR_EXCEPTION_WITH_ERRCODE 1
+    global isr %+ %1
+    isr %+ %1 :
+        ; Errcode is already on the stack
+        push QWORD %1
+        jmp isr_common_stub
+%endmacro
+
+ISR_EXCEPTION_WITHOUT_ERRCODE 0
+ISR_EXCEPTION_WITHOUT_ERRCODE 1
+ISR_EXCEPTION_WITHOUT_ERRCODE 2
+ISR_EXCEPTION_WITHOUT_ERRCODE 3
+ISR_EXCEPTION_WITHOUT_ERRCODE 4
+ISR_EXCEPTION_WITHOUT_ERRCODE 5
+ISR_EXCEPTION_WITHOUT_ERRCODE 6
+ISR_EXCEPTION_WITHOUT_ERRCODE 7
+ISR_EXCEPTION_WITH_ERRCODE 8
+ISR_EXCEPTION_WITHOUT_ERRCODE 9
+ISR_EXCEPTION_WITH_ERRCODE 10
+ISR_EXCEPTION_WITH_ERRCODE 11
+ISR_EXCEPTION_WITH_ERRCODE 12
+ISR_EXCEPTION_WITH_ERRCODE 13
+ISR_EXCEPTION_WITH_ERRCODE 14
+ISR_EXCEPTION_WITHOUT_ERRCODE 15
+ISR_EXCEPTION_WITHOUT_ERRCODE 16
+ISR_EXCEPTION_WITHOUT_ERRCODE 17
+ISR_EXCEPTION_WITHOUT_ERRCODE 18
+ISR_EXCEPTION_WITHOUT_ERRCODE 19
+ISR_EXCEPTION_WITHOUT_ERRCODE 20
+ISR_EXCEPTION_WITHOUT_ERRCODE 21
+ISR_EXCEPTION_WITHOUT_ERRCODE 22
+ISR_EXCEPTION_WITHOUT_ERRCODE 23
+ISR_EXCEPTION_WITHOUT_ERRCODE 24
+ISR_EXCEPTION_WITHOUT_ERRCODE 25
+ISR_EXCEPTION_WITHOUT_ERRCODE 26
+ISR_EXCEPTION_WITHOUT_ERRCODE 27
+ISR_EXCEPTION_WITHOUT_ERRCODE 28
+ISR_EXCEPTION_WITHOUT_ERRCODE 29
+ISR_EXCEPTION_WITHOUT_ERRCODE 30
+ISR_EXCEPTION_WITHOUT_ERRCODE 31
+
+
+extern fault_handler
+isr_common_stub:
+     push rax
+     push rcx
+     push rdx
+     push rbx
+     push Qword 0
+     push rbp
+     push rsi
+     push rdi
+     push r8
+     push r9
+     push r10
+     push r11
+     push r12
+     push r13
+     push r14
+     push r15
+  
+     xor rax, rax
+     mov  ax, ds
+     push rax
+
+     mov ax, es
+     push rax
+
+     push fs
+     push gs
+
+     mov rax, cr3
+     push rax
+
+     mov rdi, rsp           ; Param in RDI (RSP == pointer to saved registers on stack)
+     call fault_handler     ; fault_handler(struct regs *r)
+
+     pop rax
+     mov cr3, rax
+
+     pop gs
+     pop fs
+     
+     pop rax
+     mov es, ax
+
+     pop rax
+     mov ds, ax
+
+     pop r15
+     pop r14
+     pop r13
+     pop r12
+     pop r11
+     pop r10
+     pop r9
+     pop r8
+     pop rdi
+     pop rsi
+     pop rbp
+     add rsp, 1*8
+     pop rbx
+     pop rdx
+     pop rcx
+     pop rax
+
+     add rsp, 1*8
+
+     iretq
+
 
 

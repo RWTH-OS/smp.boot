@@ -1,7 +1,7 @@
 #ifndef STDDEF_H
 #define STDDEF_H
 
-#if __X86_64__
+#if __x86_64__
     typedef unsigned char      u8;
     typedef unsigned short     u16;
     typedef unsigned int       u32;
