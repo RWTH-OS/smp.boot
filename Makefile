@@ -47,8 +47,8 @@ boot32.o : boot32.c
 	$(CC32) $(C32FLAGS) -o $@ $^
 
 # link 32 bit kernel (a.out-multiboot)
-kernel32.bin : link32.ld start32.o $(O32FILES)
-	ld -T link32.ld -m i386linux -o $@ start32.o $(O32FILES)
+kernel32.bin : link32.ld start32.o boot32.o $(O32FILES)
+	ld -T link32.ld -m i386linux -o $@ start32.o boot32.o $(O32FILES)
 
 # link 64 bit kernel that will be embedded into kernel64.bin
 kernel64.elf64 : link64.ld jump64.o $(O64FILES)

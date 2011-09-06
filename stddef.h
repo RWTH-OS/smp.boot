@@ -18,6 +18,7 @@ typedef u16 uint16_t;
 typedef u32 uint32_t;
 typedef u64 uint64_t;
 typedef unsigned long size_t;
+typedef unsigned long ptr_t;
 
 
 #endif

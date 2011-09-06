@@ -2,14 +2,14 @@
 
 /* These define our textpointer, our background and foreground
 *  colors (attributes), and x and y cursor coordinates */
-unsigned short *textmemptr;
-int attrib = 0x0F;
-int csr_x = 0, csr_y = 0;
+uint16_t *textmemptr;
+uint8_t attrib = 0x0F;
+uint8_t csr_x = 0, csr_y = 0;
 
 /* Scrolls the screen */
 void scroll(void)
 {
-    unsigned blank, temp;
+    uint16_t blank, temp;
 
     /* A blank is defined as a space... we need to give it
     *  backcolor too */
@@ -21,7 +21,7 @@ void scroll(void)
         /* Move the current text chunk that makes up the screen
         *  back in the buffer by a line */
         temp = csr_y - 25 + 1;
-        memcpy ((unsigned char*)textmemptr, (unsigned char*)textmemptr + temp * 80, (25 - temp) * 80 * 2);
+        memcpy ((uint16_t*)textmemptr, (uint16_t*)textmemptr + temp * 80, (25 - temp) * 80 * 2);
 
         /* Finally, we set the chunk of memory that occupies
         *  the last line of text to our 'blank' character */
@@ -165,7 +165,7 @@ void init_video(void)
 /* Convert the integer D to a string and save the string in BUF. If
    BASE is equal to 'd', interpret that D is decimal, and if BASE is
    equal to 'x', interpret that D is hexadecimal. */
-void itoa (char *buf, int base, int d)
+void itoa (char *buf, int base, unsigned long d)
 {
   char *p = buf;
   char *p1, *p2;
@@ -215,7 +215,7 @@ printf (const char *format, ...)
 {
   int c;
   char buf[20];
-  long value;
+  unsigned long value;
   __builtin_va_list ap;
 
   __builtin_va_start(ap, format);
@@ -232,9 +232,12 @@ printf (const char *format, ...)
           switch (c)
             {
             case 'd':
+              value = __builtin_va_arg(ap, long);
+              goto weiter;
             case 'u':
             case 'x':
-              value = __builtin_va_arg(ap, long);
+              value = __builtin_va_arg(ap, unsigned long);
+            weiter:
               itoa (buf, c, value);
               p = buf;
               goto string;

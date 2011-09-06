@@ -48,6 +48,9 @@ start:
 ;void search_mp()
     extern search_mp
     call search_mp
+    mov eax, [global_mp]
+    jz NoMultiprocessor
+
 
 
     ; debug output
@@ -210,24 +213,31 @@ endless:
     jmp endless
 
 
-NoCPUID:                ; Error Code E1: CPUID instruction is not supported.
+NoCPUID:                ; Error Code: CPUID instruction is not supported.
     mov eax, 'E'
     mov [0xB8000], eax
     mov eax, '1'
     mov [0xB8002], eax
     jmp endless
 
-NoLocalAPIC:            ; Error Code E2: no local APIC available
+NoMultiprocessor:
     mov eax, 'E'
     mov [0xB8000], eax
     mov eax, '2'
     mov [0xB8002], eax
     jmp endless
 
-NoLongMode:             ; CPU does not support 64 bit long mode
+NoLocalAPIC:            ; Error Code: no local APIC available
     mov eax, 'E'
     mov [0xB8000], eax
     mov eax, '3'
+    mov [0xB8002], eax
+    jmp endless
+
+NoLongMode:             ; CPU does not support 64 bit long mode
+    mov eax, 'E'
+    mov [0xB8000], eax
+    mov eax, '4'
     mov [0xB8002], eax
     jmp endless
 

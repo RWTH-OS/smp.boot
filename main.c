@@ -99,6 +99,8 @@ static inline void stackdump(int from, int to)
         printf("[%x]   %x\n", p, *p);
     }
 }
+
+
 #define TSC_PER_USEC (2666ul)
 #define TSC_PER_SEC (TSC_PER_USEC*1000ul*1000ul)
 
@@ -123,34 +125,8 @@ void udelay(unsigned long us)
     }
 }
 
-
-void main(multiboot_info_t *mbi)
+void test_div_zero()
 {
-    *((uint32_t*)0xB8000) = 0x0F300F32;     /* "20" top left corner to say: "I've arrived in main()." */
-    init_video();
-    puts("video initialized\n");
-    udelay(500000);
-    idt_install();
-    puts("idt installed\n");
-    udelay(500000);
-    isr_install();
-    puts("isr installed\n");
-    udelay(500000);
-
-    puts("my kernel is running in main now...\n");
-
-    //unsigned eax, ebx, ecx, edx;
-    //cpuid(0x80000001, &eax, &ebx, &ecx, &edx);
-    //printf("support 1 GB pages: %d\n", edx & (1<<26));
-    
-    printf("mp: %x\n", global_mp);
-    printf("cpuid_max_low: 0x%x   cpuid_max_high: 0x%x\n", cpuid_max_low, cpuid_max_high);
-    printf("cpuid_family: 0x%x\n", cpuid_family);
-
-
-    print_multiboot_info(mbi);
-    //print_smp_iboot32.o nfo();
-
     printf("DIV ZERO in 1 sec ");
     udelay(100000);
     printf("9");
@@ -176,6 +152,76 @@ void main(multiboot_info_t *mbi)
     printf("1/0 = %d", 1/0);
     printf("\nafter DIV ZERO\n");
     udelay(500000);
+}
+
+void reboot(int timeout)
+{
+    int i;
+    printf("rebooting in ");
+    for (i=timeout; i>0; i--) {
+        printf("%d ", i);
+        udelay(1000000);
+    }
+    printf("\n");
+
+    asm volatile ("cli");
+    unsigned char tmp;
+    do {
+        tmp = inportb(0x64);
+        if (tmp & 0x01) {
+            inportb(0x60);
+        }
+    } while (tmp & 0x02);
+    outportb(0x64, 0xFE);
+
+    /* if that didn't work */
+
+    /* TODO: other possibility: kill IDT, issue Triple Fault */
+
+    /* if that didn't work either */
+    while (1) {
+        asm volatile ("hlt");
+    }
+    
+
+
+}
+/*
+ * TODO's
+ *  - is the cache activated?
+ *  - dynamic memory management (at least, malloc() should be implemented)
+ */
+#define DELAY 100000
+void main(multiboot_info_t *mbi)
+{
+    *((uint32_t*)0xB8000) = 0x0F300F32;     /* "20" top left corner to say: "I've arrived in main()." */
+    init_video();
+    puts("video initialized\n");
+    udelay(DELAY);
+    idt_install();
+    puts("idt installed\n");
+    udelay(DELAY);
+    isr_install();
+    puts("isr installed\n");
+    udelay(DELAY);
+    apic_init();
+    puts("apic initialized\n");
+
+    puts("my kernel is running in main now...\n");
+
+    //unsigned eax, ebx, ecx, edx;
+    //cpuid(0x80000001, &eax, &ebx, &ecx, &edx);
+    //printf("support 1 GB pages: %d\n", edx & (1<<26));
+    
+    printf("cpuid_max_low: 0x%x   cpuid_max_high: 0x%x\n", cpuid_max_low, cpuid_max_high);
+    printf("cpuid_family: 0x%x\n", cpuid_family);
+
+
+    //print_multiboot_info(mbi);
+    //print_smp_iboot32.o nfo();
+
+    //test_div_zero();
     printf("The end.\n");
+    //reboot(5);
 }
 		

@@ -3,6 +3,8 @@
 
 #include <stddef.h>
 
+/* Verbosity: if not defined here, modules may define their own */
+//#define VERBOSE 0
 
 #if __x86_64__
 struct regs
@@ -23,29 +25,37 @@ struct regs
 #endif
 
 
-/* MAIN.C */
+/* main.c */
 void *memcpy(void *dest, const void *src, int count);
 void *memset(void *dest, int val, int count);
 unsigned short *memsetw(unsigned short *dest, unsigned short val, int count);
 int strlen(const char *str);
+
+/* lib.c */
 unsigned char inportb (unsigned short _port);
 void outportb (unsigned short _port, unsigned char _data);
+void halt();
+
+
 #define NULL ((void*)0)
 
-/* IDT.C */
+/* idt.c */
 void idt_install();
 void idt_set_gate(unsigned char num, unsigned long base, unsigned short sel, unsigned char flags);
 
-/* ISR.C */
+/* isr.c */
 void isr_install();
 
-/* SCRN.H */
+/* apic.c */
+void apic_init();
+
+/* scrn.h */
 void cls();
 void putch(char c);
 void puts(char *str);
 void settextcolor(unsigned char forecolor, unsigned char backcolor);
 void init_video();
-void itoa (char *buf, int base, int d);
+void itoa (char *buf, int base, unsigned long d);
 void printf (const char *format, ...);
 
 #endif

@@ -112,6 +112,7 @@ typedef struct {
 	uint32_t lapic;
 	uint16_t extended_table_length;
 	uint8_t extended_table_checksum;
+    uint8_t reserved;
 } __attribute__ ((packed)) apic_config_table_t;
 
 /** @brief APIC Processor Entry */
@@ -122,7 +123,16 @@ typedef struct {
 	uint8_t cpu_flags;
 	uint32_t cpu_signature;
 	uint32_t cpu_feature;
+    uint32_t reserved1;
+    uint32_t reserved2;
 } __attribute__ ((packed)) apic_processor_entry_t;
+
+/** @brief Bus Entry */
+typedef struct {
+	uint8_t	type;
+	uint8_t	bus_id;
+	char	name[6];
+} __attribute__ ((packed)) apic_bus_entry_t;
 
 /** @brief IO APIC Entry */
 typedef struct {
@@ -133,12 +143,6 @@ typedef struct {
 	uint32_t addr;
 } __attribute__ ((packed)) apic_io_entry_t;
 
-/** @brief Bus Entry */
-typedef struct {
-	uint8_t	type;
-	uint8_t	bus_id;
-	char	name[6];
-} __attribute__ ((packed)) apic_bus_entry_t;
 
 /** @brief I/O Interrupt Assignment Entry */
 typedef struct {
@@ -184,6 +188,7 @@ typedef struct {
 	} dest;
 } __attribute__ ((packed)) ioapic_route_t;
 
+/*
 int apic_init(void);
 void apic_eoi(void);
 uint32_t apic_cpu_id(void);
@@ -193,5 +198,6 @@ int apic_is_enabled(void);
 int ioapic_inton(uint8_t irq, uint8_t apicid);
 int ioapic_intoff(uint8_t irq, uint8_t apicid);
 int map_apic(void);
+*/
 
 #endif
