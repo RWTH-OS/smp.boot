@@ -62,17 +62,6 @@ void outportb (unsigned short _port, unsigned char _data)
     __asm__ __volatile__ ("outb %1, %0" : : "dN" (_port), "a" (_data));
 }
 
-void udelay(unsigned long us)
-{
-    uint64_t tsc_now, tsc_end;
-    tsc_now = rdtsc();
-    //printf("tsc %lu\n", tsc_now.u64);
-    tsc_end = tsc_now + us * TSC_PER_USEC;
-    while (tsc_now < tsc_end) {
-        tsc_now = rdtsc();
-        //printf("tsc %lu\n", tsc_now.u64);
-    }
-}
 
 
 void halt()

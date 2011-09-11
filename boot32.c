@@ -4,9 +4,9 @@
  * This is called from startXX.asm in REAL MODE (physical addresses)
  */
 
-#include "multiboot.h"
-#include "apic.h"
-#include "stddef.h"
+#include "bda_struct.h"
+#include "acpi_struct.h"
+#include "mps_struct.h"
 #include "info.h"
 
 #define MP_FLT_SIGNATURE 0x5f504d5f
@@ -46,7 +46,26 @@ void cpu_features()
 
 }
 
+static ptr_t search_rsdp(ptr_t offset, ptr_t size) 
+{
+    union {
+        char str[9];
+        uint32_t u32[2];
+    } __attribute__((packed)) acpi_sig = { "RSD PTR " };
 
+    volatile const uint32_t *p;
+    unsigned i;
+
+    p = (uint32_t*)offset;
+
+    for (i = 0; i < size/sizeof(uint32_t); i++) {
+        if (p[i] == acpi_sig.u32[0] && p[i+1] == acpi_sig.u32[1]) {
+            return (ptr_t)(void*)&p[i];
+        }
+    }
+
+    return 0;
+}
 
 /*
  * get_info()
@@ -68,9 +87,36 @@ void get_info()
 {
 	//unsigned long addr;
 	//unsigned i;//, count;
+    init_video();
+    printf("get_info()\n");
 
-    printf("scrn.c\n");
+    /*
+     * first, read BIOS Data Area
+     */
+    bda_t *bda = (bda_t*)0x400;
 
+    /* get EBDA Segment 16-bit real-mode segment, i.e. shift left by 4 bits to get physical address */
+    ebda_t *ebda = (ebda_t*)((ptr_t)bda->segm_ebda << 4);
+    hw_info.ebda_adr = bda->segm_ebda << 4;
+    hw_info.ebda_size = ebda->size;
+    
+
+    /*
+     * search for ACPI tables 
+     *  - EBDA
+     *  - physical address range 0xE0000 .. 0xFFFFF
+     */
+    rsdp_t *rsdp = (rsdp_t*)search_rsdp(hw_info.ebda_adr, hw_info.ebda_size);
+    if (rsdp == 0) {
+        rsdp_t *rsdp = (rsdp_t*)search_rsdp(0xE0000, 0x20000);
+    }
+    if (rsdp == 0) {
+        printf("no RSDP found.\n");
+        goto skip_acpi;
+    }
+
+skip_acpi:
+    goto skip_acpi;
 /*
     // search for Multi-Processor info structure. See: MetalSVM/arch/x86/kernel/apic.c:apic_probe()
 	// searching MP signature in the reserved memory areas

@@ -35,8 +35,11 @@ mboot:
     dd start
 mbi dw 0
 
+extern hw_info          ; first element of structure is uint32_t for multiboot info address
 
 stublet:
+    mov [hw_info], ebx
+
     
     ; debug output  ('00' : first instruction in start32.asm after multiboot)
     mov ax, 0x0F00+'0'

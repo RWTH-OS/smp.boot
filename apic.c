@@ -1,5 +1,4 @@
 #include "system.h"
-#include "apic.h"
 
 #ifndef VERBOSE
 #define VERBOSE 1
@@ -7,8 +6,6 @@
 
 static ptr_t localAPIC =   0xfee00000UL;
 static ptr_t ioAPIC_base = 0xfec00000UL;
-static uint32_t ioAPIC_count = 0;
-//extern uint32_t global_mp;
 
 uint32_t read_localAPIC(uint32_t offset)
 {

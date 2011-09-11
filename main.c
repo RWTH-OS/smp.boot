@@ -1,12 +1,12 @@
 #include "system.h"
-#include "multiboot.h"
-#include "apic.h"
+#include "multiboot_struct.h"
 #include "info.h"
 
 hw_info_t hw_info; 
 
-void print_multiboot_info(multiboot_info_t *mbi) 
+void print_multiboot_info(void) 
 {
+    multiboot_info_t *mbi = (multiboot_info_t*)(ptr_t)hw_info.mb_adr;
     char mem_type[][10] = {"mem", "other"};
 
     printf("Multiboot-Flags: 0x%x\n", mbi->flags);
@@ -100,6 +100,21 @@ static inline void stackdump(int from, int to)
 }
 
 
+
+uint64_t tsc_per_sec = TSC_PER_SEC;
+
+void udelay(unsigned long us)
+{
+    uint64_t tsc_now, tsc_end;
+    tsc_now = rdtsc();
+    //printf("tsc %lu\n", tsc_now.u64);
+    tsc_end = tsc_now + (us * tsc_per_sec);
+    while (tsc_now < tsc_end) {
+        tsc_now = rdtsc();
+        //printf("tsc %lu\n", tsc_now.u64);
+    }
+}
+/* deactivate warning on divide-by-zero, b/c this is intentional in this function */
 #pragma GCC diagnostic ignored "-Wdiv-by-zero"
 void test_div_zero()
 {
@@ -125,7 +140,7 @@ void test_div_zero()
     udelay(100000);
     printf("0");
     udelay(100000);
-    printf("1/0 = %d", 1/0);
+    printf("1/0 = %d", 1/0);    /* divide by zero to test DIVZERO exception */
     printf("\nafter DIV ZERO\n");
     udelay(500000);
 }
@@ -193,7 +208,7 @@ void main(void)
     printf("cpuid_family: 0x%x\n", hw_info.cpuid_family);
 
 
-    //print_multiboot_info(mbi);
+    print_multiboot_info();
     //print_smp_iboot32.o nfo();
 
     //test_div_zero();

@@ -35,7 +35,6 @@
  * preliminary: CPU Frequency
  * (until it can be correctly measured)
  */
-#define TSC_PER_USEC (2666ul)
-#define TSC_PER_SEC (TSC_PER_USEC*1000ul*1000ul)
+#define TSC_PER_SEC (2666ul*1000ul*1000ul)
 
 #endif // CONFIG_H

@@ -21,8 +21,12 @@ MultiBootHeader:
     dd FLAGS
     dd CHECKSUM
 
+extern hw_info          ; first element of structure is uint32_t for multiboot info address
+
 start:
     mov esp, _sys_stack     ; This points the stack to our new stack area (reserved in .bss)
+
+    mov [hw_info], ebx
 
     
     ; debug output

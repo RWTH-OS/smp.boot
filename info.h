@@ -22,10 +22,16 @@
 #include "config.h"
 
 typedef struct {
+    uint32_t mb_adr;        /* first position: address of multiboot info structure */
+
     /* CPUID */
     uint32_t cpuid_max;
     uint32_t cpuid_high_max;
     uint32_t cpuid_family;
+
+    /* BDA and EBDA */
+    uint32_t ebda_adr;
+    uint32_t ebda_size;
 
     /* CPUs */
     uint32_t cpu_cnt;
