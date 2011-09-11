@@ -1,4 +1,4 @@
-#include <system.h>
+#include "system.h"
 
 /* Defines an IDT entry */
 #ifdef __x86_64__

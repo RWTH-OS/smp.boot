@@ -1,10 +1,9 @@
-#include <system.h>
-#include <multiboot.h>
-#include <apic.h>
+#include "system.h"
+#include "multiboot.h"
+#include "apic.h"
+#include "info.h"
 
-u32 global_mbi;
-u32 global_mp;
-uint32_t cpuid_max_low, cpuid_max_high, cpuid_family;
+hw_info_t hw_info; 
 
 void print_multiboot_info(multiboot_info_t *mbi) 
 {
@@ -27,7 +26,7 @@ void print_multiboot_info(multiboot_info_t *mbi)
 
     if (mbi->flags & (1<<3)) {
         printf("flags[3] - mods_count: %d  mods_addr: 0x%x\n", mbi->mods_count, mbi->mods_addr);
-        int i;
+        unsigned i;
         for (i=0; i<mbi->mods_count; i++) {
             printf("  mod[%d]...\n", i);
         }
@@ -101,30 +100,7 @@ static inline void stackdump(int from, int to)
 }
 
 
-#define TSC_PER_USEC (2666ul)
-#define TSC_PER_SEC (TSC_PER_USEC*1000ul*1000ul)
-
-inline static uint64_t rdtsc(void)
-{
-	union {
-		uint64_t u64;
-		uint32_t u32[2];
-	} x;
-	asm volatile ("rdtsc" : "=a" (x.u32[0]), "=d"(x.u32[1]));
-	return x.u64;
-}
-void udelay(unsigned long us)
-{
-    uint64_t tsc_now, tsc_end;
-    tsc_now = rdtsc();
-    //printf("tsc %lu\n", tsc_now.u64);
-    tsc_end = tsc_now + us * TSC_PER_USEC;
-    while (tsc_now < tsc_end) {
-        tsc_now = rdtsc();
-        //printf("tsc %lu\n", tsc_now.u64);
-    }
-}
-
+#pragma GCC diagnostic ignored "-Wdiv-by-zero"
 void test_div_zero()
 {
     printf("DIV ZERO in 1 sec ");
@@ -192,9 +168,9 @@ void reboot(int timeout)
  *  - dynamic memory management (at least, malloc() should be implemented)
  */
 #define DELAY 100000
-void main(multiboot_info_t *mbi)
+void main(void)
 {
-    *((uint32_t*)0xB8000) = 0x0F300F32;     /* "20" top left corner to say: "I've arrived in main()." */
+    *((uint32_t*)0xB8000) = 0x0F390F39;     /* "99" top left corner to say: "I've arrived in main()." */
     init_video();
     puts("video initialized\n");
     udelay(DELAY);
@@ -213,8 +189,8 @@ void main(multiboot_info_t *mbi)
     //cpuid(0x80000001, &eax, &ebx, &ecx, &edx);
     //printf("support 1 GB pages: %d\n", edx & (1<<26));
     
-    printf("cpuid_max_low: 0x%x   cpuid_max_high: 0x%x\n", cpuid_max_low, cpuid_max_high);
-    printf("cpuid_family: 0x%x\n", cpuid_family);
+    printf("cpuid_max: 0x%x   cpuid_high_max: 0x%x\n", hw_info.cpuid_max, hw_info.cpuid_high_max);
+    printf("cpuid_family: 0x%x\n", hw_info.cpuid_family);
 
 
     //print_multiboot_info(mbi);

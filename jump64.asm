@@ -4,7 +4,7 @@ EXTERN main
 
 [BITS 32]
 Realm32:
-    mov ax, 0x0F00+'1'
+    mov ax, 0x0F00+'2'
     mov [0xB8000], ax
     mov ax, 0x0F00+'0'
     mov [0xB8002], ax
@@ -30,19 +30,16 @@ Realm64:
     ; Attention: below 1MB is I/O space (no RAM)
 
 
-    mov ax, 0x0F00+'1'
+    mov ax, 0x0F00+'3'
     mov [0xB8000], ax
-    mov ax, 0x0F00+'1'
+    mov ax, 0x0F00+'0'
     mov [0xB8002], ax
 
     ;jmp endless
 
 ; switch to 64 bit; preserve multiboot_info!
 
-    mov rdi, rbx
-    ; 64 bit calling convention:
-    ;    1. parameter (left)  - mbi -> rdi
-    call main    ; main(multiboot_info_t *mbi)
+    call main    ; main()
 
 endless:
     hlt
@@ -156,11 +153,13 @@ ISR_EXCEPTION_WITHOUT_ERRCODE 31
 
 extern fault_handler
 isr_common_stub:
+    ; save complete context (multi-purpose&integer, no fpu/sse)
+    ; the structure is also defined in system.h:struct regs
      push rax
      push rcx
      push rdx
      push rbx
-     push Qword 0
+     push Qword 0       ; FIXME: why is this 0 pushed?!
      push rbp
      push rsi
      push rdi
@@ -174,21 +173,22 @@ isr_common_stub:
      push r15
   
      xor rax, rax
-     mov  ax, ds
+     mov  ax, ds        ; Data Segment Descriptor
      push rax
 
-     mov ax, es
+     mov ax, es         ; ES
      push rax
 
-     push fs
+     push fs            ; FS + GS
      push gs
 
-     mov rax, cr3
+     mov rax, cr3       ; CR 3
      push rax
 
      mov rdi, rsp           ; Param in RDI (RSP == pointer to saved registers on stack)
      call fault_handler     ; fault_handler(struct regs *r)
 
+     ; restore context from stack
      pop rax
      mov cr3, rax
 
@@ -212,13 +212,13 @@ isr_common_stub:
      pop rdi
      pop rsi
      pop rbp
-     add rsp, 1*8
+     add rsp, 1*8           ; pushed 0 (why?)
      pop rbx
      pop rdx
      pop rcx
      pop rax
 
-     add rsp, 1*8
+     add rsp, 2*8           ; two elements: err_code and vector-number
 
      iretq
 

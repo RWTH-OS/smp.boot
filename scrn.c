@@ -1,4 +1,10 @@
-#include <system.h>
+#include "system.h"
+
+
+/*
+ * This file is used in 32-Bit Boot Code (REAL MODE) called from startXX.asm and boot32.c
+ * as well as in the final kernel (main.c etc.)
+ */
 
 /* These define our textpointer, our background and foreground
 *  colors (attributes), and x and y cursor coordinates */
@@ -165,11 +171,11 @@ void init_video(void)
 /* Convert the integer D to a string and save the string in BUF. If
    BASE is equal to 'd', interpret that D is decimal, and if BASE is
    equal to 'x', interpret that D is hexadecimal. */
-void itoa (char *buf, int base, unsigned long d)
+void itoa (char *buf, int base, long d)
 {
   char *p = buf;
   char *p1, *p2;
-  unsigned long ud = d;
+  unsigned long ud = *((unsigned long*)&d);
   int divisor = 10;
 
   /* If %d is specified and D is minus, put `-' in the head. */

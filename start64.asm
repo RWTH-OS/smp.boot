@@ -5,8 +5,6 @@
 [BITS 32]
 global start
 extern Realm32
-extern global_mbi
-extern global_mp
 
 MODULEALIGN equ  1<<0
 MEMINFO     equ  1<<1
@@ -26,7 +24,6 @@ MultiBootHeader:
 start:
     mov esp, _sys_stack     ; This points the stack to our new stack area (reserved in .bss)
 
-    mov [global_mbi], ebx          ; store pointer to multiboot_info for later
     
     ; debug output
     mov ax, 0x0F00+'0'
@@ -34,75 +31,15 @@ start:
     mov ax, 0x0F00+'0'
     mov [0xB8002], ax
 
-    ; clear screen
-    mov ecx, 80*25
-    mov ax, 0x0F00+' '
-.loop:
-    dec ecx
-    mov [0xB8000+ecx*2], ax
-    jnz .loop
 
+%include "start.asm"
 
+setup:                  ; now 32-bit specific set up
 
-
-;void search_mp()
-    extern search_mp
-    call search_mp
-    mov eax, [global_mp]
-    jz NoMultiprocessor
-
-
-
-    ; debug output
-    mov ax, 0x0F00+'0'
-    mov [0xB8000], ax
     mov ax, 0x0F00+'1'
-    mov [0xB8002], ax
-
-
-
-
-
-    ; the following bootstrap code is taken from
-    ; http://wiki.osdev.org/User:Stephanvanschaik/Setting_Up_Long_Mode
-
-    ; detect, if CPUID is available.
-    ; set ID bit EFLAGS[21]
-    pushfd              ; store FLAGS register
-    pop eax             ; get FLAGS into EAX
-    mov ecx, eax        ; ECX := EAX = FLAGS
-    xor eax, 1 << 21    ; flip the ID bit (21)
-    push eax
-    popfd               ; FLAGS := EAX
-    ; check if ID bit was successfully changed
-    pushfd
-    pop eax
-    push ecx
-    popfd               ; restore FLAGS (to ECX, previously saved)
-    xor eax, ecx
-    jz NoCPUID
-    ; CPUID is available to use
-
-
-    mov ax, 0x0F00+'0'
     mov [0xB8000], ax
-    mov ax, 0x0F00+'2'
-    mov [0xB8002], ax
-    
-    mov eax, 1
-    cpuid               ; CPUID(1)
-    and edx, 1<<9       ; EDX[bit9] -> has localAPIC
-    jz NoLocalAPIC      ; we need a local APIC
-    ; local APIC is available
-
     mov ax, 0x0F00+'0'
-    mov [0xB8000], ax
-    mov ax, 0x0F00+'3'
     mov [0xB8002], ax
-    
-    extern cpu_features
-    call cpu_features
-
 
 
     ; check if ext'd CPUID function 8000_0001 is available
@@ -117,9 +54,9 @@ start:
     test edx, 1 << 29
     jz NoLongMode
 
-    mov ax, 0x0F00+'0'
+    mov ax, 0x0F00+'1'
     mov [0xB8000], ax
-    mov ax, 0x0F00+'4'
+    mov ax, 0x0F00+'2'
     mov [0xB8002], ax
     
 
@@ -129,9 +66,9 @@ start:
     ;and eax, ~(1<<31)
     mov cr0, eax
 
-    mov ax, 0x0F00+'0'
+    mov ax, 0x0F00+'1'
     mov [0xB8000], ax
-    mov ax, 0x0F00+'5'
+    mov ax, 0x0F00+'3'
     mov [0xB8002], ax
 
     ; prepare page tables
@@ -180,9 +117,9 @@ start:
     mov cr4, eax
 
 
-    mov ax, 0x0F00+'0'
+    mov ax, 0x0F00+'1'
     mov [0xB8000], ax
-    mov ax, 0x0F00+'6'
+    mov ax, 0x0F00+'4'
     mov [0xB8002], ax
 
     ; the switch from real-mode
@@ -199,40 +136,20 @@ start:
 
     ; now in compatibility mode
 
-    mov ax, 0x0F00+'0'
+    mov ax, 0x0F00+'1'
     mov [0xB8000], ax
-    mov ax, 0x0F00+'7'
+    mov ax, 0x0F00+'5'
     mov [0xB8002], ax
 
-    mov ebx, [global_mbi]
 
     jmp Realm32
+
 
 endless:
     hlt
     jmp endless
 
 
-NoCPUID:                ; Error Code: CPUID instruction is not supported.
-    mov eax, 'E'
-    mov [0xB8000], eax
-    mov eax, '1'
-    mov [0xB8002], eax
-    jmp endless
-
-NoMultiprocessor:
-    mov eax, 'E'
-    mov [0xB8000], eax
-    mov eax, '2'
-    mov [0xB8002], eax
-    jmp endless
-
-NoLocalAPIC:            ; Error Code: no local APIC available
-    mov eax, 'E'
-    mov [0xB8000], eax
-    mov eax, '3'
-    mov [0xB8002], eax
-    jmp endless
 
 NoLongMode:             ; CPU does not support 64 bit long mode
     mov eax, 'E'

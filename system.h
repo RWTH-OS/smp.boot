@@ -2,9 +2,11 @@
 #define __SYSTEM_H
 
 #include <stddef.h>
+#include "config.h"
 
 /* Verbosity: if not defined here, modules may define their own */
 //#define VERBOSE 0
+
 
 #if __x86_64__
 struct regs
@@ -24,6 +26,15 @@ struct regs
 };
 #endif
 
+inline static uint64_t rdtsc(void)
+{
+	union {
+		uint64_t u64;
+		uint32_t u32[2];
+	} x;
+	asm volatile ("rdtsc" : "=a" (x.u32[0]), "=d"(x.u32[1]));
+	return x.u64;
+}
 
 /* main.c */
 void *memcpy(void *dest, const void *src, int count);
@@ -34,6 +45,7 @@ int strlen(const char *str);
 /* lib.c */
 unsigned char inportb (unsigned short _port);
 void outportb (unsigned short _port, unsigned char _data);
+void udelay(unsigned long us);
 void halt();
 
 
@@ -49,13 +61,14 @@ void isr_install();
 /* apic.c */
 void apic_init();
 
-/* scrn.h */
+/* scrn.c */
 void cls();
 void putch(char c);
 void puts(char *str);
 void settextcolor(unsigned char forecolor, unsigned char backcolor);
 void init_video();
-void itoa (char *buf, int base, unsigned long d);
+void itoa (char *buf, int base, long d);
 void printf (const char *format, ...);
+
 
 #endif

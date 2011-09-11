@@ -4,8 +4,7 @@
 ; are disabled at this point: More on interrupts later!
 [BITS 32]
 global start
-extern global_mbi
-extern global_mp
+
 start:
     mov esp, _sys_stack     ; This points the stack to our new stack area
     jmp stublet
@@ -36,88 +35,23 @@ mboot:
     dd start
 mbi dw 0
 
-extern main
 
 stublet:
-    push ebx        ; multiboot_info (needed later for call main)
-
-    mov [global_mbi], ebx          ; store pointer to multiboot_info for later
     
-    ; debug output
+    ; debug output  ('00' : first instruction in start32.asm after multiboot)
     mov ax, 0x0F00+'0'
     mov [0xB8000], ax
     mov ax, 0x0F00+'0'
     mov [0xB8002], ax
 
-    ; clear screen
-    mov ecx, 80*25
-    mov ax, 0x0F00+' '
-.loop:
-    dec ecx
-    mov [0xB8000+ecx*2], ax
-    jnz .loop
+%include "start.asm"
 
+setup:                  ; now 32-bit specific set up
 
-
-
-;void search_mp()
-    extern search_mp
-    call search_mp
-    mov eax, [global_mp]
-    jz NoMultiprocessor
-
-
-    ; debug output
-    mov ax, 0x0F00+'0'
-    mov [0xB8000], ax
-    mov ax, 0x0F00+'1'
-    mov [0xB8002], ax
-
-
-
-
-
-    ; the following bootstrap code is taken from
-    ; http://wiki.osdev.org/User:Stephanvanschaik/Setting_Up_Long_Mode
-
-    ; detect, if CPUID is available.
-    ; set ID bit EFLAGS[21]
-    pushfd              ; store FLAGS register
-    pop eax             ; get FLAGS into EAX
-    mov ecx, eax        ; ECX := EAX = FLAGS
-    xor eax, 1 << 21    ; flip the ID bit (21)
-    push eax
-    popfd               ; FLAGS := EAX
-    ; check if ID bit was successfully changed
-    pushfd
-    pop eax
-    push ecx
-    popfd               ; restore FLAGS (to ECX, previously saved)
-    xor eax, ecx
-    jz NoCPUID
-    ; CPUID is available to use
-
-
-    mov ax, 0x0F00+'0'
-    mov [0xB8000], ax
     mov ax, 0x0F00+'2'
-    mov [0xB8002], ax
-    
-    mov eax, 1
-    cpuid               ; CPUID(1)
-    and edx, 1<<9       ; EDX[bit9] -> has localAPIC
-    jz NoLocalAPIC      ; we need a local APIC
-    ; local APIC is available
-
-    mov ax, 0x0F00+'0'
     mov [0xB8000], ax
-    mov ax, 0x0F00+'3'
+    mov ax, 0x0F00+'0'
     mov [0xB8002], ax
-    
-    extern cpu_features
-    call cpu_features
-
-
 
 
     ; load GDT
@@ -128,39 +62,22 @@ stublet:
     mov fs, ax
     mov gs, ax
     mov ss, ax
-    jmp 0x08:flush2
-flush2:
+    jmp 0x08:flush2     ; the far-jump loads the code selector which activates the protected mode
+flush2:                 ; now in protected mode
 
+    mov ax, 0x0F00+'3'
+    mov [0xB8000], ax
+    mov ax, 0x0F00+'0'
+    mov [0xB8002], ax
 
-
-    ; param is alreay on the stack
-    call main       ; main(multiboot_info_t *mbi)
+extern main
+    call main           ; main()   (further on in the main kernel)
 
     ; when returning from main: go into endless halt loop
 endless:
     hlt
     jmp endless
 
-NoCPUID:                ; Error Code E1: CPUID instruction is not supported.
-    mov eax, 'E'
-    mov [0xB8000], eax
-    mov eax, '1'
-    mov [0xB8002], eax
-    jmp endless
-
-NoMultiprocessor:
-    mov eax, 'E'
-    mov [0xB8000], eax
-    mov eax, '2'
-    mov [0xB8002], eax
-    jmp endless
-
-NoLocalAPIC:            ; Error Code E2: no local APIC available
-    mov eax, 'E'
-    mov [0xB8000], eax
-    mov eax, '3'
-    mov [0xB8002], eax
-    jmp endless
 
 ; Shortly we will add code for loading the GDT right here!
 
@@ -258,6 +175,8 @@ ISR_EXCEPTION_WITHOUT_ERRCODE 31
 
 extern fault_handler
 isr_common_stub:
+    ; save complete context (multi-purpose&integer, no fpu/sse)
+    ; the structure is also defined in system.h:struct regs
     pusha
     push ds
     push es
@@ -278,7 +197,7 @@ isr_common_stub:
     pop es
     pop ds
     popa
-    add esp, 8      ; clear up error code and ISR number
+    add esp, 8      ; clear up error code and ISR number (two elements)
     iret
 
 

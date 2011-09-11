@@ -1,5 +1,5 @@
-#include <system.h>
-#include <apic.h>
+#include "system.h"
+#include "apic.h"
 
 #ifndef VERBOSE
 #define VERBOSE 1
@@ -8,7 +8,7 @@
 static ptr_t localAPIC =   0xfee00000UL;
 static ptr_t ioAPIC_base = 0xfec00000UL;
 static uint32_t ioAPIC_count = 0;
-extern uint32_t global_mp;
+//extern uint32_t global_mp;
 
 uint32_t read_localAPIC(uint32_t offset)
 {
@@ -52,14 +52,14 @@ void apic_init()
 
 
 
+/*
 
-
-    /* show some infos from the Multiprocessor Table global_mp */
+    / * show some infos from the Multiprocessor Table global_mp * /
     printf("mp floating pointer structure: %x\n", (ptr_t)global_mp);
     apic_mp_t *mp = (apic_mp_t*)(unsigned long)global_mp;
     printf("mp spec version:               %x\n", mp->version);
 
-    //printf("MP System Config Type:         %x\n", (long)mp->features[0]);
+    k/printf("MP System Config Type:         %x\n", (long)mp->features[0]);
     if (mp->features[0] != 0) {
         printf("ERROR: no config table. Default config currently not supported.\n");
         halt();
@@ -72,20 +72,20 @@ void apic_init()
     localAPIC = (ptr_t)act->lapic;
     printf("lapic:                         %x\n", localAPIC);
 
-    /*
+    / *
     char string[32] = {0};
     memcpy(&string[0], act->oem_id, 8);
     string[8] = '/';
     memcpy(&string[9], act->product_id, 12);
     printf("oem_id/product_id:             %s\n", string);
-    */
+    * /
 
     printf("apic entry count               %u\n", act->entry_count);
     unsigned i;
     uint8_t *type = (uint8_t*)((unsigned long)act + sizeof(apic_config_table_t));
     for (i=0; i<act->entry_count; i++) {
         if (*type == 0) {
-            /* Processor entry */
+            / * Processor entry * /
             apic_processor_entry_t *entry = (apic_processor_entry_t*)type;
 
             printf("CPU %d en:%d bp:%d sig:%x feat:%x\n", 
@@ -94,7 +94,7 @@ void apic_init()
 
             type += sizeof(apic_processor_entry_t);
         } else if (*type == 1) {
-            /* Bus entry */
+            / * Bus entry * /
             apic_bus_entry_t *entry = (apic_bus_entry_t*)type;
             char string[7] = {0};
             memcpy(string, &entry->name[0], 6);
@@ -103,7 +103,7 @@ void apic_init()
 
             type += sizeof(apic_bus_entry_t);
         } else if (*type == 2) {
-            /* I/O APIC entry */
+            / * I/O APIC entry * /
             apic_io_entry_t *entry = (apic_io_entry_t*)type;
 
             printf("I/O APIC %d ver=%x en:%d addr=%x\n", 
@@ -114,7 +114,7 @@ void apic_init()
 
             type += sizeof(apic_io_entry_t);
         } else if (*type == 3) {
-            /* I/O Interrupt Asignment entry */
+            / * I/O Interrupt Asignment entry * /
             apic_ioirq_entry_t *entry = (apic_ioirq_entry_t*)type;
 
             printf("I/O Interrupt type=%d bus=%d irq=%d dest=%d/%d\n", 
@@ -122,7 +122,7 @@ void apic_init()
 
             type += sizeof(apic_ioirq_entry_t);
         } else if (*type == 4) {
-            /* Local Interrupt Assignment entry */
+            / * Local Interrupt Assignment entry * /
             apic_ioirq_entry_t *entry = (apic_ioirq_entry_t*)type;
 
             printf("local Interrupt type=%d bus=%d irq=%d dest=%d/%d\n", 
@@ -135,7 +135,7 @@ void apic_init()
         if (VERBOSE && i%10==0) udelay(10000000);
     }
     halt();
-
+*/
 
 
 

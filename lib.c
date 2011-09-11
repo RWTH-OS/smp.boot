@@ -1,4 +1,9 @@
-#include <system.h>
+#include "system.h"
+
+/*
+ * This file is used in 32-Bit Boot Code (REAL MODE) called from startXX.asm and boot32.c
+ * as well as in the final kernel (main.c etc.)
+ */
 
 void *memcpy(void *dest, const void *src, int count)
 {
@@ -56,6 +61,19 @@ void outportb (unsigned short _port, unsigned char _data)
 {
     __asm__ __volatile__ ("outb %1, %0" : : "dN" (_port), "a" (_data));
 }
+
+void udelay(unsigned long us)
+{
+    uint64_t tsc_now, tsc_end;
+    tsc_now = rdtsc();
+    //printf("tsc %lu\n", tsc_now.u64);
+    tsc_end = tsc_now + us * TSC_PER_USEC;
+    while (tsc_now < tsc_end) {
+        tsc_now = rdtsc();
+        //printf("tsc %lu\n", tsc_now.u64);
+    }
+}
+
 
 void halt()
 {
