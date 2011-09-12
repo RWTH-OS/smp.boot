@@ -182,19 +182,20 @@ void reboot(int timeout)
  *  - is the cache activated?
  *  - dynamic memory management (at least, malloc() should be implemented)
  */
-#define DELAY 100000
+#define DELAY 100
 void main(void)
 {
     *((uint32_t*)0xB8000) = 0x0F390F39;     /* "99" top left corner to say: "I've arrived in main()." */
     init_video();
     puts("video initialized\n");
-    udelay(DELAY);
+    printf("found %d CPUs and %d I/O APICs\n", (ptr_t)hw_info.cpu_cnt, (ptr_t)hw_info.ioapic_cnt);
+    //udelay(DELAY);
     idt_install();
     puts("idt installed\n");
-    udelay(DELAY);
+    //udelay(DELAY);
     isr_install();
     puts("isr installed\n");
-    udelay(DELAY);
+    //udelay(DELAY);
     apic_init();
     puts("apic initialized\n");
 

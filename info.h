@@ -43,6 +43,7 @@ typedef struct {
     /* I/O APICs */
     uint32_t ioapic_cnt;
     struct {
+        uint32_t id;
         uint32_t adr;
     } ioapic[MAX_IOAPIC];
 

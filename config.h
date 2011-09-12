@@ -30,6 +30,11 @@
 #define MAX_IOAPIC 1
 
 
+/*
+ * verbosity
+ */
+#define VERBOSE             0
+#define VERBOSE_BOOT        2
 
 /*
  * preliminary: CPU Frequency

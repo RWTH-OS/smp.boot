@@ -62,14 +62,6 @@
     mov ax, 0x0F00+'2'
     mov [0xB8002], ax
     
-    extern cpu_features
-    call cpu_features
-
-    mov ax, 0x0F00+'1'
-    mov [0xB8000], ax
-    mov ax, 0x0F00+'3'
-    mov [0xB8002], ax
-
 
 
 ;void search_mp()
@@ -79,7 +71,7 @@
 
     mov ax, 0x0F00+'1'
     mov [0xB8000], ax
-    mov ax, 0x0F00+'4'
+    mov ax, 0x0F00+'3'
     mov [0xB8002], ax
 
 

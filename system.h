@@ -36,18 +36,9 @@ inline static uint64_t rdtsc(void)
 	return x.u64;
 }
 
-/* main.c */
-void *memcpy(void *dest, const void *src, int count);
-void *memset(void *dest, int val, int count);
-unsigned short *memsetw(unsigned short *dest, unsigned short val, int count);
-int strlen(const char *str);
 
 /* lib.c */
-unsigned char inportb (unsigned short _port);
-void outportb (unsigned short _port, unsigned char _data);
-void udelay(unsigned long us);
-void halt();
-
+#include "lib.h"
 
 #define NULL ((void*)0)
 
