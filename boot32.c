@@ -28,10 +28,17 @@ void init_video();
 void itoa (char *buf, int base, long d);
 void printf (const char *format, ...);
 
-
+/*
+ * read CPU features (mostly from CPUID)
+ * see: http://osdev.berlios.de/cpuid.html
+ */
 void cpu_features()
 {
     uint32_t eax, ebx, ecx, edx;
+    union {
+        char str[13];
+        uint32_t u32[3];
+    } vendor;
     void cpuid(unsigned func)
     {
         asm volatile ("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(func));
@@ -40,12 +47,33 @@ void cpu_features()
     /* it was checked before, that the CPUID instruction is available */
     cpuid(0);
     hw_info.cpuid_max = eax;
+    vendor.u32[0] = ebx;
+    vendor.u32[1] = edx;
+    vendor.u32[2] = ecx;
+    vendor.str[12] = 0;
+    IFVV printf("vendor: %s\n", vendor.str);
+    if (strcmp(vendor.str, "GenuineIntel") == 0) hw_info.cpu_vendor=vend_intel;
+    else if (strcmp(vendor.str, "AuthenticAMD") == 0) hw_info.cpu_vendor=vend_amd;
+    else {
+        printf("Vendor currently not supported: '%s'. Halt.\n");
+        halt();
+    }
+
+    if (hw_info.cpuid_max >= 1) {
+        cpuid(1);
+        hw_info.cpuid_family = (eax>>8)&0x1F;
+        if (hw_info.cpu_vendor == vend_intel && (edx & (1<<19)) ) {
+            hw_info.cpuid_cachelinesize = (ebx >> 8) * 8;
+            // TODO : how to get this info on AMD or Intel w/o this flag?
+        }
+        hw_info.cpuid_lapic_id = (ebx >> 24) & 0xFF;    /* only on P4 and later */
+    }
+    printf("cache line size: %u, local APIC id: %u\n", hw_info.cpuid_cachelinesize, hw_info.cpuid_lapic_id);
+    while(1) {};
 
     cpuid(0x80000000);
     hw_info.cpuid_high_max = eax;
 
-    cpuid(1);
-    hw_info.cpuid_family = (eax>>8)&0x1F;
 
     /*
      * TODO : read info about manufacturer (Intel/AMD), CPU model, cache?, ...

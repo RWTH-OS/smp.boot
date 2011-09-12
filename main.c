@@ -185,10 +185,11 @@ void reboot(int timeout)
 #define DELAY 100
 void main(void)
 {
+    char *vendor[] = {"Intel", "AMD", "unknown"};
     *((uint32_t*)0xB8000) = 0x0F390F39;     /* "99" top left corner to say: "I've arrived in main()." */
     init_video();
     puts("video initialized\n");
-    printf("found %d CPUs and %d I/O APICs\n", (ptr_t)hw_info.cpu_cnt, (ptr_t)hw_info.ioapic_cnt);
+    printf("found %d %s CPUs and %d I/O APICs\n", (ptr_t)hw_info.cpu_cnt, vendor[hw_info.cpu_vendor], (ptr_t)hw_info.ioapic_cnt);
     //udelay(DELAY);
     idt_install();
     puts("idt installed\n");

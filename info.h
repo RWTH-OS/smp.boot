@@ -28,6 +28,9 @@ typedef struct {
     uint32_t cpuid_max;
     uint32_t cpuid_high_max;
     uint32_t cpuid_family;
+    uint32_t cpuid_cachelinesize;
+    uint32_t cpuid_lapic_id;
+    enum {vend_intel, vend_amd} cpu_vendor;
 
     /* BDA and EBDA */
     uint32_t ebda_adr;

@@ -43,6 +43,15 @@ int strlen(const char *str)
     return retval;
 }
 
+int strcmp(const char *a, const char *b) 
+{
+    while (*a != 0 && *b != 0 && (*a == *b)) {
+        a++;
+        b++;
+    }
+    return (*a - *b);
+}
+
 /* We will use this later on for reading from the I/O ports to get data
 *  from devices such as the keyboard. We are using what is called
 *  'inline assembly' in these routines to actually do the work */
