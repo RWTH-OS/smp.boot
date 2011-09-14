@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include "config.h"
+#include "info.h"
 
 /* Verbosity: if not defined here, modules may define their own */
 //#define VERBOSE 0
@@ -55,6 +56,7 @@ void apic_init();
 /* scrn.c */
 void cls();
 void putch(char c);
+void status_putch(int x, int c);
 void puts(char *str);
 void settextcolor(unsigned char forecolor, unsigned char backcolor);
 void init_video();

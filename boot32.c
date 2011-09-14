@@ -17,11 +17,11 @@
 #define MP_FLT_SIGNATURE 0x5f504d5f
 
 
-extern hw_info_t hw_info; 
 
 /* scrn.c */
 void cls();
 void putch(char c);
+void status_putch(int x, int c);
 void puts(char *str);
 void settextcolor(unsigned char forecolor, unsigned char backcolor);
 void init_video();
@@ -32,7 +32,7 @@ void printf (const char *format, ...);
  * read CPU features (mostly from CPUID)
  * see: http://osdev.berlios.de/cpuid.html
  */
-void cpu_features()
+static void cpu_features()
 {
     uint32_t eax, ebx, ecx, edx;
     union {
@@ -69,11 +69,9 @@ void cpu_features()
         hw_info.cpuid_lapic_id = (ebx >> 24) & 0xFF;    /* only on P4 and later */
     }
     printf("cache line size: %u, local APIC id: %u\n", hw_info.cpuid_cachelinesize, hw_info.cpuid_lapic_id);
-    while(1) {};
 
     cpuid(0x80000000);
     hw_info.cpuid_high_max = eax;
-
 
     /*
      * TODO : read info about manufacturer (Intel/AMD), CPU model, cache?, ...
@@ -311,7 +309,7 @@ void get_info()
         
 
 skip_acpi:
-    0;
+    asm ("nop");        /* instruction needed for label */
 
 /*
  * now read multiprocessor tables

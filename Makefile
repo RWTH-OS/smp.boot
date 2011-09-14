@@ -107,7 +107,7 @@ q64 : kernel64.bin
 
 smp : s64
 s32 : kernel32.bin
-	qemu-system-i386 -smp 2 -kernel kernel32.bin
+	qemu -smp 2 -kernel kernel32.bin
 
 s64 : kernel64.bin
 	qemu-system-x86_64 -smp 2 -kernel kernel64.bin

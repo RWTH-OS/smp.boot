@@ -1,16 +1,18 @@
 #include "system.h"
 
-
 /*
  * This file is used in 32-Bit Boot Code (REAL MODE) called from startXX.asm and boot32.c
- * as well as in the final kernel (main.c etc.)
+ * as well as in the final kernel (main.c etc.) for 32- and 64-bit mode.
  */
 
 /* These define our textpointer, our background and foreground
 *  colors (attributes), and x and y cursor coordinates */
-uint16_t *textmemptr;
-uint8_t attrib = 0x0F;
-uint8_t csr_x = 0, csr_y = 0;
+static uint16_t *textmemptr;
+static uint8_t attrib = 0x0F;
+static uint8_t attrib_status = 0x1F;
+static uint8_t csr_x = 0, csr_y = 0;
+static uint8_t screen_h = 25;              /* screen height (currently constant, but may be set according to multiboot info) */
+static uint8_t screen_w = 80;              /* screen width  (currently constant, but may be set according to multiboot info) */
 
 /* Scrolls the screen */
 void scroll(void)
@@ -21,18 +23,18 @@ void scroll(void)
     *  backcolor too */
     blank = 0x20 | (attrib << 8);
 
-    /* Row 25 is the end, this means we need to scroll up */
-    if(csr_y >= 25)
+    /* Row screen_h ( = 25) is the end, this means we need to scroll up */
+    if(csr_y >= screen_h)
     {
         /* Move the current text chunk that makes up the screen
         *  back in the buffer by a line */
-        temp = csr_y - 25 + 1;
-        memcpy ((uint16_t*)textmemptr, (uint16_t*)textmemptr + temp * 80, (25 - temp) * 80 * 2);
+        temp = csr_y - screen_h + 1;         /* skip first line (used as status monitor) */
+        memcpy ((uint16_t*)textmemptr + screen_w, (uint16_t*)textmemptr + (temp+1) * screen_w, (screen_h - temp ) * screen_w * 2);
 
         /* Finally, we set the chunk of memory that occupies
         *  the last line of text to our 'blank' character */
-        memsetw (textmemptr + (25 - temp) * 80, blank, 80);
-        csr_y = 25 - 1;
+        memsetw (textmemptr + (screen_h - temp) * screen_w, blank, screen_w);
+        csr_y = screen_h - 1;
     }
 }
 
@@ -45,7 +47,7 @@ void move_csr(void)
     /* The equation for finding the index in a linear
     *  chunk of memory can be represented by:
     *  Index = [(y * width) + x] */
-    temp = csr_y * 80 + csr_x;
+    temp = csr_y * screen_w + csr_x;
 
     /* This sends a command to indicies 14 and 15 in the
     *  CRT Control Register of the VGA controller. These
@@ -63,17 +65,22 @@ void move_csr(void)
 /* Clears the screen */
 void cls()
 {
-    unsigned blank;
+    uint16_t blank;
     int i;
 
     /* Again, we need the 'short' that will be used to
     *  represent a space with color */
     blank = 0x20 | (attrib << 8);
 
+    /* set background color of status line */
+    for (i=0; i < screen_w; i++)
+        *((uint8_t*)(textmemptr + i)+1) = attrib_status;
+
     /* Sets the entire screen to spaces in our current
     *  color */
-    for(i = 0; i < 25; i++)
-        memsetw (textmemptr + i * 80, blank, 80);
+    /* skip first line (used as status monitor) */
+    for(i = 1; i < screen_h; i++)
+        memsetw (textmemptr + i * screen_w, blank, screen_w);
 
     /* Update out virtual cursor, and then move the
     *  hardware cursor */
@@ -119,14 +126,14 @@ void putch(char c)
     *  Index = [(y * width) + x] */
     else if(c >= ' ')
     {
-        where = textmemptr + (csr_y * 80 + csr_x);
+        where = textmemptr + (csr_y * screen_w + csr_x);
         *where = c | att;	/* Character AND attributes: color */
         csr_x++;
     }
 
     /* If the cursor has reached the edge of the screen's width, we
     *  insert a new line in there */
-    if(csr_x >= 80)
+    if(csr_x >= screen_w)
     {
         csr_x = 0;
         csr_y++;
@@ -135,6 +142,16 @@ void putch(char c)
     /* Scroll the screen if needed, and finally move the cursor */
     scroll();
     move_csr();
+}
+
+/*
+ * This functions puts the character c at the position x in the first line (the status monitor)
+ * The cursor (for putch, puts, printf, et. al.) is NOT moved.
+ * Scrolling does not touch the status monitor line.
+ */
+void status_putch(int x, int c)
+{
+    *((uint16_t*)textmemptr + x) = c | (attrib_status << 8);
 }
 
 /* Uses the above routine to output a string... */
@@ -161,7 +178,9 @@ void init_video(void)
 {
     textmemptr = (unsigned short *)0xB8000;
     cls();
+    csr_y = 1;      /* skip first line (used as status monitor) */
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // the following is from the multiboot specification

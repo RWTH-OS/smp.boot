@@ -186,17 +186,23 @@ void reboot(int timeout)
 void main(void)
 {
     char *vendor[] = {"Intel", "AMD", "unknown"};
-    *((uint32_t*)0xB8000) = 0x0F390F39;     /* "99" top left corner to say: "I've arrived in main()." */
+
+    *((uint32_t*)0xB8000) = 0x1F391F39;     /* "99" top left corner to say: "I've arrived in main()." */
+    //status_putch(6, '/');
+
     init_video();
     puts("video initialized\n");
     printf("found %d %s CPUs and %d I/O APICs\n", (ptr_t)hw_info.cpu_cnt, vendor[hw_info.cpu_vendor], (ptr_t)hw_info.ioapic_cnt);
     //udelay(DELAY);
+
     idt_install();
     puts("idt installed\n");
     //udelay(DELAY);
+
     isr_install();
     puts("isr installed\n");
     //udelay(DELAY);
+
     apic_init();
     puts("apic initialized\n");
 
@@ -210,7 +216,8 @@ void main(void)
     printf("cpuid_family: 0x%x\n", hw_info.cpuid_family);
 
 
-    print_multiboot_info();
+    //int i; for (i=0; i< 40; i++) printf("Test line %d\n", i);
+    //print_multiboot_info();
     //print_smp_iboot32.o nfo();
 
     //test_div_zero();

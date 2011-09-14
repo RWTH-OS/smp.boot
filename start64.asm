@@ -96,7 +96,7 @@ setup:                  ; now 32-bit specific set up
     mov DWORD [edi+0x1f7*8], 0x7003  ; PDT.3[0x1f7] := 0x7003 (Frame 7, R/W, P)
 
     add edi, 0x1000             ; edi = PTE.0.0 (0x5000, Frame 5)
-    mov ebx, 0x0000_0003        ; first frame (0)
+    mov ebx, 0x0000_0003        ; first frame (0) (..03 : Flags for R/W and Present)
     mov ecx, 512                ; loop over 512 entries
 .SetEntry:
     mov DWORD [edi], ebx
@@ -106,14 +106,18 @@ setup:                  ; now 32-bit specific set up
 
     ; for I/O APIC
     mov edi, 0x6000             ; edi = PTE.3.1f6 (0x6000, Frame 6)
-    mov ebx, 0xfec0_0003        ; physical frame
+    mov ebx, 0xfec0_0013        ; physical frame for I/O APIC access (deactivate cache!)
     mov DWORD [edi], ebx        ; set first entry
 
     ; for local APIC
     add edi, 0x1000             ; edi = PDE.3.1f7 (0x7000, Frame 7)
-    mov ebx, 0xfee0_0003        ; physical frame
+    mov ebx, 0xfee0_0013        ; physical frame for local APIC access (deactivate cache!)
     mov DWORD [edi], ebx        ; set first entry
-
+    ; Page Table Flags (e.g. AMD Arch. Programmer's Manual, Vol. 2, Chapter 5.4 Page-Translation-Table Entry Fields)
+    ; Bit 0 : P(resent) 
+    ; Bit 1 : R(ead)/W(rite) : 0 - Read only (also for lower levels of page-directories)
+    ; Bit 3 : Page-Level Writethrough : 0 - Writeback / 1 - Writethrough (TODO: same with Intel?)
+    ; Bit 4 : Page-Level Cache Disable (PCD): 0 - Cache on / 1 - Cache off for this Page
 
     ; enable PAE (cr4[5])
     mov eax, cr4

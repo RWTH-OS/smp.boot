@@ -34,7 +34,8 @@
  * verbosity
  */
 #define VERBOSE             0
-#define VERBOSE_BOOT        2
+#define VERBOSE_BOOT        0
+#define VERBOSE_APIC        2
 
 /*
  * preliminary: CPU Frequency

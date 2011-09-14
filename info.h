@@ -43,6 +43,9 @@ typedef struct {
     } cpu[MAX_CPU];
     uint32_t lapic_adr;
 
+    /* BUS */
+    uint32_t bus_isa_id;        /* what bus-id has the ISA bus (for redirecting the IRQs) */
+
     /* I/O APICs */
     uint32_t ioapic_cnt;
     struct {
@@ -52,6 +55,7 @@ typedef struct {
 
 } hw_info_t;
 
+extern hw_info_t hw_info; 
 
 #endif // INFO_H
 

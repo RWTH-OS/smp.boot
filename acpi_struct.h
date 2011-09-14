@@ -91,6 +91,7 @@ typedef struct {
     uint8_t acpi_disable;
 } __attribute__((packed)) fadt_t;
 
+/*
 static char *fadt_preferred_pm[] = {
     "Unspecified",
     "Desktop",
@@ -102,6 +103,7 @@ static char *fadt_preferred_pm[] = {
     "Performance Server",
     [8 ... 25] = "Reserved"
 };
+*/
 
 
 /*
@@ -124,6 +126,7 @@ typedef struct {
 #define MADT_TYPE_INTSRC    2
 #define MADT_TYPE_LAPIC_NMI 4
 
+/*
 static char *madt_type[] = {
     "Processor Local APIC",
     "I/O APIC",
@@ -139,6 +142,7 @@ static char *madt_type[] = {
     [0xB ... 0x7F] = "Reserved",
     [0x80 ... 0xFF] = "Reserved"
 };
+*/
 
 typedef struct {
     uint8_t type;
