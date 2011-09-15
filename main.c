@@ -101,14 +101,16 @@ static inline void stackdump(int from, int to)
 
 
 
-uint64_t tsc_per_sec = TSC_PER_SEC;
+
+uint64_t tsc_per_usec = TSC_PER_USEC;
+uint64_t tsc_per_sec = TSC_PER_USEC*1000000ul;
 
 void udelay(unsigned long us)
 {
     uint64_t tsc_now, tsc_end;
     tsc_now = rdtsc();
     //printf("tsc %lu\n", tsc_now.u64);
-    tsc_end = tsc_now + (us * tsc_per_sec);
+    tsc_end = tsc_now + (us * tsc_per_usec);
     while (tsc_now < tsc_end) {
         tsc_now = rdtsc();
         //printf("tsc %lu\n", tsc_now.u64);
@@ -189,6 +191,8 @@ void main(void)
 
     *((uint32_t*)0xB8000) = 0x1F391F39;     /* "99" top left corner to say: "I've arrived in main()." */
     //status_putch(6, '/');
+
+    udelay(100);
 
     init_video();
     puts("video initialized\n");

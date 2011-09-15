@@ -66,7 +66,8 @@ GDT:
     dw 0                         ; Limit (low).
     dw 0                         ; Base (low).
     db 0                         ; Base (middle)
-    db 10010000b                 ; Access.       p=1  dpl=00  10  e=0  w=0  a=0  (data segment)
+    db 10010010b                 ; Access.       p=1  dpl=00  10  e=0  w=1  a=0  (data segment)
+                                 ; 14.9.2011, Robert Uhl: w=1 to avoid #GP after interrupt handler
     db 00000000b                 ; Granularity.  g=0  d/b=0  0  avl=0  seg.limit=0000
     db 0                         ; Base (high).
     .Pointer:                    ; The GDT-pointer.
@@ -223,4 +224,15 @@ isr_common_stub:
      iretq
 
 
-
+[BITS 16]
+global smp_start
+global smp_end
+smp_start:
+    MOV ax, 0xB800
+    MOV ds, ax
+    MOV BYTE [ds:0x000E], '.'
+.halt:
+    hlt
+    jmp .halt
+smp_end:
+    nop
