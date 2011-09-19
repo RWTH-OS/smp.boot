@@ -10,14 +10,14 @@ Realm32:
     mov [0xB8002], ax
 
     ; load GDT
-    lgdt [GDT.Pointer]
-    jmp GDT.Code:Realm64      ; set code segment and enter 64-bit long mode
+    lgdt [GDT64.Pointer]
+    jmp GDT64.Code:Realm64      ; set code segment and enter 64-bit long mode
     
 [BITS 64]
 
 Realm64:
     cli
-    mov ax, GDT.Data
+    mov ax, GDT64.Data
     mov ds, ax
     mov es, ax
     mov fs, ax
@@ -47,22 +47,24 @@ endless:
 
 ; Shortly we will add code for loading the GDT right here!
 
-GDT:
-    .Null: equ $ - GDT        ; the null descriptor
+align 64
+GDT64:
+    .Null: equ $ - GDT64        ; the null descriptor
     dw 0                        ; Limit (low)
     dw 0                        ; Base (low)
     db 0                        ; Base (middle)
     db 0                        ; Access
     db 0                        ; Granularity
     db 0                        ; Base (high)
-    .Code : equ $ - GDT
+    ; TODO : aren't the 64-bit GDT entries 16 Bytes long?!
+    .Code : equ $ - GDT64
     dw 0                        ; Limit (low)
     dw 0                        ; Base (low)
     db 0                         ; Base (middle)
     db 10011000b                 ; Access.       p=1  dpl=00  11  c=0  r=0  a=0  (code segment)
     db 00100000b                 ; Granularity.  g=0  d=0  l=1  avl=0  seg.limit=0000    (l=1 -> 64 bit mode)
     db 0                         ; Base (high).
-    .Data: equ $ - GDT         ; The data descriptor.
+    .Data: equ $ - GDT64         ; The data descriptor.
     dw 0                         ; Limit (low).
     dw 0                         ; Base (low).
     db 0                         ; Base (middle)
@@ -71,11 +73,11 @@ GDT:
     db 00000000b                 ; Granularity.  g=0  d/b=0  0  avl=0  seg.limit=0000
     db 0                         ; Base (high).
     .Pointer:                    ; The GDT-pointer.
-    dw $ - GDT - 1             ; Limit.
-    dq GDT                     ; Base.
+    dw $ - GDT64 - 1             ; Limit.
+    dq GDT64                     ; Base.
 
 global GDT_Code
-GDT_Code : equ GDT.Code
+GDT_Code : equ GDT64.Code
 
 ; In just a few pages in this tutorial, we will add our Interrupt
 ; Service Routines (ISRs) right here!
@@ -223,22 +225,10 @@ isr_common_stub:
 
      iretq
 
-[BITS 16]
-global smp_start
-global smp_var
-global smp_end
-smp_start:
-    ; set Segments
-    MOV ax, cs
-    MOV ds, ax                              ; initialize data segment equal to code segment
-    MOV ax, 0xB800
-    MOV es, ax
-    ; print a "I'm here"-Message
-    MOV di, WORD [ds:smp_var-smp_start]     ; access smp_var relative to smp_start!
-    MOV BYTE [es:di], '.'
 
-    ; TODO : switch to 32 bit mode
-
+; Wake-up code for SMP Application Processors
+%include 'smp.asm'
+[BITS 32]
 
     ; TODO : switch to 64 bit mode
     mov eax, 10100000b
@@ -257,21 +247,11 @@ smp_start:
     or ebx, 0x8000_0001
     mov cr0, ebx
 
-    MOV BYTE [es:di], 'o'
-[BITS 32]
-    lgdt [GDT.Pointer]
+    MOV BYTE [0xb800E], 'o'
+    lgdt [GDT64.Pointer]
 
 
-    jmp GDT.Code:Smp64      ; set code segment and enter 64-bit long mode
-
-
-.halt:
-    hlt
-    jmp .halt
-smp_var dw 0x000c                           ; local variable for the position of output
-smp_end:
-    nop
-   
+    jmp GDT64.Code:Smp64      ; set code segment and enter 64-bit long mode
 
 [BITS 64] 
 Smp64:
@@ -280,7 +260,10 @@ Smp64:
     MOV BYTE [0xb800E], 'O'
 
 
-    ; TODO : call smp_main()
-.halt:
+    extern main_smp
+    call main_smp
+.endless:
     hlt
-    jmp .halt
+    jmp .endless
+
+

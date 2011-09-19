@@ -58,7 +58,7 @@ setup:                  ; now 32-bit specific set up
 
 
     ; load GDT
-    lgdt [GDT.Pointer]
+    lgdt [GDT32.Pointer]
     mov ax, 0x10
     mov ds, ax
     mov es, ax
@@ -84,22 +84,22 @@ endless:
 
 ; Shortly we will add code for loading the GDT right here!
 
-GDT:
-    .Null: equ $ - GDT        ; the null descriptor
+GDT32:
+    .Null: equ $ - GDT32        ; the null descriptor
     dw 0                        ; Limit (low)
     dw 0                        ; Base (low)
     db 0                        ; Base (middle)
     db 0                        ; Access
     db 0                        ; Granularity
     db 0                        ; Base (high)
-    .Code : equ $ - GDT
+    .Code : equ $ - GDT32
     dw 0xFFFF                    ; Limit (low)
     dw 0                         ; Base (low)
     db 0                         ; Base (middle)
     db 0x9A                      ; Access.       p=1  dpl=00  11  c=0  r=0  a=0  (code segment)
     db 0xCF                      ; Granularity. 
     db 0                         ; Base (high).
-    .Data: equ $ - GDT         ; The data descriptor.
+    .Data: equ $ - GDT32         ; The data descriptor.
     dw 0xFFFF                    ; Limit (low).
     dw 0                         ; Base (low).
     db 0                         ; Base (middle)
@@ -107,11 +107,11 @@ GDT:
     db 0xCF                      ; Granularity.
     db 0                         ; Base (high).
     .Pointer:                    ; The GDT-pointer.
-    dw $ - GDT - 1             ; Limit.
-    dd GDT                     ; Base.
+    dw $ - GDT32 - 1             ; Limit.
+    dd GDT32                     ; Base.
 
 global GDT_Code
-GDT_Code : equ GDT.Code
+GDT_Code : equ GDT32.Code
 
 
 
@@ -185,7 +185,7 @@ isr_common_stub:
     push es
     push fs
     push gs
-    mov ax, GDT.Code
+    mov ax, GDT32.Code
     mov ds, ax
     mov es, ax
     mov fs, ax
@@ -204,6 +204,18 @@ isr_common_stub:
     iret
 
 
+; Wake-up code for SMP Application Processors
+%include 'smp.asm'
+
+    extern main_smp
+    call main_smp
+.endless:
+    hlt
+    jmp .endless
+   
+
+
+
 
 ; Here is the definition of our BSS section. Right now, we'll use
 ; it just to store the stack. Remember that a stack actually grows
@@ -212,3 +224,6 @@ isr_common_stub:
 SECTION .bss
     resb 8192               ; This reserves 8KBytes of memory here
 _sys_stack:
+
+
+

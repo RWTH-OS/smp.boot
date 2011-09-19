@@ -29,6 +29,10 @@
  */
 #define MAX_IOAPIC 1
 
+/*
+ * page frame for SMP startup code (phys. adr. is SMP_FRAME << 12)
+ */
+#define SMP_FRAME  0x88
 
 /*
  * verbosity
@@ -43,4 +47,4 @@
  */
 #define TSC_PER_USEC (2666ul)
 
-#endif // CONFIG_H
+#endif 

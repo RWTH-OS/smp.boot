@@ -8,6 +8,8 @@
 /* Verbosity: if not defined here, modules may define their own */
 //#define VERBOSE 0
 
+#define PAGE_BITS    12
+#define PAGE_SIZE    (1<<PAGE_BITS)
 
 #if __x86_64__
 struct regs

@@ -14,6 +14,8 @@
 static ptr_t localAPIC =   0xfee00000UL;
 static ptr_t ioAPIC_base = 0xfec00000UL;
 
+volatile unsigned cpu_online = 0;
+
 uint32_t read_localAPIC(uint32_t offset)
 {
     volatile uint32_t *localAPIC_Register = (uint32_t*)(localAPIC+offset);
@@ -56,7 +58,7 @@ void write_ioAPIC(unsigned id, uint32_t offset, uint32_t value)
 
 void apic_init()
 {
-    unsigned i;
+    uint16_t u;
     /* the presence of a localAPIC (CPUID(EAX=1).EDX[bit 9]) was already checked in startXX.asm */
 
     /* local APIC address is in hw_info */
@@ -99,56 +101,61 @@ void apic_init()
 
     /* install initial code to a physical page below 640 kB */
 
-#define SMP_PAGE  0x88
-    uint8_t *ptr = (uint8_t*)(ptr_t)(SMP_PAGE << 12);
+    uint8_t *ptr = (uint8_t*)(ptr_t)(SMP_FRAME << 12);
 
     extern uint8_t smp_start[];
-    extern uint16_t smp_var;
+    extern uint16_t smp_apid;
     extern uint8_t smp_end;
-    ptr_t size = (ptr_t)&smp_end - (ptr_t)&smp_start;
+    uint16_t size = (uint16_t)((ptr_t)&smp_end - (ptr_t)&smp_start);
 
-    uint16_t *ptr_var = (void*)ptr + ((ptr_t)&smp_var - (ptr_t)&smp_start);
+    /* pointer to the variable smp_apid in that page */
+    volatile uint16_t *ptr_apid = (void*)ptr + ((ptr_t)&smp_apid - (ptr_t)&smp_start);
 
     printf("smp_start = 0x%x  \n", (ptr_t)&smp_start);
     printf("smp_end   = 0x%x  \n", (ptr_t)&smp_end);
     printf("smp size  = %u  \n", size);
 
+    if (size > PAGE_SIZE) {
+        printf("WARNING: SMP start code larger than one page!\n");
+        return; 
+    }
 
-    ptr_t u;
+    /* copy code byte-wise (TODO: why not use memcpy?) */
     for (u=0; u<size; u++) {
         ptr[u] = smp_start[u];
     }
     
 
-    *ptr_var = 0x000e;
-
+    /* set up status monitor for APs */
     status_putch(6, '[');
     status_putch(6+hw_info.cpu_cnt, ']');
+
     /* now send IPIs to the APs */
-    for (i = 1; i < hw_info.cpu_cnt; i++) {
-        IFV printf("SMP: try to wake up AP#%u\n", i);
-        IFVV printf("  #%u: send INIT IPI\n", i);
-        write_localAPIC(LAPIC_ICR_HIGH, (uint32_t)hw_info.cpu[i].lapic_id<<24);
-        write_localAPIC(LAPIC_ICR_LOW,  (uint32_t)   (0x5 << 8)|SMP_PAGE);
+    for (u = 1; u < hw_info.cpu_cnt; u++) {
+        *ptr_apid = u;
+        IFV printf("SMP: try to wake up AP#%u\n", u);
+        IFVV printf("  #%u: send INIT IPI\n", u);
+        write_localAPIC(LAPIC_ICR_HIGH, (uint32_t)hw_info.cpu[u].lapic_id<<24);
+        write_localAPIC(LAPIC_ICR_LOW,  (uint32_t)   (0x5 << 8)|SMP_FRAME);
 
-        udelay(10*1000);
+        udelay(10*1000); /* 10 ms */
         
-        IFVV printf("  #%u: send first SIPI\n", i);
-        write_localAPIC(LAPIC_ICR_HIGH, (uint32_t)hw_info.cpu[i].lapic_id<<24);
-        write_localAPIC(LAPIC_ICR_LOW,  (uint32_t)   (0x6 << 8)|SMP_PAGE);
+        IFVV printf("  #%u: send first SIPI\n", u);
+        write_localAPIC(LAPIC_ICR_HIGH, (uint32_t)hw_info.cpu[u].lapic_id<<24);
+        write_localAPIC(LAPIC_ICR_LOW,  (uint32_t)   (0x6 << 8)|SMP_FRAME);
 
-        udelay(200);
+        udelay(200);  /* 200 us */
         
-        IFVV printf("  #%u: send second SIPI\n", i);
-        write_localAPIC(LAPIC_ICR_HIGH, (uint32_t)hw_info.cpu[i].lapic_id<<24);
-        write_localAPIC(LAPIC_ICR_LOW,  (uint32_t)   (0x6 << 8)|SMP_PAGE);
+        IFVV printf("  #%u: send second SIPI\n", u);
+        write_localAPIC(LAPIC_ICR_HIGH, (uint32_t)hw_info.cpu[u].lapic_id<<24);
+        write_localAPIC(LAPIC_ICR_LOW,  (uint32_t)   (0x6 << 8)|SMP_FRAME);
 
-        udelay(100000);
+        udelay(1000 * 1000); /* 10 ms */
         // TODO: check, if CPU is up.
         
-        //ptr[8] += 2;       // TODO : next CPU in next position of status monitor
-        *ptr_var += 2;
     }
+
+    IFV printf("all %u APs called, %u up\n", hw_info.cpu_cnt-1, cpu_online);
 
 
     /* TODO: activate I/O APIC */

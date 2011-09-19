@@ -228,4 +228,14 @@ void main(void)
     printf("The end.\n");
     //reboot(5);
 }
+
+
+extern volatile unsigned cpu_online;
+
+void main_smp(void)
+{
+    cpu_online++;
+    status_putch(6+cpu_online, 'x');
+    while (1) asm volatile ("hlt");
+}
 		
