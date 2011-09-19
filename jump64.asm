@@ -223,16 +223,64 @@ isr_common_stub:
 
      iretq
 
-
 [BITS 16]
 global smp_start
+global smp_var
 global smp_end
 smp_start:
+    ; set Segments
+    MOV ax, cs
+    MOV ds, ax                              ; initialize data segment equal to code segment
     MOV ax, 0xB800
-    MOV ds, ax
-    MOV BYTE [ds:0x000E], '.'
+    MOV es, ax
+    ; print a "I'm here"-Message
+    MOV di, WORD [ds:smp_var-smp_start]     ; access smp_var relative to smp_start!
+    MOV BYTE [es:di], '.'
+
+    ; TODO : switch to 32 bit mode
+
+
+    ; TODO : switch to 64 bit mode
+    mov eax, 10100000b
+    mov cr4, eax
+
+    mov edx, 0x1000         ; know-how (set up in start64.asm, but we can't access symbols from there)
+                            ; TODO: define global option (config.h?) where to put pml4
+    mov cr3, edx
+
+    mov ecx, 0xC000_0080
+    rdmsr
+    or eax, 0x0100
+    wrmsr
+
+    mov ebx, cr0
+    or ebx, 0x8000_0001
+    mov cr0, ebx
+
+    MOV BYTE [es:di], 'o'
+[BITS 32]
+    lgdt [GDT.Pointer]
+
+
+    jmp GDT.Code:Smp64      ; set code segment and enter 64-bit long mode
+
+
 .halt:
     hlt
     jmp .halt
+smp_var dw 0x000c                           ; local variable for the position of output
 smp_end:
     nop
+   
+
+[BITS 64] 
+Smp64:
+    ; TODO : set up a stack pointer rsp
+
+    MOV BYTE [0xb800E], 'O'
+
+
+    ; TODO : call smp_main()
+.halt:
+    hlt
+    jmp .halt

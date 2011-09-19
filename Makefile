@@ -7,6 +7,8 @@ HFILES=$(shell ls *.h)
 CFLAGS=-c -O
 CFLAGS+=-Wall -Wextra -Wno-main -O -fstrength-reduce -fomit-frame-pointer -finline-functions -nostdinc -fno-builtin -I .
 
+SMP=2
+
 C32FLAGS=$(CFLAGS)
 C64FLAGS=$(CFLAGS) -ffreestanding -mcmodel=large -nostdlib -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3 -mno-3dnow
 
@@ -89,8 +91,11 @@ depend : .depend
 	@echo DEPEND $^
 	@$(CC) -MM $^ | sed "s+\(.*\):\(.*\)+\1 \132 \164 :\2+" > $@
 
-# The sed regex prints every line three time: the original (xxx.o : xxx.c yyy.h...)
-# and two versions for 32 and 64 bit objects: (xxx.o32 : xxx.c yyy.h...) and (xxx.o64 : ...).
+# The sed regex prints every target left of ':' three time: the original 
+# and two versions for 32 and 64 bit objects: 
+#     xxx.o : xxx.c yyy.h zzz.h
+# becomes:
+#     xxx.o xxx.o32 xxx.o64 : xxx.c yyy.h zzz.h
 # The part right of the colon is not changed.
 # The regex catches the parts left and right of the ':' in '\(.*\)' (with arbitrary characters)
 # and the catched expressions are issued by \1 and \2 (each tree times, separated by newlin \n)
@@ -107,10 +112,10 @@ q64 : kernel64.bin
 
 smp : s64
 s32 : kernel32.bin
-	qemu -smp 2 -kernel kernel32.bin
+	qemu -smp $(SMP) -kernel kernel32.bin
 
 s64 : kernel64.bin
-	qemu-system-x86_64 -smp 2 -kernel kernel64.bin
+	qemu-system-x86_64 -smp $(SMP) -kernel kernel64.bin
 
 
 # housekeeping

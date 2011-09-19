@@ -85,7 +85,13 @@ void apic_init()
             read_localAPIC(LAPIC_REG_VERSION) && 0xFF, 
             ((read_localAPIC(LAPIC_REG_VERSION)>>16) && 0xFF)+1);
 
+    /*
+     * according to http://www.osdever.net/tutorials/view/multiprocessing-support-for-hobby-oses-explained
+     * the spurios int vector can be ignored (use 0x1F for now...)
+     * and the lowest 4 bits are hardwired to 1 (only 0x?F can be used)
+     */
     write_localAPIC(LAPIC_LVT_ERROR, 0x1F);       /* 0x1F: temporary vector (all other bits: 0) */
+
 
     /* 
      * start APs 
@@ -93,50 +99,56 @@ void apic_init()
 
     /* install initial code to a physical page below 640 kB */
 
-    uint8_t smp_page = 0x88;
-    uint8_t *ptr = (uint8_t*)(ptr_t)(smp_page << 12);
+#define SMP_PAGE  0x88
+    uint8_t *ptr = (uint8_t*)(ptr_t)(SMP_PAGE << 12);
 
     extern uint8_t smp_start[];
+    extern uint16_t smp_var;
     extern uint8_t smp_end;
-    unsigned size = (unsigned)&smp_end - (unsigned)&smp_start;
+    ptr_t size = (ptr_t)&smp_end - (ptr_t)&smp_start;
+
+    uint16_t *ptr_var = (void*)ptr + ((ptr_t)&smp_var - (ptr_t)&smp_start);
 
     printf("smp_start = 0x%x  \n", (ptr_t)&smp_start);
     printf("smp_end   = 0x%x  \n", (ptr_t)&smp_end);
     printf("smp size  = %u  \n", size);
 
-    unsigned u;
+
+    ptr_t u;
     for (u=0; u<size; u++) {
         ptr[u] = smp_start[u];
     }
     
 
+    *ptr_var = 0x000e;
 
+    status_putch(6, '[');
+    status_putch(6+hw_info.cpu_cnt, ']');
     /* now send IPIs to the APs */
     for (i = 1; i < hw_info.cpu_cnt; i++) {
         IFV printf("SMP: try to wake up AP#%u\n", i);
-        status_putch(6, '[');
         IFVV printf("  #%u: send INIT IPI\n", i);
         write_localAPIC(LAPIC_ICR_HIGH, (uint32_t)hw_info.cpu[i].lapic_id<<24);
-        write_localAPIC(LAPIC_ICR_LOW,  (uint32_t)   (0x5 << 8)|smp_page);
+        write_localAPIC(LAPIC_ICR_LOW,  (uint32_t)   (0x5 << 8)|SMP_PAGE);
 
         udelay(10*1000);
         
         IFVV printf("  #%u: send first SIPI\n", i);
         write_localAPIC(LAPIC_ICR_HIGH, (uint32_t)hw_info.cpu[i].lapic_id<<24);
-        write_localAPIC(LAPIC_ICR_LOW,  (uint32_t)   (0x6 << 8)|smp_page);
+        write_localAPIC(LAPIC_ICR_LOW,  (uint32_t)   (0x6 << 8)|SMP_PAGE);
 
         udelay(200);
         
         IFVV printf("  #%u: send second SIPI\n", i);
         write_localAPIC(LAPIC_ICR_HIGH, (uint32_t)hw_info.cpu[i].lapic_id<<24);
-        write_localAPIC(LAPIC_ICR_LOW,  (uint32_t)   (0x6 << 8)|smp_page);
+        write_localAPIC(LAPIC_ICR_LOW,  (uint32_t)   (0x6 << 8)|SMP_PAGE);
 
         udelay(100000);
         // TODO: check, if CPU is up.
         
-        ptr[8] += 2;       // TODO : next CPU in next position of status monitor
+        //ptr[8] += 2;       // TODO : next CPU in next position of status monitor
+        *ptr_var += 2;
     }
-    status_putch(6+i, ']');
 
 
     /* TODO: activate I/O APIC */
