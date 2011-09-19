@@ -5,7 +5,7 @@ O64FILES=$(CFILES:.c=.o64)
 HFILES=$(shell ls *.h)
 
 CFLAGS=-c -O
-CFLAGS+=-Wall -Wextra -Wno-main -O -fstrength-reduce -fomit-frame-pointer -finline-functions -nostdinc -fno-builtin -I .
+CFLAGS+=-Wall -Wextra -Wno-main -O -fstrength-reduce -fomit-frame-pointer -finline-functions -nostdinc -fno-builtin -fno-zero-initialized-in-bss -I .
 
 SMP=2
 

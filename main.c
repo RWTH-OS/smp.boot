@@ -55,11 +55,11 @@ void print_multiboot_info(void)
 
 void cpuid(unsigned func, unsigned *eax, unsigned *ebx, unsigned *ecx, unsigned *edx)
 {
-    asm volatile ("cpuid" : "=a"(*eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(func));
+    asm volatile ("cpuid" : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx) : "a"(func));
 }
 void cpuid2(unsigned func, unsigned subfunc, unsigned *eax, unsigned *ebx, unsigned *ecx, unsigned *edx)
 {
-    asm volatile ("cpuid" : "=a"(*eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(func), "c"(subfunc));
+    asm volatile ("cpuid" : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx) : "a"(func), "c"(subfunc));
 }
 void print_smp_info(void)
 {
