@@ -185,6 +185,10 @@ void reboot(int timeout)
  *  - dynamic memory management (at least, malloc() should be implemented)
  */
 #define DELAY 100
+
+/*
+ * this is the entry function only for the BSP
+ */
 void main(void)
 {
     char *vendor[] = {"Intel", "AMD", "unknown"};
@@ -232,10 +236,17 @@ void main(void)
 
 extern volatile unsigned cpu_online;
 
+/*
+ * this is this entry function for the APs.
+ */
 void main_smp(void)
 {
     cpu_online++;
     status_putch(6+cpu_online, 'x');
+
+    /* TODO : wait on semaphore/flag until the BSP releases our task */
     while (1) asm volatile ("hlt");
+
+
 }
 		

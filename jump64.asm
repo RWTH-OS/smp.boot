@@ -2,6 +2,7 @@
 GLOBAL Realm32
 EXTERN main
 
+; this is entered in IA32e mode (32 bit compatibility mode)
 [BITS 32]
 Realm32:
     mov ax, 0x0F00+'2'
@@ -9,7 +10,7 @@ Realm32:
     mov ax, 0x0F00+'0'
     mov [0xB8002], ax
 
-    ; load GDT
+    ; load GDT for the long mode
     lgdt [GDT64.Pointer]
     jmp GDT64.Code:Realm64      ; set code segment and enter 64-bit long mode
     
@@ -17,6 +18,7 @@ Realm32:
 
 Realm64:
     cli
+    ; set the data segments
     mov ax, GDT64.Data
     mov ds, ax
     mov es, ax
@@ -35,17 +37,14 @@ Realm64:
     mov ax, 0x0F00+'0'
     mov [0xB8002], ax
 
-    ;jmp endless
-
-; switch to 64 bit; preserve multiboot_info!
-
+    
     call main    ; main()
-
+    ; in case, main() should ever return
 endless:
     hlt
     jmp endless
 
-; Shortly we will add code for loading the GDT right here!
+; GDT for 64 bit long mode
 
 align 64
 GDT64:
@@ -228,9 +227,11 @@ isr_common_stub:
 
 ; Wake-up code for SMP Application Processors
 %include 'smp.asm'
+    ; this include file is left by the APs in 32 bit protected mode.
+
 [BITS 32]
 
-    ; TODO : switch to 64 bit mode
+    ; switch to 64 bit mode
     mov eax, 10100000b
     mov cr4, eax
 
@@ -247,18 +248,19 @@ isr_common_stub:
     or ebx, 0x8000_0001
     mov cr0, ebx
 
-    MOV BYTE [0xb800E], 'o'
-    lgdt [GDT64.Pointer]
-
+    lgdt [GDT64.Pointer]      ; same as BSP
 
     jmp GDT64.Code:Smp64      ; set code segment and enter 64-bit long mode
 
 [BITS 64] 
 Smp64:
+    mov ax, GDT64.Data
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
     ; TODO : set up a stack pointer rsp
-
-    MOV BYTE [0xb800E], 'O'
-
 
     extern main_smp
     call main_smp

@@ -3,7 +3,8 @@
  *
  *       Filename:  config.h
  *
- *    Description:  
+ *    Description:  configuration for this kernel.
+ *                  The defines are also made available as config.inc for assembler code.
  *
  *        Version:  1.0
  *        Created:  11.09.2011 10:23:32
@@ -39,7 +40,7 @@
  */
 #define VERBOSE             0
 #define VERBOSE_BOOT        0
-#define VERBOSE_APIC        2
+#define VERBOSE_APIC        1
 
 /*
  * preliminary: CPU Frequency

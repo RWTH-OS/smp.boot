@@ -1,7 +1,20 @@
+; This file is included in start32.asm and jump64.asm
+; It contains the startup code for the APs that is copied to the
+; startup page (below 640 kB) by apic.c:apic_init().
+; The file's last label at the end is left by the CPUs in 32 bit
+; protected mode.
+
 %include "config.inc"
 
+; exported labels for apic.c
 global smp_start, smp_apid, smp_end
+; smp_start    - offset of code to copy
+; smp_end      - end of section (to calculate length)
+; smp_apid     - Application Processor ID (shared variable)
+
+; SMP_FRAME is from config.inc (that is generated from config.h)
 %define SMP_OFFSET   (SMP_FRAME<<12)
+
 
 [BITS 16]
 smp_start:
@@ -33,15 +46,17 @@ smp_start:
     JMP dword GDT_SMP.Code:(SMP_OFFSET+Smp32-smp_start)  
                                             ; far jump into Code Segment, offset now 0
 
+    ; now in 32 bit protected mode
+align 16
 [BITS 32]
 Smp32:
+    ; set data segments
     mov ax, GDT_SMP.Data
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
     mov ss, ax
-    ; TODO: stack pointer!
 
     XOR edi, edi
     MOV di, [SMP_OFFSET+smp_apid-smp_start]
@@ -54,12 +69,12 @@ Smp32:
     add eax, SMP_OFFSET     ; 0x8A, 0x8B, 0x8C, 0x8D, ..., 0x99
     mov esp, eax
 
-    ; now jump into upper memory
+    ; now jump into upper memory (that label is in the original kernel above 1 MB)
     jmp dword GDT_SMP.Code:apStartup32
 
-smp_apid dw 0x0001              ; local variable for the Application Processor's ID
+smp_apid dw 0x0001              ; shared variable for the Application Processor's ID
 
-align 64
+align 16
 GDT_SMP:
     .Null: equ $ - GDT_SMP      ; the null descriptor
     dw 0                        ; Limit (low)
@@ -86,8 +101,9 @@ GDT_SMP:
     dw $ - GDT_SMP - 1                  ; Limit.
     dd SMP_OFFSET + (GDT_SMP-smp_start) ; Base. (linear address)
 
-
 smp_end:
-    nop
+    nop         ; end marker for code to copy
 
+; label in the actual kernel above 1 MB 
 apStartup32:
+; this file is left is 32 bit protected mode

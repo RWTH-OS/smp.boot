@@ -206,15 +206,17 @@ isr_common_stub:
 
 ; Wake-up code for SMP Application Processors
 %include 'smp.asm'
+    ; this include file is left by the APs in 32 bit protected mode.
 
+    ; just call main_smp()
     extern main_smp
     call main_smp
+
+    ; in case, main_smp() ever should return
 .endless:
     hlt
     jmp .endless
    
-
-
 
 
 ; Here is the definition of our BSS section. Right now, we'll use

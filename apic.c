@@ -111,9 +111,7 @@ void apic_init()
     /* pointer to the variable smp_apid in that page */
     volatile uint16_t *ptr_apid = (void*)ptr + ((ptr_t)&smp_apid - (ptr_t)&smp_start);
 
-    printf("smp_start = 0x%x  \n", (ptr_t)&smp_start);
-    printf("smp_end   = 0x%x  \n", (ptr_t)&smp_end);
-    printf("smp size  = %u  \n", size);
+    IFVV printf("smp_start = 0x%x  smp_end = 0x%x  size = %u\n", (ptr_t)&smp_start, (ptr_t)&smp_end, size);
 
     if (size > PAGE_SIZE) {
         printf("WARNING: SMP start code larger than one page!\n");
@@ -150,7 +148,7 @@ void apic_init()
         write_localAPIC(LAPIC_ICR_HIGH, (uint32_t)hw_info.cpu[u].lapic_id<<24);
         write_localAPIC(LAPIC_ICR_LOW,  (uint32_t)   (0x6 << 8)|SMP_FRAME);
 
-        udelay(1000 * 1000); /* 10 ms */
+        udelay(10 * 1000); /* 10 ms */
         // TODO: check, if CPU is up.
         
     }
