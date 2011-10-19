@@ -2,6 +2,7 @@
 #include "multiboot_struct.h"
 #include "info.h"
 #include "smp.h"
+#include "sync.h"
 
 hw_info_t hw_info; 
 
@@ -231,8 +232,18 @@ void main_bsp(void)
     //print_multiboot_info();
     //print_smp_iboot32.o nfo();
 
-    printf("offset of stack[0] : %x\n", &(stack[0]));
-    printf("new[0]: cpu_info = %x cpu_id = %x\n", my_cpu_info(), my_cpu_info()->cpu_id);
+    //printf("offset of stack[0] : %x\n", &(stack[0]));
+    //printf("new[0]: cpu_info = %x cpu_id = %x\n", my_cpu_info(), my_cpu_info()->cpu_id);
+    
+
+    mutex_t m = MUTEX_INITIALIZER;
+    mutex_lock(&m);
+    mutex_unlock(&m);
+    if (mutex_trylock(&m)) {
+        mutex_unlock(&m);
+        printf("mutex works.\n");
+    }
+
 
     //test_div_zero();
     printf("The end.\n");

@@ -28,6 +28,9 @@ typedef struct {
     unsigned cpu_id;     
 } cpu_info_t;
 
+/*
+ * Stack (growing downwards with per-cpu info structure on opposite (lower) end, where the stack should never grow to)
+ */
 typedef union {
     unsigned stack[STACK_FRAMES * 4096 / sizeof(unsigned)];
     cpu_info_t info;

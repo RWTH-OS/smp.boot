@@ -27,6 +27,7 @@ int smp_init(void)
     for (i=0; i<MAX_CPU; i++) {
         stack[i].info.cpu_id = i;
     }
+    return 0;
 }
 
 
