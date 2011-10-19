@@ -187,6 +187,8 @@ void reboot(int timeout)
  *  - dynamic memory management (at least, malloc() should be implemented)
  */
 #define DELAY 100
+barrier_t mainbarrier = BARRIER_INITIALIZER(4);
+flag_t mainflag[3];
 
 /*
  * this is the entry function only for the BSP
@@ -241,9 +243,38 @@ void main_bsp(void)
     mutex_unlock(&m);
     if (mutex_trylock(&m)) {
         mutex_unlock(&m);
-        printf("mutex works.\n");
+        printf("Mutex works.\n");
     }
+    // TODO : test Mutex between CPUs
 
+    barrier(&mainbarrier);
+    udelay(100);
+    barrier(&mainbarrier);
+    barrier(&mainbarrier);
+    barrier(&mainbarrier);
+    printf("Barrier works.\n");
+
+    flag_init(&mainflag[0]);
+    flag_init(&mainflag[1]);
+    flag_init(&mainflag[2]);
+    barrier(&mainbarrier);
+    udelay(100);
+    flag_signal(&mainflag[0]);
+    udelay(100000);
+    flag_signal(&mainflag[1]);
+    udelay(100);
+    flag_signal(&mainflag[2]);
+    udelay(100);
+    flag_signal(&mainflag[0]);
+    udelay(100);
+    flag_signal(&mainflag[0]);
+    udelay(100);
+    flag_signal(&mainflag[0]);
+
+    flag_wait(&mainflag[0]);
+    flag_wait(&mainflag[1]);
+    flag_wait(&mainflag[2]);
+    printf("Flag works.\n");
 
     //test_div_zero();
     printf("The end.\n");
@@ -263,8 +294,26 @@ void main_ap(void)
     status_putch(6+cpu_online, 'x');
 
     //udelay(3000000*my_id);
-    printf("new[%d]: cpu_info = %x cpu_id = %x\n", cpu_online, my_cpu_info(), my_cpu_info()->cpu_id);
+    //printf("new[%d]: cpu_info = %x cpu_id = %x\n", cpu_online, my_cpu_info(), my_cpu_info()->cpu_id);
 
+    barrier(&mainbarrier);
+    barrier(&mainbarrier);
+    udelay(100);
+    barrier(&mainbarrier);
+    udelay(100);
+    barrier(&mainbarrier);
+
+    int id = my_cpu_info()->cpu_id;
+    barrier(&mainbarrier);
+    flag_wait(&mainflag[id-1]);
+    //printf("flag %d signaled\n", id);
+    flag_wait(&mainflag[0]);
+    //printf("flag 0 signaled, got by id %d\n", id);
+    flag_signal(&mainflag[id-1]);
+
+       
+
+    printf("halting AP %d\n", my_cpu_info()->cpu_id);
     /* TODO : wait on semaphore/flag until the BSP releases our task */
     while (1) asm volatile ("hlt");
 }

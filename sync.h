@@ -23,18 +23,27 @@ typedef volatile int mutex_t;
 #define MUTEX_INITIALIZER   (mutex_t)1
 void mutex_init(mutex_t *m);
 void mutex_lock(mutex_t *m);
-int mutex_trylock(mutex_t *m);
 void mutex_unlock(mutex_t *m);
+int mutex_trylock(mutex_t *m);
 
 typedef struct {
     volatile unsigned cnt;
     volatile unsigned epoch;
     unsigned max;
 } barrier_t;
-#define BARRIER_INITIALIZER(max)  (barrier_t){ .cnt=0, .epoch=0, .max=max };
+#define BARRIER_INITIALIZER(m)  (barrier_t){ .cnt=0, .epoch=0, .max=m };
 void barrier_init(barrier_t *b, int max);
 void barrier(barrier_t *b);
 
+typedef struct {
+    volatile unsigned flag;
+    volatile unsigned next;
+} flag_t;
+#define FLAG_INITIALIZER  (flag_t){ .flag=0, .next=0 };
+void flag_init(flag_t *flag);
+void flag_signal(flag_t *flag);
+void flag_wait(flag_t *flag);
+int flag_trywait(flag_t *flag);
 
 
 #endif  // SYNC_H

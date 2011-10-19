@@ -62,3 +62,32 @@ void barrier(barrier_t *b)
     }
 }
 
+
+void flag_init(flag_t *flag)
+{
+    *flag = FLAG_INITIALIZER;
+}
+
+void flag_signal(flag_t *flag)
+{
+    __sync_add_and_fetch(&flag->flag, 1);
+}
+      
+void flag_wait(flag_t *flag)
+{
+    unsigned n = flag->next + 1;
+    while (flag->flag < n) {};
+    __sync_add_and_fetch(&flag->next, 1);
+}
+
+int flag_trywait(flag_t *flag)
+{
+    unsigned n = flag->next + 1;
+    if (flag->flag < n) {
+        return 0;
+    } else {
+        __sync_add_and_fetch(&flag->next, 1);
+        return 1;
+    }
+}
+      
