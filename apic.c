@@ -148,11 +148,13 @@ void apic_init()
         write_localAPIC(LAPIC_ICR_HIGH, (uint32_t)hw_info.cpu[u].lapic_id<<24);
         write_localAPIC(LAPIC_ICR_LOW,  (uint32_t)   (0x6 << 8)|SMP_FRAME);
 
-        udelay(10 * 1000); /* 10 ms */
+        udelay(100 * 1000); /* 100 ms */
         // TODO: check, if CPU is up.
+        //   ...else: what ?!
         
     }
 
+    udelay(100*1000);
     IFV printf("all %u APs called, %u up\n", hw_info.cpu_cnt-1, cpu_online);
 
 

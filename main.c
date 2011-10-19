@@ -1,6 +1,7 @@
 #include "system.h"
 #include "multiboot_struct.h"
 #include "info.h"
+#include "smp.h"
 
 hw_info_t hw_info; 
 
@@ -189,7 +190,7 @@ void reboot(int timeout)
 /*
  * this is the entry function only for the BSP
  */
-void main(void)
+void main_bsp(void)
 {
     char *vendor[] = {"Intel", "AMD", "unknown"};
 
@@ -203,6 +204,8 @@ void main(void)
     printf("found %d %s CPUs and %d I/O APICs\n", (ptr_t)hw_info.cpu_cnt, vendor[hw_info.cpu_vendor], (ptr_t)hw_info.ioapic_cnt);
     //udelay(DELAY);
 
+    smp_init();
+
     idt_install();
     puts("idt installed\n");
     //udelay(DELAY);
@@ -210,7 +213,7 @@ void main(void)
     isr_install();
     puts("isr installed\n");
     //udelay(DELAY);
-
+    
     apic_init();
     puts("apic initialized\n");
 
@@ -228,6 +231,9 @@ void main(void)
     //print_multiboot_info();
     //print_smp_iboot32.o nfo();
 
+    printf("offset of stack[0] : %x\n", &(stack[0]));
+    printf("new[0]: cpu_info = %x cpu_id = %x\n", my_cpu_info(), my_cpu_info()->cpu_id);
+
     //test_div_zero();
     printf("The end.\n");
     //reboot(5);
@@ -239,14 +245,16 @@ extern volatile unsigned cpu_online;
 /*
  * this is this entry function for the APs.
  */
-void main_smp(void)
+void main_ap(void)
 {
+
     cpu_online++;
     status_putch(6+cpu_online, 'x');
 
+    //udelay(3000000*my_id);
+    printf("new[%d]: cpu_info = %x cpu_id = %x\n", cpu_online, my_cpu_info(), my_cpu_info()->cpu_id);
+
     /* TODO : wait on semaphore/flag until the BSP releases our task */
     while (1) asm volatile ("hlt");
-
-
 }
 		

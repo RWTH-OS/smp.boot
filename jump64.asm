@@ -1,6 +1,6 @@
+%include "config.inc"
 
 GLOBAL Realm32
-EXTERN main
 
 ; this is entered in IA32e mode (32 bit compatibility mode)
 [BITS 32]
@@ -31,6 +31,11 @@ Realm64:
     ; Realm32 is 0x140000 (0x40000 above 1MB).
     ; Attention: below 1MB is I/O space (no RAM)
 
+    extern stack            ; stack_t stack[MAX_CPUS] (in smp.c / smp.h)
+    mov rdi, STACK_FRAMES*4096  ; stack size
+    add rdi, stack          ; add offset of first stack
+    mov rsp, rdi            ; set Stack Pointer
+
 
     mov ax, 0x0F00+'3'
     mov [0xB8000], ax
@@ -38,7 +43,8 @@ Realm64:
     mov [0xB8002], ax
 
     
-    call main    ; main()
+EXTERN main_bsp
+    call main_bsp    ; main()
     ; in case, main() should ever return
 endless:
     hlt
@@ -226,8 +232,9 @@ isr_common_stub:
 
 
 ; Wake-up code for SMP Application Processors
-%include 'smp.asm'
+%include 'start_smp.inc'
     ; this include file is left by the APs in 32 bit protected mode.
+    ; so code must follow to further set up the APs
 
 [BITS 32]
 
@@ -262,8 +269,8 @@ Smp64:
     mov ss, ax
     ; TODO : set up a stack pointer rsp
 
-    extern main_smp
-    call main_smp
+    extern main_ap
+    call main_ap
 .endless:
     hlt
     jmp .endless

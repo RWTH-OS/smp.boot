@@ -81,7 +81,7 @@ setup:                  ; now 32-bit specific set up
     mov cr3, edi                ; set cr3 to the PML4T
     xor eax, eax
     mov ecx, 7*1024             ; x * 1k  ( x: number of pages for page tables needed)
-    rep stosd                   ; 4 * x * 1k   (4: storing dw's (4B))
+    rep stosd                   ; 4 * x * 1k   (4: storing dw's (4B) from eax := 0  )
 
     ; initialize identity paging (Flags: R/W (read and write), P (present))
     mov edi, cr3                ; edi = PML4T (0x1000)
@@ -103,6 +103,7 @@ setup:                  ; now 32-bit specific set up
     add ebx, 0x1000             ; next page: +4k
     add edi, 8                  ; next entry: +8
     loop .SetEntry              ; counting ECX down (from 512)
+    ; so far, the first 512 * 4k = 2 MB are set up.
 
     ; for I/O APIC
     mov edi, 0x6000             ; edi = PTE.3.1f6 (0x6000, Frame 6)

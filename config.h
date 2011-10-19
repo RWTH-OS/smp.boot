@@ -36,6 +36,11 @@
 #define SMP_FRAME  0x88
 
 /*
+ * Stack size for each CPU (number of frames (4 kB); total stack size is 4096 * STACK_FRAMES))
+ */
+#define STACK_FRAMES   2
+
+/*
  * verbosity
  */
 #define VERBOSE             0

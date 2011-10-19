@@ -1,3 +1,5 @@
+%include "config.inc"
+
 ; This is the kernel's entry point. We could either call main here,
 ; or we can use this to setup the stack or other nice stuff, like
 ; perhaps setting up the GDT and segments. Please note that interrupts
@@ -6,7 +8,13 @@
 global start
 
 start:
-    mov esp, _sys_stack     ; This points the stack to our new stack area
+    ;mov esp, _sys_stack     ; This points the stack to our new stack area
+
+    extern stack            ; stack_t stack[MAX_CPUS] (in smp.c / smp.h)
+    mov edi, STACK_FRAMES*4096  ; stack size
+    add edi, stack          ; add offset of first stack
+    mov esp, edi            ; set Stack Pointer
+
     jmp stublet
 
 ; This part MUST be 4byte aligned, so we solve that issue using 'ALIGN 4'
@@ -73,8 +81,8 @@ flush2:                 ; now in protected mode
     mov ax, 0x0F00+'0'
     mov [0xB8002], ax
 
-extern main
-    call main           ; main()   (further on in the main kernel)
+extern main_bsp
+    call main_bsp         ; main()   (further on in the main kernel)
 
     ; when returning from main: go into endless halt loop
 endless:
@@ -205,12 +213,12 @@ isr_common_stub:
 
 
 ; Wake-up code for SMP Application Processors
-%include 'smp.asm'
+%include 'start_smp.inc'
     ; this include file is left by the APs in 32 bit protected mode.
 
     ; just call main_smp()
-    extern main_smp
-    call main_smp
+    extern main_ap
+    call main_ap
 
     ; in case, main_smp() ever should return
 .endless:
@@ -223,9 +231,9 @@ isr_common_stub:
 ; it just to store the stack. Remember that a stack actually grows
 ; downwards, so we declare the size of the data before declaring
 ; the identifier '_sys_stack'
-SECTION .bss
-    resb 8192               ; This reserves 8KBytes of memory here
-_sys_stack:
+;SECTION .bss
+;    resb 8192               ; This reserves 8KBytes of memory here
+;_sys_stack:
 
 
 

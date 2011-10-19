@@ -24,7 +24,7 @@ accessible in the actual kernel. Further on, the code must be position
 independent code or already be relocated to the target page. This is realized
 by using segments in 16 bit mode and calculating the offset from the beginning
 label of the code. In 32 bit mode, the offset of the smp start page is
-included. The common code for both architectures is in smp.asm which is
+included. The common code for both architectures is in start_smp.inc which is
 included directly in start32.asm and jump64.asm. The file ends with a label so
 that the APs leave the included file in 32 bit protected mode. The 32 bit
 kernel just jumps to main_smp() function. The 64 bit kernel activates long mode

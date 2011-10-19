@@ -1,10 +1,11 @@
+; vim: set ft=asm:
+
 ; This file is included in start32.asm and jump64.asm
 ; It contains the startup code for the APs that is copied to the
 ; startup page (below 640 kB) by apic.c:apic_init().
 ; The file's last label at the end is left by the CPUs in 32 bit
 ; protected mode.
 
-%include "config.inc"
 
 ; exported labels for apic.c
 global smp_start, smp_apid, smp_end
@@ -62,12 +63,22 @@ Smp32:
     MOV di, [SMP_OFFSET+smp_apid-smp_start]
     MOV BYTE [0xB800C+2*edi], '3'
 
-    ; set up stack (use frames above SMP_OFFSET
-    mov eax, edi            ; 1, 2, 3, ... 16(MAX_CPU)
-    inc eax                 ; 2, 3, 4, ... 17
-    shl eax, 12             ; 0x2000, 0x3000, 0x4000, ..., 0x11000
-    add eax, SMP_OFFSET     ; 0x8A, 0x8B, 0x8C, 0x8D, ..., 0x99
-    mov esp, eax
+    ;; set up stack (use frames above SMP_OFFSET)
+    ;; each AP has an initial stack of 0x1000 (4 kB).
+    ;mov eax, edi            ; 1, 2, 3, ... 16(MAX_CPU)
+    ;inc eax                 ; 2, 3, 4, ... 17
+    ;shl eax, 12             ; 0x2000, 0x3000, 0x4000, ..., 0x11000
+    ;add eax, SMP_OFFSET     ; 0x8A, 0x8B, 0x8C, 0x8D, ..., 0x99
+    ;mov esp, eax
+
+    ; set up stack (from smp.c)
+    extern stack            ; stack_t stack[MAX_CPUS] (in smp.c / smp.h)
+    inc edi                 ; APIC_ID is in EDI, Stackpointer should be placed at the end of the Array.
+    mov eax, STACK_FRAMES*4096  ; stack size
+    imul edi, eax           ; multiply id with stack-size (index * size)
+    add edi, stack          ; add offset of first stack
+    mov esp, edi            ; set Stack Pointer
+
 
     ; now jump into upper memory (that label is in the original kernel above 1 MB)
     jmp dword GDT_SMP.Code:apStartup32
