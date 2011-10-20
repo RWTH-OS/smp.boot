@@ -51,5 +51,8 @@ static inline cpu_info_t * my_cpu_info()
     return (cpu_info_t *)p;
 }
 
+void smp_status(char c);
+
+
 #endif // SMP_H
 

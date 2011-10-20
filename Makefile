@@ -15,10 +15,10 @@ CFLAGS+=-fstrength-reduce -fomit-frame-pointer -finline-functions -nostdinc -fno
 # -fomit-frame-pointer
 # -finline-functions
 # -fnostdinc            - don't include standards libs
-# -no-builtin           - don't use builtin functions (?)
+# -no-builtin           - don't use builtin functions for libc (memcpy etc.), we have our own implementations.
 # -no-zero-initialized-in-bss 
 #  						- don't move variables, that are initialized with 0 (zero) to the .bss segment
-#  						  because that will not be filled with zeros (the kernel is not loaded by a ld)
+#  						  because that will not be filled with zeros (the kernel is not loaded by ld.so)
 CFLAGS+=-I .
 # -I . 					- add include directory '.'
 
@@ -73,6 +73,10 @@ jump64.o : jump64.asm start_smp.inc config.inc
 	@echo NASM $< '->' $@
 	@nasm -f elf64 -o $@ $<
 
+scrn.o : scrn.c system.h
+	@echo CC32 $< '->' $@
+	@$(CC32) $(C32FLAGS) -DEARLY -o $@ $<
+
 # C files into 32 bit objects
 $(O32FILES) : %.o32 : %.c
 	@echo CC32 $< '->' $@
@@ -114,9 +118,9 @@ kernel64.o : start64.o kernel64.section
 
 # finally link 32 bit start code with implanted .KERNEL64 (opaque blob)
 # to a relocated ELF32-multiboot kernel image
-kernel64.bin : link_start64.ld kernel64.symbols kernel64.o boot32.o scrn.o32 lib.o32
+kernel64.bin : link_start64.ld kernel64.symbols kernel64.o boot32.o scrn.o lib.o32
 	@echo LD $^ '->' $@
-	@ld -melf_i386 -T link_start64.ld -T kernel64.symbols   kernel64.o boot32.o scrn.o32 lib.o32 -o kernel64.bin 
+	@ld -melf_i386 -T link_start64.ld -T kernel64.symbols   kernel64.o boot32.o scrn.o lib.o32 -o kernel64.bin 
 
 depend : .depend
 .depend : $(CFILES) boot32.c 

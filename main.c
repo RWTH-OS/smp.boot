@@ -110,6 +110,7 @@ uint64_t tsc_per_sec = TSC_PER_USEC*1000000ul;
 void udelay(unsigned long us)
 {
     uint64_t tsc_now, tsc_end;
+    //smp_status('u');
     tsc_now = rdtsc();
     //printf("tsc %lu\n", tsc_now.u64);
     tsc_end = tsc_now + (us * tsc_per_usec);
@@ -117,6 +118,7 @@ void udelay(unsigned long us)
         tsc_now = rdtsc();
         //printf("tsc %lu\n", tsc_now.u64);
     }
+    //smp_status('.');
 }
 /* deactivate warning on divide-by-zero, b/c this is intentional in this function */
 #pragma GCC diagnostic ignored "-Wdiv-by-zero"
@@ -149,6 +151,7 @@ void test_div_zero()
     udelay(500000);
 }
 
+#if 0
 void reboot(int timeout)
 {
     int i;
@@ -177,18 +180,19 @@ void reboot(int timeout)
     while (1) {
         asm volatile ("hlt");
     }
-    
-
-
 }
+#endif
+
 /*
  * TODO's
  *  - is the cache activated?
  *  - dynamic memory management (at least, malloc() should be implemented)
  */
 #define DELAY 100
-barrier_t mainbarrier = BARRIER_INITIALIZER(4);
-flag_t mainflag[3];
+barrier_t mainbarrier = BARRIER_INITIALIZER(MAX_CPU); /* max is later reduced to the actual number of CPUs */
+
+extern volatile unsigned cpu_online;
+void main();
 
 /*
  * this is the entry function only for the BSP
@@ -199,8 +203,6 @@ void main_bsp(void)
 
     *((uint32_t*)0xB8000) = 0x1F391F39;     /* "99" top left corner to say: "I've arrived in main()." */
     //status_putch(6, '/');
-
-    udelay(100);
 
     init_video();
     puts("video initialized\n");
@@ -220,14 +222,14 @@ void main_bsp(void)
     apic_init();
     puts("apic initialized\n");
 
-    puts("my kernel is running in main now...\n");
+    puts("my kernel is running in main_bsp now...\n");
 
     //unsigned eax, ebx, ecx, edx;
     //cpuid(0x80000001, &eax, &ebx, &ecx, &edx);
     //printf("support 1 GB pages: %d\n", edx & (1<<26));
     
-    printf("cpuid_max: 0x%x   cpuid_high_max: 0x%x\n", hw_info.cpuid_max, hw_info.cpuid_high_max);
-    printf("cpuid_family: 0x%x\n", hw_info.cpuid_family);
+    //printf("cpuid_max: 0x%x   cpuid_high_max: 0x%x\n", hw_info.cpuid_max, hw_info.cpuid_high_max);
+    //printf("cpuid_family: 0x%x\n", hw_info.cpuid_family);
 
 
     //int i; for (i=0; i< 40; i++) printf("Test line %d\n", i);
@@ -238,83 +240,129 @@ void main_bsp(void)
     //printf("new[0]: cpu_info = %x cpu_id = %x\n", my_cpu_info(), my_cpu_info()->cpu_id);
     
 
-    mutex_t m = MUTEX_INITIALIZER;
-    mutex_lock(&m);
-    mutex_unlock(&m);
-    if (mutex_trylock(&m)) {
-        mutex_unlock(&m);
-        printf("Mutex works.\n");
-    }
-    // TODO : test Mutex between CPUs
+    cpu_online++;       // the BSP is there, too
+    mainbarrier.max = cpu_online;
+    barrier(&mainbarrier);
 
-    barrier(&mainbarrier);
-    udelay(100);
-    barrier(&mainbarrier);
-    barrier(&mainbarrier);
-    barrier(&mainbarrier);
-    printf("Barrier works.\n");
-
-    flag_init(&mainflag[0]);
-    flag_init(&mainflag[1]);
-    flag_init(&mainflag[2]);
-    barrier(&mainbarrier);
-    udelay(100);
-    flag_signal(&mainflag[0]);
-    udelay(100000);
-    flag_signal(&mainflag[1]);
-    udelay(100);
-    flag_signal(&mainflag[2]);
-    udelay(100);
-    flag_signal(&mainflag[0]);
-    udelay(100);
-    flag_signal(&mainflag[0]);
-    udelay(100);
-    flag_signal(&mainflag[0]);
-
-    flag_wait(&mainflag[0]);
-    flag_wait(&mainflag[1]);
-    flag_wait(&mainflag[2]);
-    printf("Flag works.\n");
-
-    //test_div_zero();
-    printf("The end.\n");
-    //reboot(5);
+    main();
 }
 
 
-extern volatile unsigned cpu_online;
 
 /*
  * this is this entry function for the APs.
  */
 void main_ap(void)
 {
-
     cpu_online++;
-    status_putch(6+cpu_online, 'x');
+    //status_putch(6+cpu_online, 'x');
+    smp_status('x');
 
     //udelay(3000000*my_id);
     //printf("new[%d]: cpu_info = %x cpu_id = %x\n", cpu_online, my_cpu_info(), my_cpu_info()->cpu_id);
 
     barrier(&mainbarrier);
-    barrier(&mainbarrier);
+    main();
+}
+
+#include "payload.h"
+void stop();
+
+/*
+ * this is the main function that is entered by all CPUs after the initialization 
+ * (no difference between BSP and AP, anymore)
+ */
+void main()
+{
+    //unsigned myid = my_cpu_info()->cpu_id;
+    //printf("CPU %d/%d running in main()\n", myid, cpu_online);
+
+    /* call a payload */
+    payload_benchmark();
+
+    /* all CPUs leaving the payload: go to sleep */
+    stop();
+}
+
+#define KBRD_INTRFC  0x64
+#define KBRD_BIT_KDATA 0
+#define KBRD_BIT_UDATA 1
+
+#define KBRD_IO  0x60
+#define KBRD_RESET 0xFE
+
+#define bit(n)   (1 << (n))
+#define check_flag(flags, n)  ((flags) & bit(n))
+
+void reboot()
+{
+    int s= 9 + cpu_online, i;
+    
+    status_putch(s++, 'R');
+    status_putch(s++, 'e');
+    status_putch(s++, 'b');
+    status_putch(s++, 'o');
+    status_putch(s++, 'o');
+    status_putch(s++, 't');
+    status_putch(s++, ' ');
+    status_putch(s++, 'i');
+    status_putch(s++, 'n');
+    status_putch(s++, ' ');
+
+    for (i=1; i<=5; i++) {
+        status_putch(s++, '6'-i);
+        udelay(1000*1000);
+    }
+    status_putch(s++, '0');
+    //udelay(10);
+    smp_status('1');
+
+#if 0
+    char temp;
+    asm volatile ("CLI");
+    /* empty keyboard buffer */
+    do {
+        temp = inportb(KBRD_INTRFC);
+        if (check_flag(temp, KBRD_BIT_KDATA) != 0) {
+            inportb(KBRD_IO);
+        }
+    } while (check_flag(temp, KBRD_BIT_UDATA) != 0);
+
+    /* issue reboot command */
+    outportb(KBRD_INTRFC, KBRD_RESET);
+
     udelay(100);
-    barrier(&mainbarrier);
-    udelay(100);
-    barrier(&mainbarrier);
+#endif
 
-    int id = my_cpu_info()->cpu_id;
-    barrier(&mainbarrier);
-    flag_wait(&mainflag[id-1]);
-    //printf("flag %d signaled\n", id);
-    flag_wait(&mainflag[0]);
-    //printf("flag 0 signaled, got by id %d\n", id);
-    flag_signal(&mainflag[id-1]);
+    smp_status('2');
 
-       
+    static struct {
+        unsigned short length;
+        unsigned long base;
+    } __attribute__((__packed__)) IDTR;
+ 
+    IDTR.length = 0;
+    IDTR.base = (unsigned long)0;
+    asm( "lidt %0" : : "m"(IDTR) );
+    asm volatile ("int $32");
 
-    printf("halting AP %d\n", my_cpu_info()->cpu_id);
-    /* TODO : wait on semaphore/flag until the BSP releases our task */
-    while (1) asm volatile ("hlt");
+    //udelay(100);
+    smp_status('_');
+
+    asm volatile ("hlt");
+}
+void stop()
+{
+    static unsigned cpus_halted = 0;
+
+    cpus_halted++;
+    printf("halt CPU %d (now %d down)\n", my_cpu_info()->cpu_id, cpus_halted);
+    smp_status('_');
+    if (cpus_halted < cpu_online) {
+        while (1) asm volatile ("hlt");
+    } else {
+        reboot();
+    }
+
 }
 		

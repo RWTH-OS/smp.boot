@@ -125,11 +125,13 @@ void apic_init()
     
 
     /* set up status monitor for APs */
-    status_putch(6, '[');
+    status_putch(5, '[');
+    status_putch(6, '.');
     status_putch(6+hw_info.cpu_cnt, ']');
 
     /* now send IPIs to the APs */
     for (u = 1; u < hw_info.cpu_cnt; u++) {
+        status_putch(6+u, '^');
         *ptr_apid = u;
         IFV printf("SMP: try to wake up AP#%u\n", u);
         IFVV printf("  #%u: send INIT IPI\n", u);

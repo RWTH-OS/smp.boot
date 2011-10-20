@@ -17,6 +17,7 @@
  */
 
 #include "smp.h"
+#include "system.h"
 
 
 stack_t stack[MAX_CPU] __attribute__(( aligned(STACK_FRAMES*4096) ));
@@ -28,6 +29,12 @@ int smp_init(void)
         stack[i].info.cpu_id = i;
     }
     return 0;
+}
+
+
+void smp_status(char c)
+{
+    status_putch(6+my_cpu_info()->cpu_id, c);
 }
 
 

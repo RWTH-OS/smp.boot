@@ -17,6 +17,7 @@
  */
 
 #include "sync.h"
+#include "smp.h"
 
 
 
@@ -28,7 +29,9 @@ void mutex_init(mutex_t *m)
 
 void mutex_lock(mutex_t *m)
 {
+    smp_status('m');
     while (!__sync_bool_compare_and_swap(m, 1, 0)) {};
+    smp_status('.');
 }
 
 int mutex_trylock(mutex_t *m)
@@ -51,15 +54,23 @@ void barrier_init(barrier_t *b, int max)
 void barrier(barrier_t *b)
 {
     unsigned e = b->epoch;
-    unsigned c = __sync_add_and_fetch(&(b->cnt), 1);
+    /* epoch e ends, enter into episode. As no participant can leave the episode, every member gets the same e here */
+    unsigned c = __sync_add_and_fetch(&(b->cnt), 1); 
+    smp_status('b');
+    /* every participant increments the counter and gets a unique ID into c */
     if (c == b->max) {
-        /* release by incrementing epoch */
+        /* last: become master for this episode: */
+        /* reset counter (all others have already their ID and wait in the episode for the epoch to change)  */
         b->cnt = 0;
-        b->epoch++;
+        /* and release the others by incrementing the epoch (this end the episode and start a new epoch) */
+        b->epoch++;     /* overflow is no problem, because the others wait while the epoch is equal */
     } else {
+        /* not last:  */
         /* wait for epoch to be incremented */
         while (e == b->epoch) {};
     }
+    /* episode ends, next epoch (e+1) begins */
+    smp_status('.');
 }
 
 
@@ -76,8 +87,10 @@ void flag_signal(flag_t *flag)
 void flag_wait(flag_t *flag)
 {
     unsigned n = flag->next + 1;
+    smp_status('f');
     while (flag->flag < n) {};
     __sync_add_and_fetch(&flag->next, 1);
+    smp_status('.');
 }
 
 int flag_trywait(flag_t *flag)

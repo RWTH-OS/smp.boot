@@ -1,5 +1,9 @@
 #include "system.h"
 
+#ifndef EARLY
+#include "sync.h"
+#endif
+
 /*
  * This file is used in 32-Bit Boot Code (REAL MODE) called from startXX.asm and boot32.c
  * as well as in the final kernel (main.c etc.) for 32- and 64-bit mode.
@@ -235,6 +239,10 @@ void itoa (char *buf, int base, long d)
 
  /* Format a string and print it on the screen, just like the libc
    function printf. */
+#ifndef EARLY
+mutex_t mutex_printf = MUTEX_INITIALIZER;
+#endif
+
 void
 printf (const char *format, ...)
 {
@@ -243,6 +251,9 @@ printf (const char *format, ...)
   unsigned long value;
   __builtin_va_list ap;
 
+# ifndef EARLY
+  mutex_lock(&mutex_printf);
+# endif
   __builtin_va_start(ap, format);
 
   while ((c = *format++) != 0)
@@ -286,5 +297,8 @@ printf (const char *format, ...)
         }
     }
     __builtin_va_end(ap);
+# ifndef EARLY
+  mutex_unlock(&mutex_printf);
+# endif
 }
 
