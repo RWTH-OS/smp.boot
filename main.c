@@ -355,8 +355,12 @@ void reboot()
 void stop()
 {
     static unsigned cpus_halted = 0;
+    static mutex_t m = MUTEX_INITIALIZER;
 
+    mutex_lock(&m);
     cpus_halted++;
+    mutex_unlock(&m);
+
     printf("halt CPU %d (now %d down)\n", my_cpu_info()->cpu_id, cpus_halted);
     smp_status('_');
     if (cpus_halted < cpu_online) {
