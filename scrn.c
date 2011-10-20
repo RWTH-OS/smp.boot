@@ -250,11 +250,11 @@ printf (const char *format, ...)
   char buf[20];
   unsigned long value;
   __builtin_va_list ap;
+  __builtin_va_start(ap, format);
 
 # ifndef EARLY
   mutex_lock(&mutex_printf);
 # endif
-  __builtin_va_start(ap, format);
 
   while ((c = *format++) != 0)
     {

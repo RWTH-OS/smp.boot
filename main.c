@@ -110,7 +110,7 @@ uint64_t tsc_per_sec = TSC_PER_USEC*1000000ul;
 void udelay(unsigned long us)
 {
     uint64_t tsc_now, tsc_end;
-    //smp_status('u');
+    smp_status('u');
     tsc_now = rdtsc();
     //printf("tsc %lu\n", tsc_now.u64);
     tsc_end = tsc_now + (us * tsc_per_usec);
@@ -118,7 +118,7 @@ void udelay(unsigned long us)
         tsc_now = rdtsc();
         //printf("tsc %lu\n", tsc_now.u64);
     }
-    //smp_status('.');
+    smp_status('.');
 }
 /* deactivate warning on divide-by-zero, b/c this is intentional in this function */
 #pragma GCC diagnostic ignored "-Wdiv-by-zero"
@@ -205,11 +205,12 @@ void main_bsp(void)
     //status_putch(6, '/');
 
     init_video();
+    smp_init();
+
     puts("video initialized\n");
     printf("found %d %s CPUs and %d I/O APICs\n", (ptr_t)hw_info.cpu_cnt, vendor[hw_info.cpu_vendor], (ptr_t)hw_info.ioapic_cnt);
     //udelay(DELAY);
 
-    smp_init();
 
     idt_install();
     puts("idt installed\n");
