@@ -4,7 +4,7 @@ O32FILES=$(CFILES:.c=.o32)
 O64FILES=$(CFILES:.c=.o64)
 HFILES=$(shell ls *.h)
 
-CFLAGS=-c -O
+CFLAGS=-c -O0
 # -O          - basic optimization
 CFLAGS+=-Wall -Wextra -Wno-main 
 # -Wall       - give warnings (on most checks)

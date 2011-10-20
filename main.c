@@ -316,9 +316,8 @@ void reboot()
     }
     status_putch(s++, '0');
     //udelay(10);
-    smp_status('1');
 
-#if 0
+#if 1
     char temp;
     asm volatile ("CLI");
     /* empty keyboard buffer */
@@ -332,11 +331,11 @@ void reboot()
     /* issue reboot command */
     outportb(KBRD_INTRFC, KBRD_RESET);
 
-    udelay(100);
+    udelay(1000*1000);
+    status_putch(s++, '+');
 #endif
 
-    smp_status('2');
-
+#if 1
     static struct {
         unsigned short length;
         unsigned long base;
@@ -346,6 +345,10 @@ void reboot()
     IDTR.base = (unsigned long)0;
     asm( "lidt %0" : : "m"(IDTR) );
     asm volatile ("int $32");
+
+    udelay(1000*1000);
+    status_putch(s++, '+');
+#endif
 
     //udelay(100);
     smp_status('_');
