@@ -4,6 +4,9 @@
 #include "smp.h"
 #include "sync.h"
 
+#define IFV   if (VERBOSE > 0 || VERBOSE_APIC > 0)
+#define IFVV  if (VERBOSE > 1 || VERBOSE_APIC > 1)
+
 hw_info_t hw_info; 
 
 void print_multiboot_info(void) 
@@ -102,6 +105,20 @@ static inline void stackdump(int from, int to)
 }
 
 
+void multiboot_info(void)
+{
+    multiboot_info_t *p_mbi;
+    printf("hw_info.mb_adr = %x\n", hw_info.mb_adr);
+    p_mbi = (multiboot_info_t*)(ptr_t)hw_info.mb_adr;
+    printf("p_mbi->flags = %x\n", p_mbi->flags);
+    if (p_mbi->flags & (1<<2)) {
+        printf("p_mbi->cmdline = %x ", p_mbi->cmdline);
+        char *str = (char*)(ptr_t)p_mbi->cmdline;
+        printf("'%s'\n", str);
+    }
+    printf("hw_info->cmd_maxcpu = %u\n", hw_info.cmd_maxcpu);
+    printf("hw_info->cmd_cpumask = %u\n", hw_info.cmd_cpumask);
+}
 
 
 uint64_t tsc_per_usec = TSC_PER_USEC;
@@ -207,23 +224,23 @@ void main_bsp(void)
     init_video();
     smp_init();
 
-    puts("video initialized\n");
-    printf("found %d %s CPUs and %d I/O APICs\n", (ptr_t)hw_info.cpu_cnt, vendor[hw_info.cpu_vendor], (ptr_t)hw_info.ioapic_cnt);
+    IFV puts("main(): video initialized\n");
+    IFVV printf("found %d %s CPUs and %d I/O APICs\n", (ptr_t)hw_info.cpu_cnt, vendor[hw_info.cpu_vendor], (ptr_t)hw_info.ioapic_cnt);
     //udelay(DELAY);
 
 
     idt_install();
-    puts("idt installed\n");
+    IFV puts("idt installed\n");
     //udelay(DELAY);
 
     isr_install();
-    puts("isr installed\n");
+    IFV puts("isr installed\n");
     //udelay(DELAY);
     
     apic_init();
-    puts("apic initialized\n");
+    IFV puts("apic initialized\n");
 
-    puts("my kernel is running in main_bsp now...\n");
+    IFV puts("my kernel is running in main_bsp now...\n");
 
     //unsigned eax, ebx, ecx, edx;
     //cpuid(0x80000001, &eax, &ebx, &ecx, &edx);
@@ -240,6 +257,7 @@ void main_bsp(void)
     //printf("offset of stack[0] : %x\n", &(stack[0]));
     //printf("new[0]: cpu_info = %x cpu_id = %x\n", my_cpu_info(), my_cpu_info()->cpu_id);
     
+    multiboot_info();
 
     cpu_online++;       // the BSP is there, too
     mainbarrier.max = cpu_online;
@@ -251,7 +269,7 @@ void main_bsp(void)
 
 
 /*
- * this is this entry function for the APs.
+ * this is the entry function for the APs.
  */
 void main_ap(void)
 {
@@ -275,8 +293,7 @@ void stop();
  */
 void main()
 {
-    //unsigned myid = my_cpu_info()->cpu_id;
-    //printf("CPU %d/%d running in main()\n", myid, cpu_online);
+    IFVV printf("CPU %d/%d running in main()\n", my_cpu_info()->cpu_id, cpu_online);
 
     /* call a payload */
     payload_benchmark();
@@ -364,7 +381,7 @@ void stop()
     cpus_halted++;
     mutex_unlock(&m);
 
-    printf("halt CPU %d (now %d down)\n", my_cpu_info()->cpu_id, cpus_halted);
+    IFV printf("halt CPU %d (now %d down)\n", my_cpu_info()->cpu_id, cpus_halted);
     smp_status('_');
     if (cpus_halted < cpu_online) {
         while (1) asm volatile ("hlt");

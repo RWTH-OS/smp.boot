@@ -4,6 +4,8 @@ O32FILES=$(CFILES:.c=.o32)
 O64FILES=$(CFILES:.c=.o64)
 HFILES=$(shell ls *.h)
 
+ASMFILES=$(shell ls *.asm)
+
 CFLAGS=-c -O0
 # -O          - basic optimization
 CFLAGS+=-Wall -Wextra -Wno-main 
@@ -24,6 +26,7 @@ CFLAGS+=-I .
 
 # default nbr of CPUs for QEMU smp
 SMP=2
+CMDLINE=test
 
 C32FLAGS=$(CFLAGS)
 C64FLAGS=$(CFLAGS) -ffreestanding -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3 -mno-3dnow
@@ -43,7 +46,7 @@ CC64=gcc -m64
 # symbols from 64 bit kernel (kernel64.elf64) to be transferred to kernel64.bin
 KERNEL64_SYMBOLS="Realm32 Realm64 main hw_info isr0 idt"
 
-default : kernel32.bin kernel64.bin
+default : tags kernel32.bin kernel64.bin
 
 debug :
 	@echo CFILES: $(CFILES)
@@ -138,20 +141,23 @@ depend : .depend
 
 -include .depend
 
+tags : $(CFILES) boot32.c $(HFILES) $(ASMFILES)
+	@echo CTAGS
+	@ctags -R
 
 # start QEMU with 32 or 64 bit
 q32 : kernel32.bin
-	qemu -kernel kernel32.bin
+	qemu -kernel kernel32.bin -append "$(CMDLINE)"
 
 q64 : kernel64.bin
-	qemu-system-x86_64 -kernel kernel64.bin
+	qemu-system-x86_64 -kernel kernel64.bin -append "$(CMDLINE)"
 
 smp : s64
 s32 : kernel32.bin
-	qemu -smp $(SMP) -kernel kernel32.bin
+	qemu -smp $(SMP) -kernel kernel32.bin -append "$(CMDLINE)"
 
 s64 : kernel64.bin
-	qemu-system-x86_64 -smp $(SMP) -kernel kernel64.bin
+	qemu-system-x86_64 -smp $(SMP) -kernel kernel64.bin -append "$(CMDLINE)"
 
 
 # housekeeping

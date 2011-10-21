@@ -24,6 +24,12 @@
 typedef struct {
     uint32_t mb_adr;        /* first position: address of multiboot info structure */
 
+    /* MULTIBOOT */
+    uint32_t cmd_maxcpu;
+    uint32_t cmd_cpumask;
+    uint32_t cmd_noacpi;
+    uint32_t cmd_nomps;
+
     /* CPUID */
     uint32_t cpuid_max;
     uint32_t cpuid_high_max;

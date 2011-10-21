@@ -46,6 +46,5 @@ void payload_benchmark()
     } else {
         printf("only one CPU active, Task needs at least two.\n");
     }
-
 }
 

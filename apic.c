@@ -131,6 +131,11 @@ void apic_init()
 
     /* now send IPIs to the APs */
     for (u = 1; u < hw_info.cpu_cnt; u++) {
+        if (u >= hw_info.cmd_maxcpu || ((hw_info.cmd_cpumask & (1 << u)) == 0)) {
+            status_putch(6+u, '|');
+            IFV printf("SMP: skip AP#%u\n", u);
+            continue;
+        }
         status_putch(6+u, '^');
         *ptr_apid = u;
         IFV printf("SMP: try to wake up AP#%u\n", u);

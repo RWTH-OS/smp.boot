@@ -41,11 +41,13 @@
 #define STACK_FRAMES   2
 
 /*
- * verbosity
+ * verbosity: set to 0 (off), 1 (normal), 2 (chatter)
+ * VERBOSE (first line) has global effect over all subsequent settings
  */
 #define VERBOSE             0
 #define VERBOSE_BOOT        0
-#define VERBOSE_APIC        1
+#define VERBOSE_APIC        0
+#define VERBOSE_MAIN        0
 
 /*
  * preliminary: CPU Frequency

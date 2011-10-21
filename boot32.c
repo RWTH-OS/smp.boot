@@ -4,6 +4,7 @@
  * This is called from startXX.asm in REAL MODE (physical addresses)
  */
 
+#include "multiboot_struct.h"
 #include "bda_struct.h"
 #include "acpi_struct.h"
 #include "mps_struct.h"
@@ -214,13 +215,13 @@ static ptr_t search_fp(ptr_t offset, ptr_t size)
  * This function is called from the 32 bit startup code in real-mode to collect
  * information about the hardware from
  *  - BIOS Data Area (BDA) / Extended BDA (EBDA)
- *  - ACPI (if available) (1)
+ *  - ACPI (if available) [1]
  *  - Multiprocessor Specification tables (if available)
  * The collected information is stored in internal data structures that are
  * shared with the protected mode kernel (32- or 64-bit).
  *
  *
- *  (1) note: this OS does not support ACPI Power Management but only reads
+ *  [1] Note: This OS does not support ACPI Power Management but only reads
  *      information about available CPUs and APICs from the ACPI tables.
  */
 
@@ -232,9 +233,12 @@ void get_info()
     init_video();
     IFVV printf("get_info()\n");
 
-    /* initialize hw_info to all 0's */
-    memset(&hw_info, 0, sizeof(hw_info));
+    /* initialize hw_info to all 0's (but first uint32_t is left unchanged) */
+    memset((void*)(&hw_info)+sizeof(uint32_t), 0, sizeof(hw_info)-sizeof(uint32_t));
 
+    /* initialize some fields of hw_info */
+    hw_info.cmd_cpumask = 0xFFFFFFFF;      /* default: all CPUs */
+    hw_info.cmd_maxcpu = MAX_CPU;
 
     /*
      * check, what CPUID functions are available
@@ -242,6 +246,32 @@ void get_info()
     cpu_features();
 
 
+    /*
+     * parse Multiboot's cmdline
+     */
+    multiboot_info_t *p_mbi = (multiboot_info_t*)hw_info.mb_adr;
+    if (p_mbi->flags & (1<<2)) {
+        char *cmdline = p_mbi->cmdline;
+
+        while (cmdline != 0 && cmdline < p_mbi->cmdline+1000) {
+            while (*cmdline != ' ' && *cmdline != 0) cmdline++;
+            //printf("cmdline = '%s'\n", cmdline);
+            if (strncmp(cmdline, " maxcpu=", 8) == 0) {
+                cmdline += 8;
+                hw_info.cmd_maxcpu = atoi(cmdline);
+            } else if (strncmp(cmdline, " cpumask=", 9) == 0) {
+                cmdline += 9;
+                hw_info.cmd_cpumask = atoi(cmdline);
+            } else if (strncmp(cmdline, " noacpi ", 8) == 0) {
+                cmdline += 7;
+                hw_info.cmd_noacpi = 1;
+            } else if (strncmp(cmdline, " nomps ", 7) == 0) {
+                cmdline += 6;
+                hw_info.cmd_nomps = 1;
+            }
+            cmdline++;
+        }
+    }
 
     /*
      * first, read BIOS Data Area
@@ -258,6 +288,9 @@ void get_info()
      *  - EBDA
      *  - physical address range 0xE0000 .. 0xFFFFF
      */
+
+    if (hw_info.cmd_noacpi) goto skip_acpi;
+
     rsdp_t *rsdp = (rsdp_t*)search_rsdp(hw_info.ebda_adr, hw_info.ebda_size);
     if (rsdp == 0) {
         rsdp = (rsdp_t*)search_rsdp(0xE0000, 0x20000);
@@ -314,6 +347,8 @@ skip_acpi:
 /*
  * now read multiprocessor tables
  */
+    if (hw_info.cmd_nomps) goto skip_mps;
+
     /* 1. In the first kilobyte of the Extended BIOS Data Area (EBDA) */
     mps_fp_t *fp;
     fp = (mps_fp_t*)search_fp(hw_info.ebda_adr, 1024);

@@ -51,6 +51,49 @@ int strcmp(const char *a, const char *b)
     }
     return (*a - *b);
 }
+int strncmp(const char *a, const char *b, int n) 
+{
+    while (n > 0 && *a != 0 && *b != 0 && (*a == *b)) {
+        n--;
+        a++;
+        b++;
+    }
+    return n==0?0:(*a - *b);
+}
+
+/*
+ * can handle decimal (not starting with 0), octal (starting with zero), hex (starting with 0x) and negative values (starting with -).
+ */
+int atoi(const char *a)
+{
+    int i = 0;
+    int s = 1;
+    int base = 10;
+    if (*a == '-') {
+        s = -1;
+        a++;
+    }
+    if (*a == '0') {
+        base = 8;
+        a++;
+        if (*a == 'x' || *a == 'X') {
+            base = 16;
+            a++;
+        }
+    }
+    while ((*a >= '0' && *a <= '0'+(base>10?10:base)-1) || (base>10 && ((*a >= 'A' && *a <= 'A'+base-11) || (*a >= 'a' && *a <= 'a'+base-11)))) {
+        i *= base;
+        if (*a <= '9')
+            i += *a - '0';
+        else if (*a >= 'a')
+            i += *a - 'a'+10;
+        else
+            i += *a - 'A'+10;
+        a++;
+    }
+    i *= s;
+    return i;
+}
 
 /* We will use this later on for reading from the I/O ports to get data
 *  from devices such as the keyboard. We are using what is called
