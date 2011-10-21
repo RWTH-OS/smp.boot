@@ -40,7 +40,7 @@ start:
 
 setup:                  ; now 32-bit specific set up
 
-    mov ax, 0x0F00+'1'
+    mov ax, 0x0F00+'2'
     mov [0xB8000], ax
     mov ax, 0x0F00+'0'
     mov [0xB8002], ax
@@ -58,7 +58,7 @@ setup:                  ; now 32-bit specific set up
     test edx, 1 << 29
     jz NoLongMode
 
-    mov ax, 0x0F00+'1'
+    mov ax, 0x0F00+'2'
     mov [0xB8000], ax
     mov ax, 0x0F00+'2'
     mov [0xB8002], ax
@@ -70,7 +70,7 @@ setup:                  ; now 32-bit specific set up
     ;and eax, ~(1<<31)
     mov cr0, eax
 
-    mov ax, 0x0F00+'1'
+    mov ax, 0x0F00+'2'
     mov [0xB8000], ax
     mov ax, 0x0F00+'3'
     mov [0xB8002], ax
@@ -126,7 +126,7 @@ setup:                  ; now 32-bit specific set up
     mov cr4, eax
 
 
-    mov ax, 0x0F00+'1'
+    mov ax, 0x0F00+'2'
     mov [0xB8000], ax
     mov ax, 0x0F00+'4'
     mov [0xB8002], ax
@@ -145,7 +145,7 @@ setup:                  ; now 32-bit specific set up
 
     ; now in compatibility mode
 
-    mov ax, 0x0F00+'1'
+    mov ax, 0x0F00+'2'
     mov [0xB8000], ax
     mov ax, 0x0F00+'5'
     mov [0xB8002], ax

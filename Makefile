@@ -1,5 +1,5 @@
 
-CFILES=$(shell ls *.c | grep -v boot32.c)
+CFILES=$(shell ls *.c | grep -v boot32.c | grep -v mm..\.c )
 O32FILES=$(CFILES:.c=.o32)
 O64FILES=$(CFILES:.c=.o64)
 HFILES=$(shell ls *.h)
@@ -76,7 +76,7 @@ jump64.o : jump64.asm start_smp.inc config.inc
 	@echo NASM $< '->' $@
 	@nasm -f elf64 -o $@ $<
 
-scrn.o : scrn.c system.h
+scrn.o : scrn.c
 	@echo CC32 $< '->' $@
 	@$(CC32) $(C32FLAGS) -DEARLY -o $@ $<
 
@@ -85,24 +85,32 @@ $(O32FILES) : %.o32 : %.c
 	@echo CC32 $< '->' $@
 	@$(CC32) $(C32FLAGS) -o $@ $<
 
+boot32.o : boot32.c
+	@echo CC32 $< '->' $@
+	@$(CC32) $(C32FLAGS) -o $@ $<
+
+mm32.o : mm32.c
+	@echo CC32 $< '->' $@
+	@$(CC32) $(C32FLAGS) -o $@ $<
+
 # C files into 64 bit objects
 $(O64FILES) : %.o64 : %.c
 	@echo CC64 $< '->' $@
 	@$(CC64) $(C64FLAGS) -o $@ $<
 
-boot32.o : boot32.c
-	@echo CC32 $< '->' $@
-	@$(CC32) $(C32FLAGS) -o $@ $<
+mm64.o : mm64.c
+	@echo CC64 $< '->' $@
+	@$(CC64) $(C64FLAGS) -o $@ $<
 
 # link 32 bit kernel (a.out-multiboot)
-kernel32.bin : link32.ld start32.o boot32.o $(O32FILES)
+kernel32.bin : link32.ld start32.o boot32.o mm32.o $(O32FILES) 
 	@echo LD $^ '->' $@
-	@ld -T link32.ld -m i386linux -o $@ start32.o boot32.o $(O32FILES)
+	@ld -T link32.ld -m i386linux -o $@ start32.o boot32.o mm32.o $(O32FILES)
 
 # link 64 bit kernel that will be embedded into kernel64.bin
-kernel64.elf64 : link64.ld jump64.o $(O64FILES)
+kernel64.elf64 : link64.ld jump64.o mm64.o $(O64FILES) 
 	@echo LD $^ '->' $@
-	@ld -nostdlib -nodefaultlibs -T link64.ld  -o kernel64.elf64 jump64.o $(O64FILES)
+	@ld -nostdlib -nodefaultlibs -T link64.ld  -o kernel64.elf64 jump64.o mm64.o $(O64FILES)
 
 # generate .KERNEL64 section's data from 64 bit kernel
 kernel64.section : kernel64.elf64
@@ -126,7 +134,7 @@ kernel64.bin : link_start64.ld kernel64.symbols kernel64.o boot32.o scrn.o lib.o
 	@ld -melf_i386 -T link_start64.ld -T kernel64.symbols   kernel64.o boot32.o scrn.o lib.o32 -o kernel64.bin 
 
 depend : .depend
-.depend : $(CFILES) boot32.c 
+.depend : $(CFILES) boot32.c mm32.c mm64.c
 	@echo DEPEND $^
 	@$(CC) -MM $^ | sed "s+\(.*\):\(.*\)+\1 \132 \164 :\2+" > $@
 
@@ -141,7 +149,7 @@ depend : .depend
 
 -include .depend
 
-tags : $(CFILES) boot32.c $(HFILES) $(ASMFILES)
+tags : $(CFILES) boot32.c mm32.c mm64.c mm.h $(HFILES) $(ASMFILES)
 	@echo CTAGS
 	@ctags -R
 

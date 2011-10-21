@@ -19,6 +19,12 @@
 #ifndef LIB_H
 #define LIB_H
 
+// note: var and bit are evaluated only once!
+#define BIT_SET(var, bit)       ((var) |=  (1 << (bit)))
+#define BIT_CLEAR(var, bit)     ((var) &= ~(1 << (bit)))
+#define IS_BIT_SET(var, bit)    (((var) & (1 << bit)) == 1)
+#define IS_BIT_CLEAR(var, bit)  (((var) & (1 << bit)) == 0)
+
 void *memcpy(void *dest, const void *src, int count);
 void *memset(void *dest, int val, int count);
 unsigned short *memsetw(unsigned short *dest, unsigned short val, int count);

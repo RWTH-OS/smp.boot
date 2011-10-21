@@ -3,9 +3,10 @@
 #include "info.h"
 #include "smp.h"
 #include "sync.h"
+#include "mm.h"
 
-#define IFV   if (VERBOSE > 0 || VERBOSE_APIC > 0)
-#define IFVV  if (VERBOSE > 1 || VERBOSE_APIC > 1)
+#define IFV   if (VERBOSE > 0 || VERBOSE_MAIN > 0)
+#define IFVV  if (VERBOSE > 1 || VERBOSE_MAIN > 1)
 
 hw_info_t hw_info; 
 
@@ -228,6 +229,7 @@ void main_bsp(void)
     IFVV printf("found %d %s CPUs and %d I/O APICs\n", (ptr_t)hw_info.cpu_cnt, vendor[hw_info.cpu_vendor], (ptr_t)hw_info.ioapic_cnt);
     //udelay(DELAY);
 
+    mm_init();
 
     idt_install();
     IFV puts("idt installed\n");
@@ -257,7 +259,7 @@ void main_bsp(void)
     //printf("offset of stack[0] : %x\n", &(stack[0]));
     //printf("new[0]: cpu_info = %x cpu_id = %x\n", my_cpu_info(), my_cpu_info()->cpu_id);
     
-    multiboot_info();
+    //multiboot_info();
 
     cpu_online++;       // the BSP is there, too
     mainbarrier.max = cpu_online;
@@ -293,7 +295,7 @@ void stop();
  */
 void main()
 {
-    IFVV printf("CPU %d/%d running in main()\n", my_cpu_info()->cpu_id, cpu_online);
+    IFVV printf("CPU %d/%d entering in main()\n", my_cpu_info()->cpu_id, cpu_online);
 
     /* call a payload */
     payload_benchmark();
@@ -370,7 +372,7 @@ void reboot()
     //udelay(100);
     smp_status('_');
 
-    asm volatile ("hlt");
+    while (1) asm volatile ("hlt");
 }
 void stop()
 {

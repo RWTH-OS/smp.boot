@@ -36,6 +36,11 @@
 #define SMP_FRAME  0x88
 
 /*
+ * maximum supported memory (currently 4 GB)
+ */
+#define MAX_MEM    (4ul*1024*1024*1024)
+
+/*
  * Stack size for each CPU (number of frames (4 kB); total stack size is 4096 * STACK_FRAMES))
  */
 #define STACK_FRAMES   2
@@ -47,6 +52,7 @@
 #define VERBOSE             0
 #define VERBOSE_BOOT        0
 #define VERBOSE_APIC        0
+#define VERBOSE_MM          2
 #define VERBOSE_MAIN        0
 
 /*
