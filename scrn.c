@@ -241,6 +241,7 @@ void itoa (char *buf, int base, long d)
    function printf. */
 #ifndef EARLY
 mutex_t mutex_printf = MUTEX_INITIALIZER;
+extern unsigned cpu_online;
 #endif
 
 void
@@ -253,7 +254,7 @@ printf (const char *format, ...)
   __builtin_va_start(ap, format);
 
 # ifndef EARLY
-  mutex_lock(&mutex_printf);
+  if (cpu_online > 1) mutex_lock(&mutex_printf);
 # endif
 
   while ((c = *format++) != 0)
@@ -298,7 +299,7 @@ printf (const char *format, ...)
     }
     __builtin_va_end(ap);
 # ifndef EARLY
-  mutex_unlock(&mutex_printf);
+  if (cpu_online > 1) mutex_unlock(&mutex_printf);
 # endif
 }
 

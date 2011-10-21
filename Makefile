@@ -162,6 +162,6 @@ s64 : kernel64.bin
 
 # housekeeping
 clean :
-	-rm *.o *.o32 *.o64 *.symbols *.section *.bin *.elf64 .depend config.inc
+	-rm *.o *.o32 *.o64 *.symbols *.section *.bin *.elf64 .depend config.inc tags
 
 .PHONY : default debug qemu clean depend

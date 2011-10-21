@@ -251,9 +251,9 @@ void get_info()
      */
     multiboot_info_t *p_mbi = (multiboot_info_t*)hw_info.mb_adr;
     if (p_mbi->flags & (1<<2)) {
-        char *cmdline = p_mbi->cmdline;
+        char *cmdline = (char*)p_mbi->cmdline;
 
-        while (cmdline != 0 && cmdline < p_mbi->cmdline+1000) {
+        while (cmdline != 0 && cmdline < (char*)p_mbi->cmdline+1000) {
             while (*cmdline != ' ' && *cmdline != 0) cmdline++;
             //printf("cmdline = '%s'\n", cmdline);
             if (strncmp(cmdline, " maxcpu=", 8) == 0) {
