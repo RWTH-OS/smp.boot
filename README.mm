@@ -29,4 +29,6 @@ Memory Layout
 Notation
 --------
 frame : number of physical page frame, 0..N
-adr(ess) : offset of physical page frame, (frame<<12)
+offset : offset of physical page frame, linear address, (frame << 12)
+page : number of virtual page
+adr(ess) : virtual address/paging, (page << 12)
