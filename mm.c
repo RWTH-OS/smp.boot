@@ -39,6 +39,14 @@ static inline ptr_t pt_index(void * adr)
     return (((ptr_t)adr) >> PAGE_BITS) & INDEX_MASK;
 }
 #if __x86_64__
+static inline ptr_t offset1G(void * adr) 
+{
+    return ((ptr_t)adr) & ((INDEX_MASK<<(PAGE_BITS+INDEX_BITS))|(INDEX_MASK<<PAGE_BITS)|PAGE_MASK);
+}
+static inline ptr_t offset2M(void * adr) 
+{
+    return ((ptr_t)adr) & ((INDEX_MASK<<PAGE_BITS)|PAGE_MASK);
+}
 static inline ptr_t pd3_index(void * adr) 
 {
     return (((ptr_t)adr) >> (PAGE_BITS+INDEX_BITS)) & INDEX_MASK;
@@ -52,11 +60,69 @@ static inline ptr_t pd1_index(void * adr)
     return (((ptr_t)adr) >> (PAGE_BITS+3*INDEX_BITS)) & INDEX_MASK;
 }
 #else
+static inline ptr_t offset4M(void * adr) 
+{
+    return ((ptr_t)adr) & ((INDEX_MASK<<PAGE_BITS)|PAGE_MASK);
+}
 static inline ptr_t pd1_index(void * adr) 
 {
     return (((ptr_t)adr) >> (PAGE_BITS+INDEX_BITS)) & INDEX_MASK;
 }
 #endif
+
+/*  --------------------------------------------------------------------------- */
+
+
+unsigned long freemap[MAX_MEM / PAGE_SIZE / (sizeof(unsigned long)*8)];     // currently 2GB / 4kB / 8bits = 64kB
+
+static inline unsigned frame_to_freemap_index(frame_t frame)
+{
+    return (frame / (sizeof(unsigned long)*8));        // DIV 64
+}
+static inline unsigned frame_to_freemap_bit(frame_t frame)
+{
+    return (frame % (sizeof(unsigned long)*8));      // MOD 64
+}
+#define FRAME_TYPE_PT   1
+#define FRAME_TYPE_4k   2
+#if __x86_64__
+#define FRAME_TYPE_2M   3
+#define FRAME_TYPE_1G   4
+#else
+#define FRAME_TYPE_4M   5
+#endif
+frame_t get_free_frame(unsigned type)
+{
+    static frame_t last_frame_pt = 0x400; // start at 4 MB (frame << PAGE_BITS = 0x400000)
+    static frame_t last_frame_4k = 0x800; // start at 8 MB (frame << PAGE_BITS = 0x800000)
+
+    if (type == FRAME_TYPE_4k) {
+        while (IS_BIT_CLEAR(freemap[frame_to_freemap_index(last_frame_4k)], frame_to_freemap_bit(last_frame_4k))) {
+            last_frame_4k++;
+            if (last_frame_4k >= (MAX_MEM / PAGE_SIZE)) {
+                printf("ERROR: out of memory!\n");
+                smp_status('E');
+                while (1) asm volatile ("hlt");
+            }
+        }
+        BIT_CLEAR(freemap[frame_to_freemap_index(last_frame_4k)], frame_to_freemap_bit(last_frame_4k));
+        return last_frame_4k;
+    } else if (type == FRAME_TYPE_PT) {
+        while (IS_BIT_CLEAR(freemap[frame_to_freemap_index(last_frame_pt)], frame_to_freemap_bit(last_frame_pt))) {
+            last_frame_pt++;
+            if (last_frame_pt >= (MAX_MEM / PAGE_SIZE)) {
+                printf("ERROR: out of memory!\n");
+                smp_status('E');
+                while (1) asm volatile ("hlt");
+            }
+        }
+        BIT_CLEAR(freemap[frame_to_freemap_index(last_frame_pt)], frame_to_freemap_bit(last_frame_pt));
+        return last_frame_pt;
+    }
+    printf("ERROR: type %d not supported!\n", type);
+    smp_status('E');
+    while (1) asm volatile ("hlt");
+}
 
 /*  --------------------------------------------------------------------------- */
 
@@ -74,16 +140,28 @@ ptr_t virt_to_phys(void * adr)
     if (pd1[pd1_index(adr)].dir.p) {
         pd2_entry_t *pd2 = (pd2_entry_t*)((ptr_t)pd1[pd1_index(adr)].dir.frame << PAGE_BITS);
         if (pd2[pd2_index(adr)].dir.p) {
-            pd3_entry_t *pd3 = (pd3_entry_t*)((ptr_t)pd2[pd2_index(adr)].dir.frame << PAGE_BITS);
-            if (pd3[pd3_index(adr)].dir.p) {
-                pt_entry_t *pt = (pt_entry_t*)((ptr_t)pd3[pd3_index(adr)].dir.frame << PAGE_BITS);
-                if (pt[pt_index(adr)].page.p) {
-                    return (((ptr_t)pt[pt_index(adr)].page.frame << PAGE_BITS) + offset(adr));
+            if (pd2[pd2_index(adr)].dir.ps == 1) {
+                /* 1 GB huge page */
+                return (((ptr_t)pd2[pd2_index(adr)].page.frame1G << (PAGE_BITS+2*INDEX_BITS)) + offset1G(adr));
+            } else {
+                /* read pd3 */
+                pd3_entry_t *pd3 = (pd3_entry_t*)((ptr_t)pd2[pd2_index(adr)].dir.frame << PAGE_BITS);
+                if (pd3[pd3_index(adr)].dir.p) {
+                    if (pd3[pd3_index(adr)].dir.ps == 1) {
+                        /* 2 MB huge page */
+                        return (((ptr_t)pd3[pd3_index(adr)].page.frame2M << (PAGE_BITS+INDEX_BITS)) + offset2M(adr));
+                    } else {
+                        /* read pt */
+                        pt_entry_t *pt = (pt_entry_t*)((ptr_t)pd3[pd3_index(adr)].dir.frame << PAGE_BITS);
+                        if (pt[pt_index(adr)].page.p) {
+                            return (((ptr_t)pt[pt_index(adr)].page.frame << PAGE_BITS) + offset(adr));
+                        } else {
+                            return 0;
+                        }
+                    }
                 } else {
                     return 0;
                 }
-            } else {
-                return 0;
             }
         } else {
             return 0;
@@ -93,11 +171,16 @@ ptr_t virt_to_phys(void * adr)
     }
 #   else
     if (pd1[pd1_index(adr)].dir.p) {
-        pt_entry_t *pt = (pt_entry_t*)((ptr_t)pd1[pd1_index(adr)].dir.frame << PAGE_BITS);
-        if (pt[pt_index(adr)].page.p) {
-            return (((ptr_t)pt[pt_index(adr)].page.frame << PAGE_BITS) + offset(adr));
+        if (pd1[pd1_index(adr)].dir.ps == 1) {
+            /* 4 MB huge page */
+            return (((ptr_t)pd1[pd1_index(adr)].page.frame4M << (PAGE_BITS+INDEX_BITS)) + offset4M(adr));
         } else {
-            return 0;
+            pt_entry_t *pt = (pt_entry_t*)((ptr_t)pd1[pd1_index(adr)].dir.frame << PAGE_BITS);
+            if (pt[pt_index(adr)].page.p) {
+                return (((ptr_t)pt[pt_index(adr)].page.frame << PAGE_BITS) + offset(adr));
+            } else {
+                return 0;
+            }
         }
     } else {
         return 0;
@@ -110,50 +193,120 @@ ptr_t virt_to_phys(void * adr)
  * phys_to_virt only possible by a tree-search through the page directories...
  */
 
-
-
-
-
-
-
-/*  --------------------------------------------------------------------------- */
-
-
-unsigned long freemap[MAX_MEM / PAGE_SIZE / (sizeof(unsigned long)*8)];     // currently 2GB / 4kB / 8bits = 64kB
-
-static inline unsigned frame_to_freemap_index(frame_t frame)
+static void *map_temporary(frame_t frame) 
 {
-    return (frame / (sizeof(unsigned long)*8));        // DIV 64
+    const void *tmp_map = (void*)0x1FF000;      /*  mapped initially in 32 AND 64 bit mode */
+#   if __x86_64__
+        static pt_entry_t * const  pt = 0x5000;  /* initialized there in start64.asm */
+#   else
+        static pt_entry_t * const  pt = 0x5000;  /* ATTN: not initialized in 32 bit mode, yet! */
+#   endif
+    pt[0x1FF].page.frame = frame;
+    pt[0x1FF].page.p = 1;
+    pt[0x1FF].page.rw = 1;
+    return tmp_map;
 }
-static inline unsigned frame_to_freemap_bit(frame_t frame)
+
+#if __x86_64__
+#   define MAP_HUGE_2M     1
+#   define MAP_HUGE_1G     2
+#else
+#   define MAP_HUGE_4M     4
+#endif
+
+static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
 {
-    return (frame % (sizeof(unsigned long)*8));      // MOD 64
-}
-frame_t get_free_frame()
-{
-    static frame_t last_frame = 0x400; // start at 4 MB (frame << PAGE_BITS = 0x400000)
-    while (IS_BIT_CLEAR(freemap[frame_to_freemap_index(last_frame)], frame_to_freemap_bit(last_frame))) {
-        last_frame++;
-        if (last_frame >= (MAX_MEM / PAGE_SIZE)) {
-            printf("ERROR: out of memory!\n");
-            smp_status('E');
-            while (1) asm volatile ("hlt");
-        }
+    if (flags != 0) {
+        printf("ERROR (map_frame_to_adr): flags %d not supported!\n", flags);
+        smp_status('E');
+        while (1) asm volatile ("hlt");
     }
-    BIT_CLEAR(freemap[frame_to_freemap_index(last_frame)], frame_to_freemap_bit(last_frame));
-    return last_frame;
+#   if __x86_64__
+    unsigned ipd1 = pd1_index(adr);
+    IFVV printf("map_frame_to_adr: ipd1 = %u\n", ipd1);
+
+    if (pd1[ipd1].dir.p == 0) {
+        /* we need a new pd2 */
+        frame_t new_frame = get_free_frame(FRAME_TYPE_PT);
+        IFVV printf("map_frame_to_adr: new pd2: 0x%x\n", new_frame);
+        pd1[ipd1].dir.p = 1;
+        pd1[ipd1].dir.rw = 1;
+        pd1[ipd1].dir.frame = new_frame;
+    }
+    /* pd1 now contains an entry for pd2 */
+    pd2_entry_t *pd2;
+    pd2 = (pd2_entry_t*)map_temporary(pd1[ipd1].dir.frame);
+
+    unsigned ipd2 = pd2_index(adr);
+    IFVV printf("map_frame_to_adr: ipd2 = %u\n", ipd2);
+    if (pd2[ipd2].dir.p == 0) {
+        /* we need a new pd3 */
+        frame_t new_frame = get_free_frame(FRAME_TYPE_PT);
+        IFVV printf("map_frame_to_adr: new pd3: 0x%x\n", new_frame);
+        pd2[ipd2].dir.p = 1;
+        pd2[ipd2].dir.rw = 1;
+        pd2[ipd2].dir.frame = new_frame;
+    }
+    /* pd2 now contains an entry for pd3 */
+    pd3_entry_t *pd3;
+    pd3 = (pd3_entry_t*)map_temporary(pd2[ipd2].dir.frame);
+    
+    unsigned ipd3 = pd3_index(adr);
+    IFVV printf("map_frame_to_adr: ipd3 = %u\n", ipd3);
+    if (pd3[ipd3].dir.p == 0) {
+        /* we nedd a new pt */
+        frame_t new_frame = get_free_frame(FRAME_TYPE_PT);
+        IFVV printf("map_frame_to_adr: new pt: 0x%x\n", new_frame);
+        pd3[ipd3].dir.p = 1;
+        pd3[ipd3].dir.rw = 1;
+        pd3[ipd3].dir.frame = new_frame;
+    }
+    /* pd3 now contains an entry for pt */
+    pt_entry_t *pt;
+    pt = (pt_entry_t*)map_temporary(pd3[ipd3].dir.frame);
+
+    unsigned ipt = pt_index(adr);
+    IFVV printf("map_frame_to_adr: ipt = %u\n", ipt);
+    if (pt[ipt].page.p == 0) {
+        /* the page was not mapped before */
+        IFVV printf("map_frame_to_adr: new page: 0x%x\n", frame);
+        pt[ipt].page.p = 1;
+        pt[ipt].page.rw = 1;
+        pt[ipt].page.frame = frame;
+    }
+
+    IFVV printf("map_frame_to_adr: done\n");
+
+#   else
+    unsigned ipd1 = pd1_index(adr);
+
+    if (pd1[ipd1].dir.p == 0) {
+        /* we need a new pd2 */
+        frame_t new_frame = get_free_frame(FRAME_TYPE_PT);
+        pd1[ipd1].dir.p = 1;
+        pd1[ipd1].dir.rw = 1;
+        pd1[ipd1].dir.frame = new_frame;
+    }
+    /* pd1 now contains an entry for pt */
+    pt_entry_t *pt;
+    pt = (pt_entry_t*)(ptr_t)(pd1[ipd1].dir.frame << PAGE_BITS);
+
+    unsigned ipt = pt_index(adr);
+    if (pt[ipt].page.p == 0) {
+        /* the page was not mapped before */
+        pt[ipt].page.p = 1;
+        pt[ipt].page.rw = 1;
+        pt[ipt].page.frame = frame;
+    }
+#   endif
 }
+
+
+
+
 
 /*  --------------------------------------------------------------------------- */
 
-void map_free_frame_to_page(page_t page)
-{
-    // get free frame from get_free_frame()
-    // walk through page tables (creating them as neccessary)
-    // and enter the new frame to the given adr
-    unsigned frame = get_free_frame();
-    frame += page;
-}
 
 /*  --------------------------------------------------------------------------- */
 
@@ -164,7 +317,7 @@ mutex_t pt_mutex = MUTEX_INITIALIZER_LOCKED;
  */
 int mm_init()
 {
-    IFV printf("mm_init() 64 bit version\n");
+    IFV printf("mm_init() \n");
 
     /* read address of page table PML4 (first level) from register cr3 */
 #   if __x86_64__
@@ -173,6 +326,7 @@ int mm_init()
     asm volatile ("mov %%cr3, %%eax" : "=a"(pd1));
 #   endif
     IFVV printf("MM: pd1 = 0x%x\n", (ptr_t)pd1);
+
 
 #   if __x86_64__
     /* checks of page table entries */
@@ -190,6 +344,7 @@ int mm_init()
 
     pt_entry_t *pt = (pt_entry_t*)(ptr_t)(pd3[0].dir.frame << PAGE_BITS);
     IFVV printf("MM: pd1[0]->pd2[0]->pd3[0]->pt = 0x%x\n", (ptr_t)pt);
+#   endif
 
     /*
      * initialize freemap[]
@@ -232,13 +387,10 @@ int mm_init()
 
 
 
-    
-
     //int *p = (int*)0x00200000-4;    // 2 MB (- 4B) : access fine; 2 MB + 4B : page fault
     //*p = 0;
     
     mutex_unlock(&pt_mutex);    // pt_mutex was initialized in locked state, from now on, the mm is usable
-#   endif
     return 0;
 }
 
@@ -246,19 +398,20 @@ static unsigned next_virt_page = 0x400;
 
 void *heap_alloc(unsigned nbr_pages)
 {
-    unsigned res;
-    unsigned u;
+    unsigned i;
+    void *res;
+    frame_t frame;
 
     mutex_lock(&pt_mutex);
 
-    res = next_virt_page;
-    
-    for (u = res; u < res+nbr_pages; u++) {
-        map_free_frame_to_page(u);
+    res = (void*)(ptr_t)(next_virt_page << PAGE_BITS);
+    for (i = 0; i < nbr_pages; i++) {
+        frame = get_free_frame(FRAME_TYPE_4k);
+        map_frame_to_adr(frame, (void*)(ptr_t)(next_virt_page<<PAGE_BITS), 0);
+        next_virt_page++;
     }
-    next_virt_page += nbr_pages;
 
     mutex_unlock(&pt_mutex);
-    return ((void*)(ptr_t)(res << PAGE_BITS));
+    return res;
 }
 

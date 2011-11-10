@@ -24,6 +24,7 @@ typedef     unsigned long    page_t;     // the number of a virtual page
 
 int mm_init();
 
+void *heap_alloc(unsigned nbr_pages);
 
 
 
