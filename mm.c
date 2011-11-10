@@ -71,14 +71,14 @@ pd1_entry_t *pd1;
 ptr_t virt_to_phys(void * adr)
 {
 #   if __x86_64__
-    if (pd1[pd1_index(adr)].bits.p) {
-        pd2_entry_t *pd2 = (pd2_entry_t*)((ptr_t)pd1[pd1_index(adr)].bits.frame << PAGE_BITS);
-        if (pd2[pd2_index(adr)].bits.p) {
-            pd3_entry_t *pd3 = (pd3_entry_t*)((ptr_t)pd2[pd2_index(adr)].bits.frame << PAGE_BITS);
-            if (pd3[pd3_index(adr)].bits.p) {
-                pt_entry_t *pt = (pt_entry_t*)((ptr_t)pd3[pd3_index(adr)].bits.frame << PAGE_BITS);
-                if (pt[pt_index(adr)].bits.p) {
-                    return (((ptr_t)pt[pt_index(adr)].bits.frame << PAGE_BITS) + offset(adr));
+    if (pd1[pd1_index(adr)].dir.p) {
+        pd2_entry_t *pd2 = (pd2_entry_t*)((ptr_t)pd1[pd1_index(adr)].dir.frame << PAGE_BITS);
+        if (pd2[pd2_index(adr)].dir.p) {
+            pd3_entry_t *pd3 = (pd3_entry_t*)((ptr_t)pd2[pd2_index(adr)].dir.frame << PAGE_BITS);
+            if (pd3[pd3_index(adr)].dir.p) {
+                pt_entry_t *pt = (pt_entry_t*)((ptr_t)pd3[pd3_index(adr)].dir.frame << PAGE_BITS);
+                if (pt[pt_index(adr)].page.p) {
+                    return (((ptr_t)pt[pt_index(adr)].page.frame << PAGE_BITS) + offset(adr));
                 } else {
                     return 0;
                 }
@@ -92,10 +92,10 @@ ptr_t virt_to_phys(void * adr)
         return 0;
     }
 #   else
-    if (pd1[pd1_index(adr)].bits.p) {
-        pt_entry_t *pt = (pt_entry_t*)((ptr_t)pd1[pd1_index(adr)].bits.frame << PAGE_BITS);
-        if (pt[pt_index(adr)].bits.p) {
-            return (((ptr_t)pt[pt_index(adr)].bits.frame << PAGE_BITS) + offset(adr));
+    if (pd1[pd1_index(adr)].dir.p) {
+        pt_entry_t *pt = (pt_entry_t*)((ptr_t)pd1[pd1_index(adr)].dir.frame << PAGE_BITS);
+        if (pt[pt_index(adr)].page.p) {
+            return (((ptr_t)pt[pt_index(adr)].page.frame << PAGE_BITS) + offset(adr));
         } else {
             return 0;
         }
@@ -176,19 +176,19 @@ int mm_init()
 
 #   if __x86_64__
     /* checks of page table entries */
-    IFVV printf("MM: pd1[0].p : %u\n", pd1[0].bits.p);
-    IFVV printf("MM: pd1[1].p : %u\n", pd1[1].bits.p);
+    IFVV printf("MM: pd1[0].p : %u\n", pd1[0].dir.p);
+    IFVV printf("MM: pd1[1].p : %u\n", pd1[1].dir.p);
 
-    pd2_entry_t *pd2 = (pd2_entry_t*)(ptr_t)(pd1[0].bits.frame << PAGE_BITS);
+    pd2_entry_t *pd2 = (pd2_entry_t*)(ptr_t)(pd1[0].dir.frame << PAGE_BITS);
     IFVV printf("MM: pd1[0]->pd2 = 0x%x\n", (ptr_t)pd2);
 
-    pd3_entry_t *pd3 = (pd3_entry_t*)(ptr_t)(pd2[0].bits.frame << PAGE_BITS);
+    pd3_entry_t *pd3 = (pd3_entry_t*)(ptr_t)(pd2[0].dir.frame << PAGE_BITS);
     IFVV printf("MM: pd1[0]->pd2[0]->pd3 = 0x%x\n", (ptr_t)pd3);
 
-    IFVV printf("MM: pd1[0]->pd2[0]->pd3[0].p = %d   adr = 0x%x\n", pd3[0].bits.p, pd3[0].bits.frame<<PAGE_BITS);
-    IFVV printf("MM: pd1[0]->pd2[0]->pd3[1].p = %d   adr = 0x%x\n", pd3[1].bits.p, pd3[1].bits.frame<<PAGE_BITS);
+    IFVV printf("MM: pd1[0]->pd2[0]->pd3[0].p = %d   adr = 0x%x\n", pd3[0].dir.p, pd3[0].dir.frame<<PAGE_BITS);
+    IFVV printf("MM: pd1[0]->pd2[0]->pd3[1].p = %d   adr = 0x%x\n", pd3[1].dir.p, pd3[1].dir.frame<<PAGE_BITS);
 
-    pt_entry_t *pt = (pt_entry_t*)(ptr_t)(pd3[0].bits.frame << PAGE_BITS);
+    pt_entry_t *pt = (pt_entry_t*)(ptr_t)(pd3[0].dir.frame << PAGE_BITS);
     IFVV printf("MM: pd1[0]->pd2[0]->pd3[0]->pt = 0x%x\n", (ptr_t)pt);
 
     /*

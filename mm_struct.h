@@ -33,12 +33,12 @@ typedef union {
         uint64_t a     :  1;    /* bit 5 - Accessed         - indicates if this entry has been used */
         uint64_t ign   :  1;    /* bit 6 - ignored */
         uint64_t ps    :  1;    /* bit 7 - Page Size        - must be 0 (i.e. reference to pd2/pdpe) */
-        uint64_t ign   :  1;    /* bit 8 - ignored */
+        uint64_t ign2  :  1;    /* bit 8 - ignored */
         uint64_t avl1  :  3;    /* 9,10,11 - ignored        - AMD: available */
         uint64_t frame : 40;    /* bit 12..51 - Phys adr    - reference to 4kB aligned pd2/pdpe */
         uint64_t avl2  : 11;    /* bit 52..62 - ign.        - ignored/available */
         uint64_t nx    :  1;    /* bit 63 - eXecute Disable - if IA32_EFER.NXE=1 : 1: no execute from 512 GB region */
-    } bits;
+    } dir;
 } pd1_entry_t;     /*  pd1 (page directory 1st level): pml4 */
 
 typedef union {
@@ -73,7 +73,7 @@ typedef union {
         uint64_t avl1  :  3;    /* 9,10,11 - ignored */
         uint64_t pat   :  1;    /* bit 12 */
         uint64_t res   : 17;    /* 13..29 - reserved        - must be 0 (upper bits of 1GB offset) */
-        uint64_t frame : 22;    /* 30..51 - Phys adr        - reference to a 1 GB-page */
+        uint64_t frame1G : 22;    /* 30..51 - Phys adr        - reference to a 1 GB-page */
         uint64_t avl2  : 11;    /* 52..62 - ignored */
         uint64_t nx    :  1;    /* bit 63 - eXecute Disable - 1: no execute from 1 GB page */
     } page;
@@ -111,7 +111,7 @@ typedef union {
         uint64_t avl1  :  3;    /* 9,10,11 */
         uint64_t pat   :  1;    /* bit 12 */
         uint64_t res   :  8;    /* 13..20 */
-        uint64_t frame : 31;    /* 21..51 */
+        uint64_t frame2M : 31;    /* 21..51 */
         uint64_t avl2  : 11;    /* 52..62 */
         uint64_t nx    :  1;    /* bit 63 */
     } page;
@@ -166,7 +166,7 @@ typedef union {
         uint32_t avl1  :  3;    /* 9,10,11 */
         uint32_t pat   :  1;    /* bit 12 - PAT             -  */
         uint32_t ign   :  9;    /* 13..21 */
-        uint32_t frame : 10;    /* 22..31 */
+        uint32_t frame4M : 10;    /* 22..31 */
     } page;
 } pd1_entry_t;     /* pd1 (page directory 1st level): pde  */
 
