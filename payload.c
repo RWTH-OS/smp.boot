@@ -26,20 +26,20 @@ extern volatile unsigned cpu_online;
  * A Barrier is executed immediately before, so they should come in shortly.
  */
 
+//static barrier_t barr = BARRIER_INITIALIZER(2);
 void payload_benchmark()
 {
     unsigned myid = my_cpu_info()->cpu_id;
-    static barrier_t b = BARRIER_INITIALIZER(2);
-    static volatile uint32_t * volatile p_shared = NULL;
+    //static volatile uint32_t * volatile p_shared = NULL;
 
     /* needs at least two CPUs */
     if (cpu_online >= 2) {
         if (myid == 0) {
             /* call Task for CPU 0 */
-            p_shared = heap_alloc(1);   // one page = 4kB
-            printf("[0] p_shared = 0x%x\n", p_shared);
-            udelay(1*1000*1000);
-            barrier(&b);
+            //p_shared = heap_alloc(1);   // one page = 4kB
+            //printf("[0] p_shared = 0x%x\n", p_shared);
+            //udelay(1*1000*1000);
+            //barrier(&barr);
 
 
             printf("CPU 0: udelay 5 Sek.\n");
@@ -47,11 +47,11 @@ void payload_benchmark()
             printf("CPU 0: exit now\n");
         } else if (myid == 1) {
             /* call Task for CPU 1 */
-            barrier(&b);
-            udelay(1*1000*1000);
-            printf("[1] p_shared = 0x%x\n", p_shared);
-            udelay(1*1000*1000);
-            memset(p_shared, 1, 4096);
+            //barrier(&barr);
+            //udelay(1*1000*1000);
+            //printf("[1] p_shared = 0x%x\n", p_shared);
+            //udelay(1*1000*1000);
+            //memset(p_shared, 1, 4096);
 
             printf("CPU 1: udelay 10 Sek.\n");
             udelay(10*1000*1000);
