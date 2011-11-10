@@ -10,6 +10,13 @@
 
 #define PAGE_BITS    12
 #define PAGE_SIZE    (1<<PAGE_BITS)
+#define PAGE_MASK    (PAGE_SIZE-1)
+#if __x86_64__
+#   define INDEX_BITS   9
+#else
+#   define INDEX_BITS  10
+#endif
+#define INDEX_MASK    ((1<<INDEX_BITS) -1)
 
 #if __x86_64__
 struct regs

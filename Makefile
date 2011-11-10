@@ -1,5 +1,5 @@
 
-CFILES=$(shell ls *.c | grep -v boot32.c | grep -v mm..\.c )
+CFILES=$(shell ls *.c | grep -v boot32.c )
 O32FILES=$(CFILES:.c=.o32)
 O64FILES=$(CFILES:.c=.o64)
 HFILES=$(shell ls *.h)
@@ -48,6 +48,22 @@ KERNEL64_SYMBOLS="Realm32 Realm64 main hw_info isr0 idt"
 
 default : tags kernel32.bin kernel64.bin
 
+help :
+	@echo 'Makefile for Multiboot kernel'
+	@echo 'available tagets:'
+	@echo '  default         default target is: tags kernel32 kernel64'
+	@echo '  debug           show internal variables (for debug purposes)'
+	@echo '  tags            create ctags table'
+	@echo '  depend          recreate dependencies (is done automatically when needed)'
+	@echo '  kernel32        -> kernel32.bin'
+	@echo '  kernel64        -> kernel64.bin'
+	@echo '  q32             build kernel32.bin and boot it in QEmu'
+	@echo '  q64             build kernel64.bin and boot it in QEmu'
+	@echo '  s32             build kernel32.bin and boot it in SMP-QEmu (SMP=2)'
+	@echo '  s64             build kernel64.bin and boot it in SMP-QEmu (SMP=2)'
+	@echo '                  use "make SMP=4 s64" to configure the number of CPUs'
+	@echo '  clean           remove intermediate and built files'
+
 debug :
 	@echo CFILES: $(CFILES)
 	@echo O32FILES: $(O32FILES)
@@ -89,28 +105,22 @@ boot32.o : boot32.c
 	@echo CC32 $< '->' $@
 	@$(CC32) $(C32FLAGS) -o $@ $<
 
-mm32.o : mm32.c
-	@echo CC32 $< '->' $@
-	@$(CC32) $(C32FLAGS) -o $@ $<
 
 # C files into 64 bit objects
 $(O64FILES) : %.o64 : %.c
 	@echo CC64 $< '->' $@
 	@$(CC64) $(C64FLAGS) -o $@ $<
 
-mm64.o : mm64.c
-	@echo CC64 $< '->' $@
-	@$(CC64) $(C64FLAGS) -o $@ $<
-
 # link 32 bit kernel (a.out-multiboot)
-kernel32.bin : link32.ld start32.o boot32.o mm32.o $(O32FILES) 
+kernel32 : kernel32.bin
+kernel32.bin : link32.ld start32.o boot32.o $(O32FILES) 
 	@echo LD $^ '->' $@
-	@ld -T link32.ld -m i386linux -o $@ start32.o boot32.o mm32.o $(O32FILES)
+	@ld -T link32.ld -m i386linux -o $@ start32.o boot32.o $(O32FILES)
 
 # link 64 bit kernel that will be embedded into kernel64.bin
-kernel64.elf64 : link64.ld jump64.o mm64.o $(O64FILES) 
+kernel64.elf64 : link64.ld jump64.o $(O64FILES) 
 	@echo LD $^ '->' $@
-	@ld -nostdlib -nodefaultlibs -T link64.ld  -o kernel64.elf64 jump64.o mm64.o $(O64FILES)
+	@ld -nostdlib -nodefaultlibs -T link64.ld  -o kernel64.elf64 jump64.o $(O64FILES)
 
 # generate .KERNEL64 section's data from 64 bit kernel
 kernel64.section : kernel64.elf64
@@ -129,12 +139,13 @@ kernel64.o : start64.o kernel64.section
 
 # finally link 32 bit start code with implanted .KERNEL64 (opaque blob)
 # to a relocated ELF32-multiboot kernel image
+kernel64 : kernel64.bin
 kernel64.bin : link_start64.ld kernel64.symbols kernel64.o boot32.o scrn.o lib.o32
 	@echo LD $^ '->' $@
 	@ld -melf_i386 -T link_start64.ld -T kernel64.symbols   kernel64.o boot32.o scrn.o lib.o32 -o kernel64.bin 
 
 depend : .depend
-.depend : $(CFILES) boot32.c mm32.c mm64.c
+.depend : $(CFILES) boot32.c 
 	@echo DEPEND $^
 	@$(CC) -MM $^ | sed "s+\(.*\):\(.*\)+\1 \132 \164 :\2+" > $@
 
@@ -149,7 +160,7 @@ depend : .depend
 
 -include .depend
 
-tags : $(CFILES) boot32.c mm32.c mm64.c mm.h $(HFILES) $(ASMFILES)
+tags : $(CFILES) boot32.c $(HFILES) $(ASMFILES)
 	@echo CTAGS
 	@ctags -R
 
@@ -172,4 +183,4 @@ s64 : kernel64.bin
 clean :
 	-rm *.o *.o32 *.o64 *.symbols *.section *.bin *.elf64 .depend config.inc tags
 
-.PHONY : default debug qemu clean depend
+.PHONY : default help debug q32 q64 s32 s64 kernel32 kernel64 clean depend

@@ -21,98 +21,117 @@
 #include "smp.h"
 #include "sync.h"
 #include "multiboot_struct.h"
+#include "mm_struct.h"
 
 #define IFV   if (VERBOSE > 0 || VERBOSE_MM > 0)
 #define IFVV  if (VERBOSE > 1 || VERBOSE_MM > 1)
 
-typedef union {
-    uint64_t u64;
-    struct {
-        uint64_t p     :  1;
-        uint64_t rw    :  1;
-        uint64_t us    :  1;
-        uint64_t pwd   :  1;
-        uint64_t pcd   :  1;
-        uint64_t a     :  1;
-        uint64_t ign   :  1;
-        uint64_t mbz   :  2;
-        uint64_t avl1  :  3;
-        uint64_t frame : 40;
-        uint64_t avl2  : 11;
-        uint64_t nx    :  1;
-    } bits;
-} pml4_entry_t;
-typedef union {
-    uint64_t u64;
-    struct {
-        uint64_t p     :  1;
-        uint64_t rw    :  1;
-        uint64_t us    :  1;
-        uint64_t pwd   :  1;
-        uint64_t pcd   :  1;
-        uint64_t a     :  1;
-        uint64_t ign   :  1;
-        uint64_t zero  :  1;
-        uint64_t mbz   :  1;
-        uint64_t avl1  :  3;
-        uint64_t frame : 40;
-        uint64_t avl2  : 11;
-        uint64_t nx    :  1;
-    } bits;
-} pdpe_entry_t;
-typedef union {
-    uint64_t u64;
-    struct {
-        uint64_t p     :  1;
-        uint64_t rw    :  1;
-        uint64_t us    :  1;
-        uint64_t pwd   :  1;
-        uint64_t pcd   :  1;
-        uint64_t a     :  1;
-        uint64_t ign   :  1;
-        uint64_t zero  :  1;
-        uint64_t mbz   :  1;
-        uint64_t avl1  :  3;
-        uint64_t frame : 40;
-        uint64_t avl2  : 11;
-        uint64_t nx    :  1;
-    } bits;
-} pde_entry_t;
-typedef union {
-    uint64_t u64;
-    struct {
-        uint64_t p     :  1;
-        uint64_t rw    :  1;
-        uint64_t us    :  1;
-        uint64_t pwd   :  1;
-        uint64_t pcd   :  1;
-        uint64_t a     :  1;
-        uint64_t d     :  1;
-        uint64_t pat   :  1;
-        uint64_t g     :  1;
-        uint64_t avl1  :  3;
-        uint64_t frame : 40;
-        uint64_t avl2  : 11;
-        uint64_t nx    :  1;
-    } bits;
-} pte_entry_t;
 
-pml4_entry_t *pml4;
+/*
+ * helper functions to extract offset and table indices from a (virtual) address
+ */
+static inline ptr_t offset(void * adr) 
+{
+    return ((ptr_t)adr) & PAGE_MASK;
+}
+static inline ptr_t pt_index(void * adr) 
+{
+    return (((ptr_t)adr) >> PAGE_BITS) & INDEX_MASK;
+}
+#if __x86_64__
+static inline ptr_t pd3_index(void * adr) 
+{
+    return (((ptr_t)adr) >> (PAGE_BITS+INDEX_BITS)) & INDEX_MASK;
+}
+static inline ptr_t pd2_index(void * adr) 
+{
+    return (((ptr_t)adr) >> (PAGE_BITS+2*INDEX_BITS)) & INDEX_MASK;
+}
+static inline ptr_t pd1_index(void * adr) 
+{
+    return (((ptr_t)adr) >> (PAGE_BITS+3*INDEX_BITS)) & INDEX_MASK;
+}
+#else
+static inline ptr_t pd1_index(void * adr) 
+{
+    return (((ptr_t)adr) >> (PAGE_BITS+INDEX_BITS)) & INDEX_MASK;
+}
+#endif
 
 /*  --------------------------------------------------------------------------- */
 
-uint64_t freemap[MAX_MEM / PAGE_SIZE / 64];
-static inline unsigned frame_to_freemap_index(unsigned frame)
+/* global pointer to pd1 (1st level page directory; pml4) */
+pd1_entry_t *pd1;
+
+/*  --------------------------------------------------------------------------- */
+
+/*
+ * helper functions to convert virtual <-> physical address
+ */
+ptr_t virt_to_phys(void * adr)
 {
-    return (frame >> 6);        // DIV 64
+#   if __x86_64__
+    if (pd1[pd1_index(adr)].bits.p) {
+        pd2_entry_t *pd2 = (pd2_entry_t*)((ptr_t)pd1[pd1_index(adr)].bits.frame << PAGE_BITS);
+        if (pd2[pd2_index(adr)].bits.p) {
+            pd3_entry_t *pd3 = (pd3_entry_t*)((ptr_t)pd2[pd2_index(adr)].bits.frame << PAGE_BITS);
+            if (pd3[pd3_index(adr)].bits.p) {
+                pt_entry_t *pt = (pt_entry_t*)((ptr_t)pd3[pd3_index(adr)].bits.frame << PAGE_BITS);
+                if (pt[pt_index(adr)].bits.p) {
+                    return (((ptr_t)pt[pt_index(adr)].bits.frame << PAGE_BITS) + offset(adr));
+                } else {
+                    return 0;
+                }
+            } else {
+                return 0;
+            }
+        } else {
+            return 0;
+        }
+    } else {
+        return 0;
+    }
+#   else
+    if (pd1[pd1_index(adr)].bits.p) {
+        pt_entry_t *pt = (pt_entry_t*)((ptr_t)pd1[pd1_index(adr)].bits.frame << PAGE_BITS);
+        if (pt[pt_index(adr)].bits.p) {
+            return (((ptr_t)pt[pt_index(adr)].bits.frame << PAGE_BITS) + offset(adr));
+        } else {
+            return 0;
+        }
+    } else {
+        return 0;
+    }
+#   endif
+    return 0;
 }
-static inline unsigned frame_to_freemap_bit(unsigned frame)
+
+/*
+ * phys_to_virt only possible by a tree-search through the page directories...
+ */
+
+
+
+
+
+
+
+/*  --------------------------------------------------------------------------- */
+
+
+unsigned long freemap[MAX_MEM / PAGE_SIZE / (sizeof(unsigned long)*8)];     // currently 2GB / 4kB / 8bits = 64kB
+
+static inline unsigned frame_to_freemap_index(frame_t frame)
 {
-    return (frame & 0x3F);      // MOD 64
+    return (frame / (sizeof(unsigned long)*8));        // DIV 64
 }
-uint64_t get_free_frame()
+static inline unsigned frame_to_freemap_bit(frame_t frame)
 {
-    static unsigned last_frame = 0x400; // start at 4 MB (frame << PAGE_BITS = 0x400000)
+    return (frame % (sizeof(unsigned long)*8));      // MOD 64
+}
+frame_t get_free_frame()
+{
+    static frame_t last_frame = 0x400; // start at 4 MB (frame << PAGE_BITS = 0x400000)
     while (IS_BIT_CLEAR(freemap[frame_to_freemap_index(last_frame)], frame_to_freemap_bit(last_frame))) {
         last_frame++;
         if (last_frame >= (MAX_MEM / PAGE_SIZE)) {
@@ -127,7 +146,7 @@ uint64_t get_free_frame()
 
 /*  --------------------------------------------------------------------------- */
 
-void map_free_frame_to_page(unsigned page)
+void map_free_frame_to_page(page_t page)
 {
     // get free frame from get_free_frame()
     // walk through page tables (creating them as neccessary)
@@ -139,6 +158,7 @@ void map_free_frame_to_page(unsigned page)
 /*  --------------------------------------------------------------------------- */
 
 mutex_t pt_mutex = MUTEX_INITIALIZER_LOCKED;
+
 /*
  * In 64 bit mode, paging is enabled by start64.asm and the first 2 MB are identity-mapped.
  */
@@ -147,24 +167,29 @@ int mm_init()
     IFV printf("mm_init() 64 bit version\n");
 
     /* read address of page table PML4 (first level) from register cr3 */
-    asm volatile ("mov %%cr3, %%rax" : "=a"(pml4));
-    IFVV printf("MM: pml4 = 0x%x\n", (ptr_t)pml4);
+#   if __x86_64__
+    asm volatile ("mov %%cr3, %%rax" : "=a"(pd1));
+#   else
+    asm volatile ("mov %%cr3, %%eax" : "=a"(pd1));
+#   endif
+    IFVV printf("MM: pd1 = 0x%x\n", (ptr_t)pd1);
 
+#   if __x86_64__
     /* checks of page table entries */
-    IFVV printf("MM: pml4[0].p : %u\n", pml4[0].bits.p);
-    IFVV printf("MM: pml4[1].p : %u\n", pml4[1].bits.p);
+    IFVV printf("MM: pd1[0].p : %u\n", pd1[0].bits.p);
+    IFVV printf("MM: pd1[1].p : %u\n", pd1[1].bits.p);
 
-    pdpe_entry_t *pdpe = (pdpe_entry_t*)(ptr_t)(pml4[0].bits.frame << PAGE_BITS);
-    IFVV printf("MM: pml4[0]->pdpe = 0x%x\n", (ptr_t)pdpe);
+    pd2_entry_t *pd2 = (pd2_entry_t*)(ptr_t)(pd1[0].bits.frame << PAGE_BITS);
+    IFVV printf("MM: pd1[0]->pd2 = 0x%x\n", (ptr_t)pd2);
 
-    pde_entry_t *pde = (pde_entry_t*)(ptr_t)(pdpe[0].bits.frame << PAGE_BITS);
-    IFVV printf("MM: pml4[0]->pdpe[0]->pde = 0x%x\n", (ptr_t)pde);
+    pd3_entry_t *pd3 = (pd3_entry_t*)(ptr_t)(pd2[0].bits.frame << PAGE_BITS);
+    IFVV printf("MM: pd1[0]->pd2[0]->pd3 = 0x%x\n", (ptr_t)pd3);
 
-    IFVV printf("MM: pml4[0]->pdpe[0]->pde[0].p = %d   adr = 0x%x\n", pde[0].bits.p, pde[0].bits.frame<<PAGE_BITS);
-    IFVV printf("MM: pml4[0]->pdpe[0]->pde[1].p = %d   adr = 0x%x\n", pde[1].bits.p, pde[1].bits.frame<<PAGE_BITS);
+    IFVV printf("MM: pd1[0]->pd2[0]->pd3[0].p = %d   adr = 0x%x\n", pd3[0].bits.p, pd3[0].bits.frame<<PAGE_BITS);
+    IFVV printf("MM: pd1[0]->pd2[0]->pd3[1].p = %d   adr = 0x%x\n", pd3[1].bits.p, pd3[1].bits.frame<<PAGE_BITS);
 
-    pte_entry_t *pte = (pte_entry_t*)(ptr_t)(pde[0].bits.frame << PAGE_BITS);
-    IFVV printf("MM: pml4[0]->pdpe[0]->pde[0]->pte = 0x%x\n", (ptr_t)pte);
+    pt_entry_t *pt = (pt_entry_t*)(ptr_t)(pd3[0].bits.frame << PAGE_BITS);
+    IFVV printf("MM: pd1[0]->pd2[0]->pd3[0]->pt = 0x%x\n", (ptr_t)pt);
 
     /*
      * initialize freemap[]
@@ -212,7 +237,8 @@ int mm_init()
     //int *p = (int*)0x00200000-4;    // 2 MB (- 4B) : access fine; 2 MB + 4B : page fault
     //*p = 0;
     
-    mutex_unlock(&pt_mutex);
+    mutex_unlock(&pt_mutex);    // pt_mutex was initialized in locked state, from now on, the mm is usable
+#   endif
     return 0;
 }
 

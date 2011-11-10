@@ -44,7 +44,7 @@ void payload_benchmark()
             printf("CPU 1: exit now\n");
         } 
     } else {
-        printf("only one CPU active, Task needs at least two.\n");
+        printf("only one CPU active, this task needs at least two.\n");
     }
 }
 

@@ -13,12 +13,13 @@
     typedef unsigned long long u64;
 #endif
 
-typedef u8 uint8_t;
+typedef u8  uint8_t;
 typedef u16 uint16_t;
 typedef u32 uint32_t;
 typedef u64 uint64_t;
-typedef unsigned long size_t;
-typedef unsigned long ptr_t;
+
+typedef unsigned long size_t;   // size of a pointer; 32/64 bit safe
+typedef unsigned long ptr_t;    // size of a pointer; 32/64 bit safe
 
 
 #endif

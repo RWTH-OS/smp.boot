@@ -36,9 +36,10 @@
 #define SMP_FRAME  0x88
 
 /*
- * maximum supported memory (currently 4 GB)
+ * maximum supported memory (currently 2 GB)
+ * ATTN: ulong is 32 bit on __x86_32__, so 4GB==0 (overflow), max value would be 4GB-1, but that's not page-aligned...
  */
-#define MAX_MEM    (4ul*1024*1024*1024)
+#define MAX_MEM    (2ul*1024*1024*1024)
 
 /*
  * Stack size for each CPU (number of frames (4 kB); total stack size is 4096 * STACK_FRAMES))

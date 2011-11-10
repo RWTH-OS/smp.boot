@@ -19,6 +19,8 @@
 #ifndef MM_H
 #define MM_H
 
+typedef     unsigned long    frame_t;    // the number of a physical page frame
+typedef     unsigned long    page_t;     // the number of a virtual page
 
 int mm_init();
 
