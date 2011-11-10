@@ -225,6 +225,7 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
     unsigned ipd1 = pd1_index(adr);
     IFVV printf("map_frame_to_adr: ipd1 = %u\n", ipd1);
 
+    pd2_entry_t *pd2;
     if (pd1[ipd1].dir.p == 0) {
         /* we need a new pd2 */
         frame_t new_frame = get_free_frame(FRAME_TYPE_PT);
@@ -232,13 +233,17 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
         pd1[ipd1].dir.p = 1;
         pd1[ipd1].dir.rw = 1;
         pd1[ipd1].dir.frame = new_frame;
+        pd2 = (pd2_entry_t*)map_temporary(pd1[ipd1].dir.frame);
+        memset(pd2, 0, 4096);
+    } else {
+        pd2 = (pd2_entry_t*)map_temporary(pd1[ipd1].dir.frame);
     }
     /* pd1 now contains an entry for pd2 */
-    pd2_entry_t *pd2;
-    pd2 = (pd2_entry_t*)map_temporary(pd1[ipd1].dir.frame);
 
     unsigned ipd2 = pd2_index(adr);
     IFVV printf("map_frame_to_adr: ipd2 = %u\n", ipd2);
+
+    pd3_entry_t *pd3;
     if (pd2[ipd2].dir.p == 0) {
         /* we need a new pd3 */
         frame_t new_frame = get_free_frame(FRAME_TYPE_PT);
@@ -246,13 +251,17 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
         pd2[ipd2].dir.p = 1;
         pd2[ipd2].dir.rw = 1;
         pd2[ipd2].dir.frame = new_frame;
+        pd3 = (pd3_entry_t*)map_temporary(pd2[ipd2].dir.frame);
+        memset(pd3, 0, 4096);
+    } else {
+        pd3 = (pd3_entry_t*)map_temporary(pd2[ipd2].dir.frame);
     }
     /* pd2 now contains an entry for pd3 */
-    pd3_entry_t *pd3;
-    pd3 = (pd3_entry_t*)map_temporary(pd2[ipd2].dir.frame);
     
     unsigned ipd3 = pd3_index(adr);
     IFVV printf("map_frame_to_adr: ipd3 = %u\n", ipd3);
+
+    pt_entry_t *pt;
     if (pd3[ipd3].dir.p == 0) {
         /* we nedd a new pt */
         frame_t new_frame = get_free_frame(FRAME_TYPE_PT);
@@ -260,10 +269,12 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
         pd3[ipd3].dir.p = 1;
         pd3[ipd3].dir.rw = 1;
         pd3[ipd3].dir.frame = new_frame;
+        pt = (pt_entry_t*)map_temporary(pd3[ipd3].dir.frame);
+        memset(pt, 0, 4096);
+    } else {
+        pt = (pt_entry_t*)map_temporary(pd3[ipd3].dir.frame);
     }
     /* pd3 now contains an entry for pt */
-    pt_entry_t *pt;
-    pt = (pt_entry_t*)map_temporary(pd3[ipd3].dir.frame);
 
     unsigned ipt = pt_index(adr);
     IFVV printf("map_frame_to_adr: ipt = %u\n", ipt);
