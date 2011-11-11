@@ -56,9 +56,9 @@ void tests_barrier(void)
         if ((u % (myid+1)) == 0) udelay(1000*(u+1));
 
         barrier(&barr_all);
-
     }
     IFV printf("[%u] leaving test_barrier()\n", myid);
+    barrier(&barr_all);
 }
 
 void tests_doall(void)
@@ -68,5 +68,5 @@ void tests_doall(void)
     IFV printf("[%u] calling test_barrier()\n", myid);
     tests_barrier();
 
-    printf("[%u] exit doall()\n", myid);
+    printf("[%u] exit tests_doall()\n", myid);
 }

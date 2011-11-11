@@ -19,7 +19,7 @@
 #ifndef SMP_H
 #define SMP_H
 
-#include "config.h"
+#include "system.h"
 #include "sync.h"
 
 /*
@@ -42,15 +42,15 @@ extern stack_t stack[MAX_CPU];
 
 int smp_init(void);
 
-static inline cpu_info_t * my_cpu_info()
+static inline volatile cpu_info_t * my_cpu_info()
 {
-    void *p;
+    void volatile * p;
 #   ifdef __x86_64__
-    asm ("movq %%rsp, %%rax \n\t andq %%rdx, %%rax" : "=a"(p) : "d" ( ~(STACK_FRAMES*4096ul-1) ));
+    asm volatile("movq %%rsp, %%rax \n\t andq %%rdx, %%rax" : "=a"(p) : "d" ( ~STACK_MASK ));
 #   else
-    asm ("movl %%esp, %%eax \n\t andl %%edx, %%eax" : "=a"(p) : "d" ( ~(STACK_FRAMES*4096ul-1) ));
+    asm volatile("movl %%esp, %%eax \n\t andl %%edx, %%eax" : "=a"(p) : "d" ( ~STACK_MASK ));
 #   endif
-    return (cpu_info_t *)p;
+    return (cpu_info_t volatile * )p;
 }
 
 void smp_status(char c);

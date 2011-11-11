@@ -161,7 +161,10 @@ void apic_init()
 
         udelay(100 * 1000); /* 100 ms */
         if (mutex_trylock(&(stack[u].info.wakelock))) {
-            /* lock obtained successfully => AP did not lock it in time */
+            /*
+             * lock obtained successfully => AP did not lock it in time 
+             * if we lock the wakelock, the AP will block in main_ap()
+             */
             printf("  #%u: CPU did not come up.\n", u);
         }
         

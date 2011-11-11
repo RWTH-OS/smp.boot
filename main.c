@@ -224,12 +224,14 @@ void main_bsp(void)
 
     init_video();
     smp_init();
+    IFVV printf("my_cpu_info()->cpu_id: %u\n", my_cpu_info()->cpu_id);
 
     IFV puts("main(): video initialized\n");
     IFVV printf("found %d %s CPUs and %d I/O APICs\n", (ptr_t)hw_info.cpu_cnt, vendor[hw_info.cpu_vendor], (ptr_t)hw_info.ioapic_cnt);
     //udelay(DELAY);
 
     mm_init();
+    IFVV printf("my_cpu_info()->cpu_id: %u\n", my_cpu_info()->cpu_id);
 
     idt_install();
     IFV puts("idt installed\n");
@@ -256,7 +258,18 @@ void main_bsp(void)
     //print_multiboot_info();
     //print_smp_iboot32.o nfo();
 
-    //printf("offset of stack[0] : %x\n", &(stack[0]));
+    IFVV {
+        printf("offset of stack[0] : 0x%x ", &(stack[0]));
+        ptr_t sp;
+#       if __x86_64__
+        asm volatile("movq %%rsp, %%rax" : "=a"(sp) );
+#       else
+        asm volatile("movl %%esp, %%eax" : "=a"(sp) );
+#       endif
+        printf("my sp: 0x%x ", sp);
+        printf("my_cpu_info: 0x%x ", my_cpu_info());
+        printf("[%u]\n", my_cpu_info()->cpu_id);
+    }
     //printf("new[0]: cpu_info = %x cpu_id = %x\n", my_cpu_info(), my_cpu_info()->cpu_id);
     
     //multiboot_info();
@@ -278,9 +291,13 @@ void main_bsp(void)
 void main_ap(void)
 {
     cpu_online++;
-    mutex_lock(&(my_cpu_info()->wakelock));  /* signal, that the initialization of this CPU is done. */
+    /*
+     * Signal, that the initialization of this CPU is done. 
+     * If I'm not here in time, apic_init() will trylock() my wakelock
+     * and I will block here.
+     */
+    mutex_lock(&(my_cpu_info()->wakelock)); 
 
-    //status_putch(6+cpu_online, 'x');
     smp_status('x');
 
     //udelay(3000000*my_id);

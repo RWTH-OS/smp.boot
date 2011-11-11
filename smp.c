@@ -20,15 +20,16 @@
 #include "system.h"
 
 
-stack_t stack[MAX_CPU] __attribute__(( aligned(STACK_FRAMES*4096) ));
+stack_t stack[MAX_CPU] __attribute__(( aligned(STACK_SIZE) ));
 
 int smp_init(void)
 {
     /* this is run before any other CPU (AP) is called */
-    int i;
-    for (i=0; i<MAX_CPU; i++) {
-        stack[i].info.cpu_id = i;
-        mutex_init(&(stack[i].info.wakelock));
+    unsigned u;
+    for (u=0; u<MAX_CPU; u++) {
+        stack[u].info.cpu_id = u;
+        if (u<4) printf("stack[%u].info.cpu_id at 0x%x value: %u\n", u, &(stack[u].info.cpu_id), stack[u].info.cpu_id);
+        mutex_init(&(stack[u].info.wakelock));  // state: unlocked
     }
     return 0;
 }

@@ -18,6 +18,9 @@
 #endif
 #define INDEX_MASK    ((1<<INDEX_BITS) -1)
 
+#define STACK_SIZE    ((ptr_t)STACK_FRAMES * PAGE_SIZE)
+#define STACK_MASK    (STACK_SIZE-1)
+
 #if __x86_64__
 struct regs
 {

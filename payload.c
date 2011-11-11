@@ -52,7 +52,7 @@ void payload_benchmark()
             udelay(1*1000*1000);
             printf("[1] p_shared = 0x%x\n", p_shared);
             udelay(1*1000*1000);
-            memset(p_shared, 1, 4096);
+            memset((void*)p_shared, 1, 4096);
 
             printf("CPU 1: udelay 10 Sek.\n");
             udelay(10*1000*1000);

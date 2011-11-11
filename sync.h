@@ -20,8 +20,8 @@
 #define SYNC_H
 
 typedef volatile int mutex_t;
-#define MUTEX_INITIALIZER           (mutex_t)1
-#define MUTEX_INITIALIZER_LOCKED    (mutex_t)0
+#define MUTEX_INITIALIZER           ((mutex_t)1)
+#define MUTEX_INITIALIZER_LOCKED    ((mutex_t)0)
 void mutex_init(mutex_t *m);
 void mutex_lock(mutex_t *m);
 void mutex_unlock(mutex_t *m);

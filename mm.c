@@ -370,13 +370,19 @@ int mm_init()
      */
     unsigned count = 0;
     memset(freemap, 0, sizeof(freemap));
+    IFVV printf("freemap at 0x%x, sizeof(freemap): 0x%x\n", freemap, sizeof(freemap));
+
     multiboot_info_t *mbi = (multiboot_info_t*)(ptr_t)hw_info.mb_adr;
     if (IS_BIT_SET(mbi->flags, 0)) {
         // mem_upper is from 1 MB up to first memory hole.
         // we start with this and add more later if we find mmap_ (flags[6])
+        // mem_lower and mem_upper are in kB
         IFVV printf("flags[0] - mem_lower: 0x%x=%d  mem_upper: 0x%x=%d\n", mbi->mem_lower, mbi->mem_lower, mbi->mem_upper, mbi->mem_upper);
-        unsigned u;     // start at 0x400000 (4 MB)
-        for (u = 0x400; u < (mbi->mem_upper >> 2)+0x100; u++) {
+        frame_t u;     // start at 0x400000 (4 MB)
+        frame_t limit = mbi->mem_upper;
+        limit = limit >> 2;
+        if (limit > (MAX_MEM >> PAGE_BITS)) limit = MAX_MEM >> PAGE_BITS;
+        for (u = 0x400; u < limit; u++) {
             count++;
             BIT_SET(freemap[frame_to_freemap_index(u)], frame_to_freemap_bit(u));
         }
@@ -392,7 +398,7 @@ int mm_init()
                 IFVV printf("  mmap[0x%x] - addr:0x%x  len:0x%x  type: %d (%s)\n",
                         p, (multiboot_uint32_t)(p->addr), (multiboot_uint32_t)(p->len), p->type, mem_type[p->type==1?0:1]);
                 for (u = (p->addr>>PAGE_BITS); u < ((p->addr + p->len) >> PAGE_BITS); u++) {
-                    if (u >= 0x400) {
+                    if (u >= 0x400 && u < (MAX_MEM >> PAGE_BITS)) {
                         if (IS_BIT_CLEAR(freemap[frame_to_freemap_index(u)], frame_to_freemap_bit(u))) {
                             count++;
                             BIT_SET(freemap[frame_to_freemap_index(u)], frame_to_freemap_bit(u));

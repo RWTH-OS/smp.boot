@@ -56,7 +56,7 @@
 #define VERBOSE_SYNC        0
 #define VERBOSE_MM          0
 #define VERBOSE_TESTS       2
-#define VERBOSE_MAIN        0
+#define VERBOSE_MAIN        2
 
 /*
  * preliminary: CPU Frequency
