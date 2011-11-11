@@ -32,13 +32,16 @@ void payload_benchmark()
 {
     unsigned myid = my_cpu_info()->cpu_id;
     static volatile uint32_t * volatile p_shared = NULL;
+    static volatile uint32_t * volatile p_shared2 = NULL;
 
     /* needs at least two CPUs */
     if (cpu_online >= 2) {
         if (myid == 0) {
             /* call Task for CPU 0 */
             p_shared = heap_alloc(1);   // one page = 4kB
+            p_shared2 = heap_alloc(4);   // one page = 16kB
             printf("[0] p_shared = 0x%x\n", p_shared);
+            printf("[0] p_shared2 = 0x%x\n", p_shared);
             udelay(1*1000*1000);
             barrier(&barr);
 
@@ -51,8 +54,10 @@ void payload_benchmark()
             barrier(&barr);
             udelay(1*1000*1000);
             printf("[1] p_shared = 0x%x\n", p_shared);
+            printf("[1] p_shared2 = 0x%x\n", p_shared);
             udelay(1*1000*1000);
             memset((void*)p_shared, 1, 4096);
+            memset((void*)p_shared2, 1, 4*4096);
 
             printf("CPU 1: udelay 10 Sek.\n");
             udelay(10*1000*1000);
