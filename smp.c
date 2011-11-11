@@ -28,7 +28,7 @@ int smp_init(void)
     unsigned u;
     for (u=0; u<MAX_CPU; u++) {
         stack[u].info.cpu_id = u;
-        if (u<4) printf("stack[%u].info.cpu_id at 0x%x value: %u\n", u, &(stack[u].info.cpu_id), stack[u].info.cpu_id);
+        //if (u<4) printf("stack[%u].info.cpu_id at 0x%x value: %u\n", u, &(stack[u].info.cpu_id), stack[u].info.cpu_id);
         mutex_init(&(stack[u].info.wakelock));  // state: unlocked
     }
     return 0;

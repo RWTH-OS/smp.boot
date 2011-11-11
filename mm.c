@@ -102,6 +102,7 @@ frame_t get_free_frame(unsigned type)
     static frame_t last_frame_4k = 0x800; // start at 8 MB (frame << PAGE_BITS = 0x800000)
 
     if (type == FRAME_TYPE_4k) {
+        IFVV printf("get_free_frame(4k): start at frame 0x%x ", last_frame_4k);
         while (IS_BIT_CLEAR(freemap[frame_to_freemap_index(last_frame_4k)], frame_to_freemap_bit(last_frame_4k))) {
             last_frame_4k++;
             if (last_frame_4k >= (MAX_MEM / PAGE_SIZE)) {
@@ -111,8 +112,10 @@ frame_t get_free_frame(unsigned type)
             }
         }
         BIT_CLEAR(freemap[frame_to_freemap_index(last_frame_4k)], frame_to_freemap_bit(last_frame_4k));
+        IFVV printf("return frame 0x%x\n", last_frame_4k);
         return last_frame_4k;
     } else if (type == FRAME_TYPE_PT) {
+        IFVV printf("get_free_frame(pt): start at frame 0x%x ", last_frame_pt);
         while (IS_BIT_CLEAR(freemap[frame_to_freemap_index(last_frame_pt)], frame_to_freemap_bit(last_frame_pt))) {
             last_frame_pt++;
             if (last_frame_pt >= (MAX_MEM / PAGE_SIZE)) {
@@ -122,6 +125,7 @@ frame_t get_free_frame(unsigned type)
             }
         }
         BIT_CLEAR(freemap[frame_to_freemap_index(last_frame_pt)], frame_to_freemap_bit(last_frame_pt));
+        IFVV printf("return frame 0x%x\n", last_frame_pt);
         return last_frame_pt;
     }
     printf("ERROR: type %d not supported!\n", type);
@@ -200,15 +204,20 @@ ptr_t virt_to_phys(void * adr)
 
 static void *map_temporary(frame_t frame) 
 {
-    void * const tmp_map = (void*)0x1FF000;      /*  mapped initially in 32 AND 64 bit mode */
+    const page_t tmp_page = 0x1FF;                              /* this page is mapped initially in 32 AND 64 bit mode */
+    void * const tmp_map = (void*)(tmp_page << PAGE_BITS);      /* just below 2 MB */
 #   if __x86_64__
-        static pt_entry_t * const  pt = (pt_entry_t*)0x5000;  /* initialized there in start64.asm */
+        static pt_entry_t * const  pt = (pt_entry_t*)0x5000;    /* initialized there in start64.asm */
 #   else
-        static pt_entry_t * const  pt = (pt_entry_t*)0x5000;  /* ATTN: not initialized in 32 bit mode, yet! */
+        static pt_entry_t * const  pt = (pt_entry_t*)0x5000;    /* ATTN: not initialized in 32 bit mode, yet! */
 #   endif
-    pt[0x1FF].page.frame = frame;
-    pt[0x1FF].page.p = 1;
-    pt[0x1FF].page.rw = 1;
+
+    IFVV printf("map_temporary: frame 0x%x to adr 0x%x\n", frame, tmp_map);
+    pt[tmp_page].page.frame = frame;
+    pt[tmp_page].page.rw = 1;
+    pt[tmp_page].page.p = 1;
+    /* invalidate TLB for page containing the address tmp_map */
+    asm volatile ("invlpg %0" : : "m"(*(int*)tmp_map));
     return tmp_map;
 }
 
@@ -222,19 +231,21 @@ static void *map_temporary(frame_t frame)
 static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
 {
     if (flags != 0) {
-        printf("ERROR (map_frame_to_adr): flags %d not supported!\n", flags);
+        printf("ERROR (map_frame_to_adr): flags %d not supported, yet!\n", flags);
         smp_status('E');
         while (1) asm volatile ("hlt");
     }
+    IFV printf("map_frame_to_adr(frame=0x%x, adr=0x%x, flags=0x%x)\n", frame, adr, flags);
+
 #   if __x86_64__
     unsigned ipd1 = pd1_index(adr);
-    IFVV printf("map_frame_to_adr: ipd1 = %u\n", ipd1);
+    IFVV printf("map: pd1=0x%x ipd1=%u\n", pd1, ipd1);
 
     pd2_entry_t *pd2;
     if (pd1[ipd1].dir.p == 0) {
         /* we need a new pd2 */
         frame_t new_frame = get_free_frame(FRAME_TYPE_PT);
-        IFVV printf("map_frame_to_adr: new pd2: 0x%x\n", new_frame);
+        IFVV printf("map: new pd2: 0x%x\n", new_frame);
         pd1[ipd1].dir.p = 1;
         pd1[ipd1].dir.rw = 1;
         pd1[ipd1].dir.frame = new_frame;
@@ -246,13 +257,13 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
     /* pd1 now contains an entry for pd2 */
 
     unsigned ipd2 = pd2_index(adr);
-    IFVV printf("map_frame_to_adr: ipd2 = %u\n", ipd2);
+    IFVV printf("map: pd2=0x%x ipd2=%u\n", pd2, ipd2);
 
     pd3_entry_t *pd3;
     if (pd2[ipd2].dir.p == 0) {
         /* we need a new pd3 */
         frame_t new_frame = get_free_frame(FRAME_TYPE_PT);
-        IFVV printf("map_frame_to_adr: new pd3: 0x%x\n", new_frame);
+        IFVV printf("map: new pd3: 0x%x\n", new_frame);
         pd2[ipd2].dir.p = 1;
         pd2[ipd2].dir.rw = 1;
         pd2[ipd2].dir.frame = new_frame;
@@ -264,13 +275,13 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
     /* pd2 now contains an entry for pd3 */
     
     unsigned ipd3 = pd3_index(adr);
-    IFVV printf("map_frame_to_adr: ipd3 = %u\n", ipd3);
+    IFVV printf("map: pd3=0x%x ipd3=%u\n", pd3, ipd3);
 
     pt_entry_t *pt;
     if (pd3[ipd3].dir.p == 0) {
         /* we nedd a new pt */
         frame_t new_frame = get_free_frame(FRAME_TYPE_PT);
-        IFVV printf("map_frame_to_adr: new pt: 0x%x\n", new_frame);
+        IFVV printf("map: new pt: 0x%x\n", new_frame);
         pd3[ipd3].dir.frame = new_frame;
         pd3[ipd3].dir.rw = 1;
         pd3[ipd3].dir.p = 1;
@@ -282,13 +293,15 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
     /* pd3 now contains an entry for pt */
 
     unsigned ipt = pt_index(adr);
-    IFVV printf("map_frame_to_adr: ipt = %u\n", ipt);
+    IFVV printf("map: dt=0x%x ipt=%u\n", pt, ipt);
     if (pt[ipt].page.p == 0) {
         /* the page was not mapped before */
-        IFVV printf("map_frame_to_adr: new page: 0x%x\n", frame);
+        IFVV printf("map: new page: 0x%x\n", frame);
         pt[ipt].page.frame = frame;
         pt[ipt].page.rw = 1;
         pt[ipt].page.p = 1;
+        /* invalidate TLB for page containing the address just mapped */
+        asm volatile ("invlpg %0" : : "m"(*((int*)((ptr_t)frame<<PAGE_BITS))));
     }
 #   else
     unsigned ipd1 = pd1_index(adr);
@@ -315,6 +328,8 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
         pt[ipt].page.frame = frame;
         pt[ipt].page.rw = 1;
         pt[ipt].page.p = 1;
+        /* invalidate TLB for page containing the address just mapped */
+        asm volatile ("invlpg %0" : : "m"(*((int*)((ptr_t)frame<<PAGE_BITS))));
     }
 #   endif
     IFVV printf("map_frame_to_adr: done\n");
