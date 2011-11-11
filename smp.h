@@ -20,12 +20,14 @@
 #define SMP_H
 
 #include "config.h"
+#include "sync.h"
 
 /*
  * per-cpu info structure
  */
 typedef struct {
     unsigned cpu_id;     
+    mutex_t wakelock;
 } cpu_info_t;
 
 /*

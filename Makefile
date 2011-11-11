@@ -8,10 +8,11 @@ ASMFILES=$(shell ls *.asm)
 
 CFLAGS=-c -O0
 # -O          - basic optimization
-CFLAGS+=-Wall -Wextra -Wno-main 
+CFLAGS+=-Wall -Wextra -Wno-main -Wno-unused-function
 # -Wall       - give warnings (on most checks)
 # -Wextra     - give even more warnings (on all checks)
 # -Wno-main   - suppress warning on main and its parameters (this is a kernel!)
+# -Wno-unused-function - suppress warning about unused function (during development...)
 CFLAGS+=-fstrength-reduce -fomit-frame-pointer -finline-functions -nostdinc -fno-builtin -fno-zero-initialized-in-bss 
 # -fstrengh-reduce
 # -fomit-frame-pointer

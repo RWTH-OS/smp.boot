@@ -59,7 +59,7 @@ static inline ptr_t pd1_index(void * adr)
 {
     return (((ptr_t)adr) >> (PAGE_BITS+3*INDEX_BITS)) & INDEX_MASK;
 }
-#else
+#else   // __x86_32__
 static inline ptr_t offset4M(void * adr) 
 {
     return ((ptr_t)adr) & ((INDEX_MASK<<PAGE_BITS)|PAGE_MASK);
@@ -68,7 +68,12 @@ static inline ptr_t pd1_index(void * adr)
 {
     return (((ptr_t)adr) >> (PAGE_BITS+INDEX_BITS)) & INDEX_MASK;
 }
-#endif
+#endif  // __x86_??__
+
+static inline void *page_to_adr(page_t page)
+{
+    return (void*)((ptr_t)page << PAGE_BITS);
+}
 
 /*  --------------------------------------------------------------------------- */
 
@@ -195,11 +200,11 @@ ptr_t virt_to_phys(void * adr)
 
 static void *map_temporary(frame_t frame) 
 {
-    const void *tmp_map = (void*)0x1FF000;      /*  mapped initially in 32 AND 64 bit mode */
+    void * const tmp_map = (void*)0x1FF000;      /*  mapped initially in 32 AND 64 bit mode */
 #   if __x86_64__
-        static pt_entry_t * const  pt = 0x5000;  /* initialized there in start64.asm */
+        static pt_entry_t * const  pt = (pt_entry_t*)0x5000;  /* initialized there in start64.asm */
 #   else
-        static pt_entry_t * const  pt = 0x5000;  /* ATTN: not initialized in 32 bit mode, yet! */
+        static pt_entry_t * const  pt = (pt_entry_t*)0x5000;  /* ATTN: not initialized in 32 bit mode, yet! */
 #   endif
     pt[0x1FF].page.frame = frame;
     pt[0x1FF].page.p = 1;
@@ -266,9 +271,9 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
         /* we nedd a new pt */
         frame_t new_frame = get_free_frame(FRAME_TYPE_PT);
         IFVV printf("map_frame_to_adr: new pt: 0x%x\n", new_frame);
-        pd3[ipd3].dir.p = 1;
-        pd3[ipd3].dir.rw = 1;
         pd3[ipd3].dir.frame = new_frame;
+        pd3[ipd3].dir.rw = 1;
+        pd3[ipd3].dir.p = 1;
         pt = (pt_entry_t*)map_temporary(pd3[ipd3].dir.frame);
         memset(pt, 0, 4096);
     } else {
@@ -281,35 +286,38 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
     if (pt[ipt].page.p == 0) {
         /* the page was not mapped before */
         IFVV printf("map_frame_to_adr: new page: 0x%x\n", frame);
-        pt[ipt].page.p = 1;
-        pt[ipt].page.rw = 1;
         pt[ipt].page.frame = frame;
+        pt[ipt].page.rw = 1;
+        pt[ipt].page.p = 1;
     }
-
-    IFVV printf("map_frame_to_adr: done\n");
-
 #   else
     unsigned ipd1 = pd1_index(adr);
 
+    pt_entry_t *pt;
     if (pd1[ipd1].dir.p == 0) {
         /* we need a new pd2 */
         frame_t new_frame = get_free_frame(FRAME_TYPE_PT);
-        pd1[ipd1].dir.p = 1;
-        pd1[ipd1].dir.rw = 1;
+        IFVV printf("map_frame_to_adr: new pt: 0x%x\n", new_frame);
         pd1[ipd1].dir.frame = new_frame;
+        pd1[ipd1].dir.rw = 1;
+        pd1[ipd1].dir.p = 1;
+        pt = (pt_entry_t*)map_temporary(pd1[ipd1].dir.frame);
+    } else {
+        pt = (pt_entry_t*)map_temporary(pd1[ipd1].dir.frame);
     }
     /* pd1 now contains an entry for pt */
-    pt_entry_t *pt;
-    pt = (pt_entry_t*)(ptr_t)(pd1[ipd1].dir.frame << PAGE_BITS);
 
     unsigned ipt = pt_index(adr);
+    IFVV printf("map_frame_to_adr: ipt = %u\n", ipt);
     if (pt[ipt].page.p == 0) {
         /* the page was not mapped before */
-        pt[ipt].page.p = 1;
-        pt[ipt].page.rw = 1;
+        IFVV printf("map_frame_to_adr: new page: 0x%x\n", frame);
         pt[ipt].page.frame = frame;
+        pt[ipt].page.rw = 1;
+        pt[ipt].page.p = 1;
     }
 #   endif
+    IFVV printf("map_frame_to_adr: done\n");
 }
 
 
@@ -405,7 +413,7 @@ int mm_init()
     return 0;
 }
 
-static unsigned next_virt_page = 0x400;
+static page_t next_virt_page = 0x400;
 
 void *heap_alloc(unsigned nbr_pages)
 {
@@ -415,10 +423,10 @@ void *heap_alloc(unsigned nbr_pages)
 
     mutex_lock(&pt_mutex);
 
-    res = (void*)(ptr_t)(next_virt_page << PAGE_BITS);
+    res = page_to_adr(next_virt_page);
     for (i = 0; i < nbr_pages; i++) {
         frame = get_free_frame(FRAME_TYPE_4k);
-        map_frame_to_adr(frame, (void*)(ptr_t)(next_virt_page<<PAGE_BITS), 0);
+        map_frame_to_adr(frame, page_to_adr(next_virt_page), 0);
         next_virt_page++;
     }
 

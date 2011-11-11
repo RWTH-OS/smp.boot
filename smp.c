@@ -24,9 +24,11 @@ stack_t stack[MAX_CPU] __attribute__(( aligned(STACK_FRAMES*4096) ));
 
 int smp_init(void)
 {
+    /* this is run before any other CPU (AP) is called */
     int i;
     for (i=0; i<MAX_CPU; i++) {
         stack[i].info.cpu_id = i;
+        mutex_init(&(stack[i].info.wakelock));
     }
     return 0;
 }

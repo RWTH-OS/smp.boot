@@ -239,7 +239,7 @@ void main_bsp(void)
     IFV puts("isr installed\n");
     //udelay(DELAY);
     
-    apic_init();
+    apic_init();    /* this is where the APs are waked up */
     IFV puts("apic initialized\n");
 
     IFV puts("my kernel is running in main_bsp now...\n");
@@ -263,6 +263,8 @@ void main_bsp(void)
 
     cpu_online++;       // the BSP is there, too
     mainbarrier.max = cpu_online;
+    /* wait until all others are in the following barrier */
+    while (mainbarrier.cnt < (mainbarrier.max-1)) {};
     barrier(&mainbarrier);
 
     main();
@@ -276,6 +278,8 @@ void main_bsp(void)
 void main_ap(void)
 {
     cpu_online++;
+    mutex_lock(&(my_cpu_info()->wakelock));  /* signal, that the initialization of this CPU is done. */
+
     //status_putch(6+cpu_online, 'x');
     smp_status('x');
 
@@ -287,6 +291,7 @@ void main_ap(void)
 }
 
 #include "payload.h"
+#include "tests.h"
 void stop();
 
 /*
@@ -296,6 +301,9 @@ void stop();
 void main()
 {
     IFVV printf("CPU %d/%d entering in main()\n", my_cpu_info()->cpu_id, cpu_online);
+
+    /* call tests */
+    tests_doall();
 
     /* call a payload */
     payload_benchmark();

@@ -1,4 +1,6 @@
 #include "system.h"
+#include "sync.h"
+#include "smp.h"
 
 #define IFV   if (VERBOSE > 0 || VERBOSE_APIC > 0)
 #define IFVV  if (VERBOSE > 1 || VERBOSE_APIC > 1)
@@ -55,6 +57,8 @@ void write_ioAPIC(unsigned id, uint32_t offset, uint32_t value)
     *ioAPIC_Data = value;
     // TODO : restore IF to previous value
 }
+
+extern stack_t stack[MAX_CPU];
 
 void apic_init()
 {
@@ -156,8 +160,10 @@ void apic_init()
         write_localAPIC(LAPIC_ICR_LOW,  (uint32_t)   (0x6 << 8)|SMP_FRAME);
 
         udelay(100 * 1000); /* 100 ms */
-        // TODO: check, if CPU is up.
-        //   ...else: what ?!
+        if (mutex_trylock(&(stack[u].info.wakelock))) {
+            /* lock obtained successfully => AP did not lock it in time */
+            printf("  #%u: CPU did not come up.\n", u);
+        }
         
     }
 
