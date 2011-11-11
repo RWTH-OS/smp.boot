@@ -19,6 +19,7 @@
 #include "system.h"
 #include "smp.h"
 #include "sync.h"
+#include "mm.h"
 
 #define IFV   if (VERBOSE > 0 || VERBOSE_TESTS > 0)
 #define IFVV  if (VERBOSE > 1 || VERBOSE_TESTS > 1)
@@ -61,12 +62,65 @@ void tests_barrier(void)
     barrier(&barr_all);
 }
 
+void tests_mm(void)
+{
+    static barrier_t barr = BARRIER_INITIALIZER(2);
+    unsigned myid = my_cpu_info()->cpu_id;
+    static volatile uint32_t * volatile p_shared = NULL;
+    static volatile uint32_t * volatile p_shared2 = NULL;
+    static volatile uint32_t * volatile p_shared3 = NULL;
+    static volatile uint32_t * volatile p_shared4 = NULL;
+
+    if (cpu_online >= 2) {
+        if (myid == 0) {
+            /* call Task for CPU 0 */
+            p_shared = heap_alloc(1);   // one page = 4kB
+            p_shared2 = heap_alloc(4);   // one page = 16kB
+            printf("[0] p_shared = 0x%x\n", p_shared);
+            printf("[0] p_shared2 = 0x%x\n", p_shared2);
+            udelay(1*1000*1000);
+            barrier(&barr);
+            p_shared3 = heap_alloc(2);   // two pages = 8kB
+            barrier(&barr);
+            printf("p_shared[1023] = 0x%x (should be 0x01010101)\n", p_shared[1023]);
+            printf("p_shared2[2048] = 0x%x (should be 0x22222222)\n", p_shared2[2048]);
+
+
+            printf("CPU 0: udelay 5 Sek.\n");
+            udelay(5*1000*1000);
+            printf("CPU 0: exit now\n");
+        } else if (myid == 1) {
+            /* call Task for CPU 1 */
+            barrier(&barr);
+            p_shared4 = heap_alloc(2);   // two pages = 8kB
+            udelay(1*1000*1000);
+            printf("[1] p_shared = 0x%x\n", p_shared);
+            printf("[1] p_shared2 = 0x%x\n", p_shared2);
+            printf("[1] p_shared3 = 0x%x\n", p_shared3);
+            printf("[1] p_shared4 = 0x%x\n", p_shared4);
+            udelay(1*1000*1000);
+            memset((void*)p_shared, 1, 4096);
+            memset((void*)p_shared2, 0x22, 4*4096);
+            barrier(&barr);
+
+            printf("CPU 1: udelay 10 Sek.\n");
+            udelay(10*1000*1000);
+            printf("CPU 1: exit now\n");
+        } 
+    } else {
+        printf("only one CPU active, this task needs at least two.\n");
+    }
+
+}
+
 void tests_doall(void)
 {
     unsigned myid = my_cpu_info()->cpu_id;
 
     IFV printf("[%u] calling test_barrier()\n", myid);
     tests_barrier();
+
+    tests_mm();
 
     printf("[%u] exit tests_doall()\n", myid);
 }
