@@ -70,6 +70,8 @@ static inline ptr_t pd1_index(void * adr)
 }
 #endif  // __x86_??__
 
+#define pt_num_entries (0x1000 / sizeof(pt_entry_t))
+
 static inline void *page_to_adr(page_t page)
 {
     return (void*)((ptr_t)page << PAGE_BITS);
@@ -348,25 +350,64 @@ mutex_t pt_mutex = MUTEX_INITIALIZER_LOCKED;
 
 /*
  * In 64 bit mode, paging is enabled by start64.asm and the first 2 MB are identity-mapped.
+ * In 32 bit mode, the paging not activated, yet.
  */
 int mm_init()
 {
     IFV printf("mm_init() \n");
 
-    /* read address of page table PML4 (first level) from register cr3 */
+
 #   if __x86_64__
+    /* read address of page table PML4 (first level) from register cr3 */
     asm volatile ("mov %%cr3, %%rax" : "=a"(pd1));
-#   else
-    asm volatile ("mov %%cr3, %%eax" : "=a"(pd1));
-#   endif
+#   else    /* 32 bit */
+
+    pd1 = (pd1_entry_t*)0x1000;
+    memset(pd1, 0, PAGE_SIZE);
+
+    pt_entry_t* pt = (pt_entry_t*)0x2000;
+    memset(pt, 0, PAGE_SIZE);
+    pd1[0].dir.frame = ((ptr_t)pt >> PAGE_BITS);
+    pd1[0].dir.rw = 1;
+    pd1[0].dir.p = 1;
+
+    unsigned u;
+    for (u = 0; u < pt_num_entries; u++) {
+        pt[u].page.frame = u;        /* identity paging for the first 4 MB */
+        pt[u].page.rw = 1;
+        pt[u].page.p = 1;
+    }
+
+    /* map APICs 0xfee00000 and 0xfec00000 */
+    /* 0xfee00-000    
+     * 0b1111 1110 11-10 0000 0000 - 0000 0000 0000
+     * 0xfec00-000
+     * 0b1111 1110 11-00 0000 0000 - 0000 0000 0000
+     */
+    pt = (pt_entry_t*)0x3000;
+    pd1[1023-4].dir.frame = ((ptr_t)pt >> PAGE_BITS);
+    pd1[1023-4].dir.rw = 1;
+    pd1[1023-4].dir.p = 1;
+    pt[0].page.frame = 0xfec00;
+    pt[0].page.rw = 1;
+    pt[0].page.p = 1;
+    pt[512].page.frame = 0xfee00;
+    pt[512].page.rw = 1;
+    pt[512].page.p = 1;
+
+    asm volatile ("mov %%eax, %%cr3" : : "a"(pd1));     /* set cr3 to page-directory */
+    asm volatile ("mov %%cr0, %%eax "
+            "\n\t or $0x80000000, %%eax "
+            "\n\t mov %%eax, %%cr0" ::: "eax");          /*  activate paging with cr0[31] */
+#   endif   /*  64/32 bit */
+
     IFVV printf("MM: pd1 = 0x%x\n", (ptr_t)pd1);
 
-
-#   if __x86_64__
     /* checks of page table entries */
     IFVV printf("MM: pd1[0].p : %u\n", pd1[0].dir.p);
     IFVV printf("MM: pd1[1].p : %u\n", pd1[1].dir.p);
 
+#   if __x86_64__
     pd2_entry_t *pd2 = (pd2_entry_t*)(ptr_t)(pd1[0].dir.frame << PAGE_BITS);
     IFVV printf("MM: pd1[0]->pd2 = 0x%x\n", (ptr_t)pd2);
 
@@ -377,8 +418,11 @@ int mm_init()
     IFVV printf("MM: pd1[0]->pd2[0]->pd3[1].p = %d   adr = 0x%x\n", pd3[1].dir.p, pd3[1].dir.frame<<PAGE_BITS);
 
     pt_entry_t *pt = (pt_entry_t*)(ptr_t)(pd3[0].dir.frame << PAGE_BITS);
-    IFVV printf("MM: pd1[0]->pd2[0]->pd3[0]->pt = 0x%x\n", (ptr_t)pt);
+#   else
+    pt = (pt_entry_t*)(ptr_t)(pd1[0].dir.frame << PAGE_BITS);
 #   endif
+
+        IFVV printf("MM: pt = 0x%x\n", (ptr_t)pt);
 
     /*
      * initialize freemap[]

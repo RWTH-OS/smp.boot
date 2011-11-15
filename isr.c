@@ -126,8 +126,27 @@ void fault_handler(struct regs *r)
 {
     if (r->int_no < 32) {
         printf("\nException: %s\n", exception_messages[r->int_no]);
+#       if __x86_64__
+            printf("ip: 0x%x, sp:0x%x\n", r->rip, r->rsp);
+            //struct regs
+            //{
+            //    unsigned long long cr3, gs, fs, es, ds;				/* pushed the segs last */
+            //    unsigned long long r15, r14, r13, r12, r11, r10, r9, r8, rdi, rsi, rbp, _zero, rbx, rdx, rcx, rax ;
+            //    unsigned long long int_no, err_code;			/* our 'push byte #' and ecodes do this */
+            //    unsigned long long rip, cs, rflags, rsp, ss;			/* pushed by the processor automatically */
+            //} __attribute__((packed));
+#       else
+            printf("ip: 0x%x, sp:0x%x\n", r->eip, r->useresp);
+            //struct regs
+            //{
+            //    unsigned int gs, fs, es, ds;
+            //    unsigned int edi, esi, ebp, esp, ebx, edx, ecx, eax;
+            //    unsigned int int_no, err_code;
+            //    unsigned int eip, cx, eflags, useresp, ss;
+            //};
+#       endif
         printf("System halted.\n");
-        while(1) {};
+        while(1) {asm volatile ("hlt"); };
     }
 }
 

@@ -81,6 +81,8 @@ flush2:                 ; now in protected mode
     mov ax, 0x0F00+'0'
     mov [0xB8002], ax
 
+
+    ; jump into C main()
 extern main_bsp
     call main_bsp         ; main()   (further on in the main kernel)
 
