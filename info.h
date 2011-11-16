@@ -59,6 +59,10 @@ typedef struct {
         uint32_t adr;
     } ioapic[MAX_IOAPIC];
 
+    /* TSC */
+    uint64_t tsc_per_sec;
+    uint64_t tsc_per_usec;
+
 } hw_info_t;
 
 extern hw_info_t hw_info; 

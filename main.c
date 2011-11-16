@@ -4,6 +4,7 @@
 #include "smp.h"
 #include "sync.h"
 #include "mm.h"
+#include "pit.h"
 
 #define IFV   if (VERBOSE > 0 || VERBOSE_MAIN > 0)
 #define IFVV  if (VERBOSE > 1 || VERBOSE_MAIN > 1)
@@ -59,14 +60,6 @@ void print_multiboot_info(void)
     /* see: http://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format */
 }
 
-void cpuid(unsigned func, unsigned *eax, unsigned *ebx, unsigned *ecx, unsigned *edx)
-{
-    asm volatile ("cpuid" : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx) : "a"(func));
-}
-void cpuid2(unsigned func, unsigned subfunc, unsigned *eax, unsigned *ebx, unsigned *ecx, unsigned *edx)
-{
-    asm volatile ("cpuid" : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx) : "a"(func), "c"(subfunc));
-}
 void print_smp_info(void)
 {
     unsigned eax, ebx, ecx, edx;
@@ -241,6 +234,9 @@ void main_bsp(void)
     IFV puts("isr installed\n");
     //udelay(DELAY);
     
+    hw_info.tsc_per_sec = PIT_measure_tsc_per_sec();
+    IFV puts("tsc calibrated\n");
+    
     apic_init();    /* this is where the APs are waked up */
     IFV puts("apic initialized\n");
 
@@ -320,10 +316,10 @@ void main()
     IFVV printf("CPU %d/%d entering in main()\n", my_cpu_info()->cpu_id, cpu_online);
 
     /* call tests */
-    tests_doall();
+    //tests_doall();
 
     /* call a payload */
-    //payload_benchmark();
+    payload_benchmark();
 
     /* all CPUs leaving the payload: go to sleep */
     stop();
