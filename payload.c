@@ -44,27 +44,51 @@ void payload_benchmark()
     mutex_unlock(&mut);
 
 
-    if (myid == 0) printf("1 CPU hourglass -------------------------------\n");
+    if (myid == 0) printf("1 CPU hourglass (%u sec) -------------------------------\n", BENCH_HOURGLAS_SEC);
     barrier(&barr);
 
     if (myid == 0) {
-        hourglass(10);
+        hourglass(BENCH_HOURGLAS_SEC);
     }
 
     if (cpu_online > 1) {
-        if (myid == 0) printf("2 CPUs hourglass ------------------------------\n");
+        if (myid == 0) printf("2 CPUs hourglass (%u sec) ------------------------------\n", BENCH_HOURGLAS_SEC);
         barrier(&barr);
 
         if (myid == 0) {
-            hourglass(10);
+            hourglass(BENCH_HOURGLAS_SEC);
         } else if (myid == 1) {
-            hourglass(10);
+            hourglass(BENCH_HOURGLAS_SEC);
         }
     }
 
     barrier(&barr);
 
+    /*
+     * allocate Buffer for memory benchmarks
+     */
+    if (myid == 0) {
+        static void * p_buffer = NULL;
+        size_t max_range = (1 << BENCH_MAX_RANGE_POW2); // 2^25 = 32 MB
+        size_t i, j;
+        p_buffer = heap_alloc(max_range/4096);       // one page = 4kB
 
+        /* no need for pre-faulting, because pages are present after head_alloc()
+         * but initialize them */
+        memset(p_buffer, 0, max_range);
+
+
+        printf("str.|range%4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s\n", 
+                "4k", "8k", "16k", "32k", "64k", "128k", "256k", "512k", "1M", "2M", "4M", "8M", "16M", "32M");
+        for (i=BENCH_MIN_STRIDE_POW2; i<=BENCH_MAX_STRIDE_POW2; i++) {                      /* stride */
+            printf("%3u      ", (1<<i));
+            for (j=BENCH_MIN_RANGE_POW2; j<=BENCH_MAX_RANGE_POW2; j++) {                /* range */
+                unsigned long ret = range_stride(p_buffer, (1<<j), (1<<i));
+                printf(" %4u", ret);
+            }
+            printf("\n");
+        }
+    }
 
 #   if 0
     /* needs at least two CPUs */

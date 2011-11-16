@@ -265,11 +265,18 @@ printf (const char *format, ...)
       else
         {
           char *p;
+          int len = 0;
 
           c = *format++;
+          while (c >= '0' && c <= '9') {
+              len *= 10;
+              len += (c-'0');
+              c = *format++;
+          }
           switch (c)
             {
             case 'd':
+            case 'i':
               value = __builtin_va_arg(ap, long);
               goto weiter;
             case 'u':
@@ -287,6 +294,11 @@ printf (const char *format, ...)
                 p = "(null)";
 
             string:
+              len -= strlen(p);
+              while (len > 0) {
+                  putch(' ');
+                  len--;
+              }
               while (*p)
                 putch (*p++);
               break;

@@ -55,8 +55,8 @@
 #define VERBOSE_APIC        0
 #define VERBOSE_SYNC        0
 #define VERBOSE_MM          0
-#define VERBOSE_PIT         2
-#define VERBOSE_SMM         2
+#define VERBOSE_PIT         0
+#define VERBOSE_SMM         0
 #define VERBOSE_TESTS       0
 #define VERBOSE_MAIN        0
 
@@ -65,5 +65,15 @@
  * (until it can be correctly measured)
  */
 #define TSC_PER_USEC (2666ul)
+
+
+/*
+ * settings for benchmarks
+ */
+#define BENCH_HOURGLAS_SEC      2u
+#define BENCH_MIN_STRIDE_POW2   4  
+#define BENCH_MAX_STRIDE_POW2   9
+#define BENCH_MIN_RANGE_POW2    12
+#define BENCH_MAX_RANGE_POW2    25
 
 #endif 

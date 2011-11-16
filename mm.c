@@ -493,7 +493,7 @@ void *heap_alloc(unsigned nbr_pages)
         frame = get_free_frame(FRAME_TYPE_4k);
         map_frame_to_adr(frame, page_to_adr(next_virt_page), 0);
         next_virt_page++;
-        printf("next_virt_page=0x%x\n", next_virt_page);
+        IFVV printf("next_virt_page=0x%x\n", next_virt_page);
     }
 
     mutex_unlock(&pt_mutex);

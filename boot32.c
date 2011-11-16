@@ -239,7 +239,7 @@ void get_info()
     /* initialize some fields of hw_info */
     hw_info.cmd_cpumask = 0xFFFFFFFF;      /* default: all CPUs */
     hw_info.cmd_maxcpu = MAX_CPU;
-    hw_info.tsc_per_usec = 2666;            /* for 2.6 GHz CPU, used before calibration */
+    hw_info.tsc_per_usec = TSC_PER_USEC;            /* for 2.6 GHz CPU, used before calibration (see pit.c) */
 
     /*
      * check, what CPUID functions are available

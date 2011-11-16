@@ -2,9 +2,9 @@
 Memory Management
 =================
 
-The header mm.h is for both 32 and 64 bit kernels. As the code is strongly
-dependent on the architecture, two independent versions, mm32.c and mm64.c are
-implemented (but both interface to mm.h).
+The header mm.h is for both 32 and 64 bit kernels. In mm.c, there are
+#if/#else/#endif blocks where a distinction between 32 and 64 bit is needed.
+All structure definitions are in mm_struct.h
 
 Some Numbers:
                                     32 bit      64 bit
@@ -17,6 +17,7 @@ size of all frame is sub-level      4 MB        2 MB
 
 needed bit-field for available pages (limited to 4 GB usable memory):
     1 M bits = 128 kByte
+(currently limited to 2GB)
 
 
 Memory Layout

@@ -37,12 +37,13 @@ void smm_deactivate(void)
     // TODO: how to read pmbase correctly from pci_config? Are there MetalSVM-functions to do this?
     uint32_t adr;
     uint32_t smi_en;
+
+    /*
     union {
         char string[48];
         uint32_t reg[12];
     } brand;
 
-    /*
     asm volatile ("movl $0x80000002, %%eax \n\t cpuid" : "=a"(brand.reg[0]), "=b"(brand.reg[1]), "=c"(brand.reg[2]), "=d"(brand.reg[3]));
     asm volatile ("movl $0x80000003, %%eax \n\t cpuid" : "=a"(brand.reg[4]), "=b"(brand.reg[5]), "=c"(brand.reg[6]), "=d"(brand.reg[7]));
     asm volatile ("movl $0x80000004, %%eax \n\t cpuid" : "=a"(brand.reg[8]), "=b"(brand.reg[9]), "=c"(brand.reg[10]), "=d"(brand.reg[11]));
@@ -75,9 +76,9 @@ void smm_deactivate(void)
 
     /* if GBL_SMI_EN (bit #0) is 0, deactivation was successful */
     if ((smi_en & 0x01) == 0) {
-        IFVV printf("SMI globally disabled\n");
+        IFV printf("SMI globally disabled\n");
     } else {
-        IFV printf("Warning: SMI was not disabled!\n");
+        printf("Warning: SMI was not disabled!\n");
     }
 }
 

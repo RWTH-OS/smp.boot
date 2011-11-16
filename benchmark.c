@@ -51,7 +51,7 @@ void hourglass(unsigned sec)
      */
     min = 0xFFFFFFFF, avg = 0; cnt = 0; max = 0;
     tsc = rdtsc();
-    tsc_end = tsc + 10 * 1000000ull * hw_info.tsc_per_usec;
+    tsc_end = tsc + sec * 1000000ull * hw_info.tsc_per_usec;
     while (tsc < tsc_end) {
         tsc_last = tsc;
         tsc = rdtsc();
@@ -74,4 +74,35 @@ void hourglass(unsigned sec)
     printf("[%u] %u sec hourglass: cnt : min/avg/max %u : %u/%u/%u " /* "[%i.%i:%i.%i]" */ "\n", 
             my_cpu_info()->cpu_id, sec, 
             cnt, min, avg, max /* , p_min/10, abs(p_min)%10, p_max/10, abs(p_max)%10 */ );
+}
+
+/*
+ * Do range-stride benchmark for a combination of range/stride.
+ * Needs a buffer, that is page-aligned and at least range bytes in size.
+ */
+typedef char access_type;
+uint64_t range_stride(void *buffer, size_t range, size_t stride)
+{
+    size_t r, i;
+    volatile access_type d;
+    volatile access_type *data = (volatile access_type*)buffer;
+    uint64_t tsc;
+
+    stride /= sizeof(access_type);
+
+    /* warm-up */
+    for (i=0; i<4; i++) {
+        for (r=0; r < range; r += stride) {
+            d = data[r];
+        }
+    }
+    
+    tsc = rdtsc();
+    /* calculate count of repeats to be of constant time (decreasing with increasing number of accesses in range) */
+    for (i=0; i<256*1024*1024/(range/stride); i++) {
+        for (r=0; r < range; r += stride) {
+            d = data[r];
+        }
+    }
+    return (rdtsc()-tsc)/(256*1024*1024);
 }

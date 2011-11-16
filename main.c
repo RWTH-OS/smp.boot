@@ -88,7 +88,8 @@ void main_bsp(void)
     }
     //printf("new[0]: cpu_info = %x cpu_id = %x\n", my_cpu_info(), my_cpu_info()->cpu_id);
     
-    //multiboot_info();
+    //multiboot_info(); 
+    
 
     cpu_online++;       // the BSP is there, too
     mainbarrier.max = cpu_online;
