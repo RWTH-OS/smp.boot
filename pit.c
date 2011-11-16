@@ -3,6 +3,7 @@
  */
 
 #include "system.h"
+#include "cpu.h"
 #include "pit.h"
 
 #define IFV   if (VERBOSE > 0 || VERBOSE_PIT > 0)
@@ -43,7 +44,7 @@ static uint64_t PIT_get_tsc_per_xxx(void) {
                 : "=a" (count));
 #       endif
 
-        if (count <= (65536 - 19549) ) {    // 1193182 * (1<<14) / 1000000 (ticks per 2^14 usec)
+        if (count <= (65536 - 19549) ) {    // 1193182 * (1<<14) / 1000000 = 19549.09 (ticks per 2^14 usec)
             tsc_end = rdtsc();
             break;
         }
@@ -78,7 +79,7 @@ static void PIT_measure_tsc_per_sec(void) {
 
     hw_info.tsc_per_usec = (sum >> (pot+14));
     IFV printf("TSC per usec: %u\n", (unsigned long)(hw_info.tsc_per_usec));
-    hw_info.tsc_per_sec = hw_info.tsc_per_usec*1000000;
+    //hw_info.tsc_per_sec = hw_info.tsc_per_usec*1000000;
 }
 
 void pit_init(void)

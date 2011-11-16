@@ -34,7 +34,7 @@ void tests_barrier(void)
     unsigned u;
     static barrier_t barr2 = BARRIER_INITIALIZER(2);
 
-    if (myid < 2) {
+    if (cpu_online >= 2 && myid < 2) {
         barrier(&barr2);
         for (u=0; u<20; u++) {
 

@@ -19,6 +19,7 @@
 #ifndef INFO_H
 #define INFO_H
 
+#include "stddef.h"
 #include "config.h"
 
 typedef struct {
@@ -60,7 +61,7 @@ typedef struct {
     } ioapic[MAX_IOAPIC];
 
     /* TSC */
-    uint64_t tsc_per_sec;
+    //uint64_t tsc_per_sec;
     uint64_t tsc_per_usec;
 
 } hw_info_t;

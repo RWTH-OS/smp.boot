@@ -35,7 +35,6 @@ int atoi(const char *a);
 
 unsigned char inportb (unsigned short _port);
 void outportb (unsigned short _port, unsigned char _data);
-void udelay(unsigned long us);
 void halt();
 
 

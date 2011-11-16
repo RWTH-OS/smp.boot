@@ -54,8 +54,8 @@
 #define VERBOSE_BOOT        0
 #define VERBOSE_APIC        0
 #define VERBOSE_SYNC        0
-#define VERBOSE_MM          1
-#define VERBOSE_PIT         2
+#define VERBOSE_MM          0
+#define VERBOSE_PIT         0
 #define VERBOSE_TESTS       1
 #define VERBOSE_MAIN        1
 

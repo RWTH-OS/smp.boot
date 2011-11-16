@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include "config.h"
 #include "info.h"
+#include "time.h"
 
 /* Verbosity: if not defined here, modules may define their own */
 //#define VERBOSE 0
@@ -39,63 +40,6 @@ struct regs
 };
 #endif
 
-inline static uint64_t rdtsc(void)
-{
-	union {
-		uint64_t u64;
-		uint32_t u32[2];
-	} x;
-	asm volatile ("rdtsc" : "=a" (x.u32[0]), "=d"(x.u32[1]));
-	return x.u64;
-}
-
-inline static void sti(void) {
-    asm volatile ("sti");
-}
-
-inline static void cli(void) {
-    asm volatile ("cli");
-}
-
-inline static void cpuid(uint32_t func, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx) {
-    asm volatile ("cpuid" : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx) : "a"(func));
-}
-
-inline static void cpuid2(uint32_t func, uint32_t subfunc, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx) {
-    asm volatile ("cpuid" : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx) : "a"(func), "c"(subfunc));
-}
-
-inline static uint32_t cpuid_eax(uint32_t code) {
-    uint32_t eax, ebx, ecx, edx;
-
-    cpuid(code, &eax, &ebx, &ecx, &edx);
-
-    return eax;
-}
-
-inline static uint32_t cpuid_ebx(uint32_t code) {
-    uint32_t eax, ebx, ecx, edx;
-
-    cpuid(code, &eax, &ebx, &ecx, &edx);
-
-    return ebx;
-}
-
-inline static uint32_t cpuid_ecx(uint32_t code) {
-    uint32_t eax, ebx, ecx, edx;
-
-    cpuid(code, &eax, &ebx, &ecx, &edx);
-
-    return ecx;
-}
-
-inline static uint32_t cpuid_edx(uint32_t code) {
-    uint32_t eax, ebx, ecx, edx;
-
-    cpuid(code, &eax, &ebx, &ecx, &edx);
-
-    return edx;
-}
 
 
 /* lib.c */
