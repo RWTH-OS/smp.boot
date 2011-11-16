@@ -33,10 +33,8 @@ int strcmp(const char *a, const char *b);
 int strncmp(const char *a, const char *b, int n);
 int atoi(const char *a);
 
-unsigned char inportb (unsigned short _port);
-void outportb (unsigned short _port, unsigned char _data);
-void halt();
-
+int abs(int j);
+long labs(long j);
 
 
 #endif // LIB_H

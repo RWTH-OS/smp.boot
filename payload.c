@@ -20,6 +20,9 @@
 #include "system.h"
 #include "smp.h"
 #include "mm.h"
+#include "benchmark.h"
+#include "smm.h"
+
 extern volatile unsigned cpu_online;
 
 /*
@@ -27,11 +30,43 @@ extern volatile unsigned cpu_online;
  * A Barrier is executed immediately before, so they should come in shortly.
  */
 
-static barrier_t barr = BARRIER_INITIALIZER(2);
+static mutex_t mut = MUTEX_INITIALIZER;
+static barrier_t barr = BARRIER_INITIALIZER(MAX_CPU+1);
+
 void payload_benchmark()
 {
     unsigned myid = my_cpu_info()->cpu_id;
+    mutex_lock(&mut);
+    if (barr.max == MAX_CPU+1) {
+        barr.max = cpu_online;
+        smm_deactivate();
+    }
+    mutex_unlock(&mut);
 
+
+    if (myid == 0) printf("1 CPU hourglass -------------------------------\n");
+    barrier(&barr);
+
+    if (myid == 0) {
+        hourglass(10);
+    }
+
+    if (cpu_online > 1) {
+        if (myid == 0) printf("2 CPUs hourglass ------------------------------\n");
+        barrier(&barr);
+
+        if (myid == 0) {
+            hourglass(10);
+        } else if (myid == 1) {
+            hourglass(10);
+        }
+    }
+
+    barrier(&barr);
+
+
+
+#   if 0
     /* needs at least two CPUs */
     if (cpu_online >= 2) {
         if (myid == 0) {
@@ -52,5 +87,6 @@ void payload_benchmark()
     } else {
         printf("only one CPU active, this task needs at least two.\n");
     }
+#   endif
 }
 

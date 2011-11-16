@@ -55,9 +55,10 @@
 #define VERBOSE_APIC        0
 #define VERBOSE_SYNC        0
 #define VERBOSE_MM          0
-#define VERBOSE_PIT         0
-#define VERBOSE_TESTS       1
-#define VERBOSE_MAIN        1
+#define VERBOSE_PIT         2
+#define VERBOSE_SMM         2
+#define VERBOSE_TESTS       0
+#define VERBOSE_MAIN        0
 
 /*
  * preliminary: CPU Frequency

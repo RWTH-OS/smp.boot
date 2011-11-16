@@ -1,4 +1,5 @@
 #include "system.h"
+#include "cpu.h"
 
 #ifndef EARLY
 #include "sync.h"

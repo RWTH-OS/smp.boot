@@ -62,9 +62,11 @@ typedef struct {
 
     /* TSC */
     //uint64_t tsc_per_sec;
-    uint64_t tsc_per_usec;
+    uint64_t tsc_per_usec;      /* ATTN: this structure behaves differently in 32 bit and 64 bit.
+                                 * and it is used from boot32.c in 32 bit mode and later in the 64 bit kernel also. 
+                                 * this is why __attribute__((packed)) is needed on the struct! */
 
-} hw_info_t;
+} __attribute__((packed)) hw_info_t;
 
 extern hw_info_t hw_info; 
 

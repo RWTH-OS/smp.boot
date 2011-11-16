@@ -38,6 +38,7 @@ void main_bsp(void)
     smp_init();
     IFVV printf("my_cpu_info()->cpu_id: %u\n", my_cpu_info()->cpu_id);
 
+
     IFV puts("main(): video initialized\n");
     IFVV printf("found %d %s CPUs and %d I/O APICs\n", (ptr_t)hw_info.cpu_cnt, vendor[hw_info.cpu_vendor], (ptr_t)hw_info.ioapic_cnt);
     //udelay(DELAY);
@@ -134,7 +135,7 @@ void main()
     IFVV printf("CPU %d/%d entering in main()\n", my_cpu_info()->cpu_id, cpu_online);
 
     /* call tests */
-    tests_doall();
+    //tests_doall();
 
     /* call a payload */
     payload_benchmark();

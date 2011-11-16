@@ -20,6 +20,7 @@
 #include "sync.h"
 #include "smp.h"
 #include "config.h"
+#include "cpu.h"
 
 #define IFV   if (VERBOSE > 0)
 #define IFVV  if (VERBOSE > 1)
@@ -35,6 +36,7 @@
 #define check_flag(flags, n)  ((flags) & bit(n))
 
 extern volatile unsigned cpu_online;
+
 
 void reboot()
 {

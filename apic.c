@@ -1,6 +1,7 @@
 #include "system.h"
 #include "sync.h"
 #include "smp.h"
+#include "cpu.h"
 
 #define IFV   if (VERBOSE > 0 || VERBOSE_APIC > 0)
 #define IFVV  if (VERBOSE > 1 || VERBOSE_APIC > 1)
