@@ -234,7 +234,7 @@ void main_bsp(void)
     IFV puts("isr installed\n");
     //udelay(DELAY);
     
-    hw_info.tsc_per_sec = PIT_measure_tsc_per_sec();
+    pit_init();
     IFV puts("tsc calibrated\n");
     
     apic_init();    /* this is where the APs are waked up */

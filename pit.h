@@ -12,6 +12,6 @@ enum PIT {
     PIT_MCR = 0x43  // mode and command register (write only, ready ignored)
 };
 
-uint64_t PIT_measure_tsc_per_sec(void);
+void pit_init(void);
 
 #endif  // __PIT_H

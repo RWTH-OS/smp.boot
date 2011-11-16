@@ -8,7 +8,7 @@
 #define IFV   if (VERBOSE > 0 || VERBOSE_PIT > 0)
 #define IFVV  if (VERBOSE > 1 || VERBOSE_PIT > 1)
 
-static uint64_t PIT_get_tsc_per_sec(void) {
+static uint64_t PIT_get_tsc_per_xxx(void) {
     uint16_t counter = 0x00;    // 0 = 65.536 ?
     uint64_t tsc_start, tsc_end;
     unsigned long count;
@@ -43,21 +43,21 @@ static uint64_t PIT_get_tsc_per_sec(void) {
                 : "=a" (count));
 #       endif
 
-        if (count <= (65536 - 11922) ) {    // 10msec = 100Hz -> 1193182 / 100 = 11921,82 counts
+        if (count <= (65536 - 19549) ) {    // 1193182 * (1<<14) / 1000000 (ticks per 2^14 usec)
             tsc_end = rdtsc();
             break;
         }
     }
 
-    IFVV printf("TSCs per sec: %u\n", (tsc_end - tsc_start) * 100);
+    IFVV printf("TSCs per hsec: %u\n", (tsc_end - tsc_start) );
 
-    return (tsc_end - tsc_start) * 100;
+    return (tsc_end - tsc_start) ;
 }
 
 /*
  * average TSC per second
  */
-uint64_t PIT_measure_tsc_per_sec(void) {
+static void PIT_measure_tsc_per_sec(void) {
     const unsigned pot = 4;             // cycles: power-of-two
     unsigned cycles = (1 << pot);       // 2^4 = 16
     unsigned c;
@@ -71,10 +71,17 @@ uint64_t PIT_measure_tsc_per_sec(void) {
         IFVV printf("TSC is variant!\n");
     }
 
+    // TODO: use linear regression to increase accuracy
     for (c = 0; c < cycles; c++) {
-        sum += PIT_get_tsc_per_sec();
+        sum += PIT_get_tsc_per_xxx();
     }
 
-    IFV printf("TSC per sec: %u\n", (unsigned long)(sum >> pot));
-    return (sum >> pot);
+    hw_info.tsc_per_usec = (sum >> (pot+14));
+    IFV printf("TSC per usec: %u\n", (unsigned long)(hw_info.tsc_per_usec));
+    hw_info.tsc_per_sec = hw_info.tsc_per_usec*1000000;
+}
+
+void pit_init(void)
+{
+    PIT_measure_tsc_per_sec();
 }
