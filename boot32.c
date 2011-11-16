@@ -430,7 +430,7 @@ skip_mps:
     if (hw_info.lapic_adr == 0 || hw_info.cpu_cnt == 0 || hw_info.ioapic_cnt == 0) {
         printf("ERROR: neither ACPI nor MP gave me information about CPUs and APICs. Halt.\n");
         //halt();
-        hw_info.cpu_count = 1;
+        hw_info.cpu_cnt = 1;
         hw_info.cpu[0].lapic_id = 0;
         hw_info.lapic_adr = 0xfee00000; /* just guessed (should be in MSR... */
         hw_info.ioapic_cnt = 0;
