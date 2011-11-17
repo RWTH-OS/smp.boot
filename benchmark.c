@@ -81,6 +81,8 @@ void hourglass(unsigned sec)
  * Needs a buffer, that is page-aligned and at least range bytes in size.
  */
 typedef char access_type;
+
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 uint64_t range_stride(void *buffer, size_t range, size_t stride)
 {
     size_t r, i;

@@ -22,6 +22,7 @@
 
 
 void hourglass(unsigned sec);
+uint64_t range_stride(void *buffer, size_t range, size_t stride);
 
 
 #endif  // BENCHMARK_H

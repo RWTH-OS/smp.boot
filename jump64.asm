@@ -125,6 +125,23 @@ idt_load:
         jmp isr_common_stub
 %endmacro
 
+%macro ISR_INTERRUPT 1
+    global isr %+ %1
+    isr %+ %1 :
+       ; push rax
+       ; mov ax, 0x0F00+'I'
+       ; mov [0xB8000], ax
+       ; mov ax, 0x0F00+'0' ;('0'+%1/10)
+       ; mov [0xB8002], ax
+       ; ;mov ax, 0x0F00+('0'+%1 % 10)
+       ; ;mov [0xB8004], ax
+       ; pop rax
+
+        push QWORD 0
+        push QWORD %1
+        jmp isr_common_stub
+%endmacro
+
 ISR_EXCEPTION_WITHOUT_ERRCODE 0
 ISR_EXCEPTION_WITHOUT_ERRCODE 1
 ISR_EXCEPTION_WITHOUT_ERRCODE 2
@@ -158,8 +175,10 @@ ISR_EXCEPTION_WITHOUT_ERRCODE 29
 ISR_EXCEPTION_WITHOUT_ERRCODE 30
 ISR_EXCEPTION_WITHOUT_ERRCODE 31
 
+ISR_INTERRUPT 128
 
-extern fault_handler
+
+extern int_handler
 isr_common_stub:
     ; save complete context (multi-purpose&integer, no fpu/sse)
     ; the structure is also defined in system.h:struct regs
@@ -194,7 +213,7 @@ isr_common_stub:
      push rax
 
      mov rdi, rsp           ; Param in RDI (RSP == pointer to saved registers on stack)
-     call fault_handler     ; fault_handler(struct regs *r)
+     call int_handler       ; int_handler(struct regs *r)
 
      ; restore context from stack
      pop rax

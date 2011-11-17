@@ -113,6 +113,47 @@ void tests_mm(void)
 
 }
 
+void tests_ipi(void)
+{
+    unsigned myid = my_cpu_info()->cpu_id;
+    if (cpu_online > 1) {
+
+        if (myid == 0) {
+            unsigned u;
+
+            //asm volatile ("int $31");
+            
+            IFVV printf("Issue INT 128...\n");
+            asm volatile ("int $128");
+            udelay(2000000);
+            
+            IFVV printf("Issue IPI vector 128 to self\n");
+            send_ipi(0, 0x80);
+
+            for (u = 1; u < cpu_online; u++) {
+                udelay(1000000);
+                IFVV printf("send IPI vector %u to CPU %u \n", 0x80, u);
+                send_ipi(u, 0x80);
+            }
+        } else {
+
+            if (myid == 1) {
+                udelay(1000000);
+                IFVV printf("Issue INT 128 on CPU 1\n");
+                asm volatile ("int $128");
+            }
+
+            smp_status('H');
+            asm volatile ("hlt");   // should be waken up by IPI, but apparantly, IS NOT.
+            smp_status('.');
+        }
+
+    } else {
+        printf("tests_ipi: can only be executed with more than one CPU\n");
+    }
+    barrier(&barr_all);
+}
+
 void tests_doall(void)
 {
     unsigned myid = my_cpu_info()->cpu_id;
@@ -120,7 +161,9 @@ void tests_doall(void)
     IFV printf("[%u] calling test_barrier()\n", myid);
     tests_barrier();
 
-    tests_mm();
+    //tests_mm();
+
+    tests_ipi();
 
     printf("[%u] exit tests_doall()\n", myid);
 }

@@ -33,6 +33,8 @@ extern void isr29();
 extern void isr30();
 extern void isr31();
 
+extern void isr128();
+
 
 /*
  * GDT.Code is the Selector for the Code segment.
@@ -48,38 +50,40 @@ extern int GDT_Code;
 
 void isr_install()
 {
-    idt_set_gate(0,  (unsigned long)isr0,  GDT_Code_Sel, 0x8E);
-    idt_set_gate(1,  (unsigned long)isr1,  GDT_Code_Sel, 0x8E);
-    idt_set_gate(2,  (unsigned long)isr2,  GDT_Code_Sel, 0x8E);
-    idt_set_gate(3,  (unsigned long)isr3,  GDT_Code_Sel, 0x8E);
-    idt_set_gate(4,  (unsigned long)isr4,  GDT_Code_Sel, 0x8E);
-    idt_set_gate(5,  (unsigned long)isr5,  GDT_Code_Sel, 0x8E);
-    idt_set_gate(6,  (unsigned long)isr6,  GDT_Code_Sel, 0x8E);
-    idt_set_gate(7,  (unsigned long)isr7,  GDT_Code_Sel, 0x8E);
-    idt_set_gate(8,  (unsigned long)isr8,  GDT_Code_Sel, 0x8E);
-    idt_set_gate(9,  (unsigned long)isr9,  GDT_Code_Sel, 0x8E);
-    idt_set_gate(10, (unsigned long)isr10, GDT_Code_Sel, 0x8E);
-    idt_set_gate(11, (unsigned long)isr11, GDT_Code_Sel, 0x8E);
-    idt_set_gate(12, (unsigned long)isr12, GDT_Code_Sel, 0x8E);
-    idt_set_gate(13, (unsigned long)isr13, GDT_Code_Sel, 0x8E);
-    idt_set_gate(14, (unsigned long)isr14, GDT_Code_Sel, 0x8E);
-    idt_set_gate(15, (unsigned long)isr15, GDT_Code_Sel, 0x8E);
-    idt_set_gate(16, (unsigned long)isr16, GDT_Code_Sel, 0x8E);
-    idt_set_gate(17, (unsigned long)isr17, GDT_Code_Sel, 0x8E);
-    idt_set_gate(18, (unsigned long)isr18, GDT_Code_Sel, 0x8E);
-    idt_set_gate(19, (unsigned long)isr19, GDT_Code_Sel, 0x8E);
-    idt_set_gate(20, (unsigned long)isr20, GDT_Code_Sel, 0x8E);
-    idt_set_gate(21, (unsigned long)isr21, GDT_Code_Sel, 0x8E);
-    idt_set_gate(22, (unsigned long)isr22, GDT_Code_Sel, 0x8E);
-    idt_set_gate(23, (unsigned long)isr23, GDT_Code_Sel, 0x8E);
-    idt_set_gate(24, (unsigned long)isr24, GDT_Code_Sel, 0x8E);
-    idt_set_gate(25, (unsigned long)isr25, GDT_Code_Sel, 0x8E);
-    idt_set_gate(26, (unsigned long)isr26, GDT_Code_Sel, 0x8E);
-    idt_set_gate(27, (unsigned long)isr27, GDT_Code_Sel, 0x8E);
-    idt_set_gate(28, (unsigned long)isr28, GDT_Code_Sel, 0x8E);
-    idt_set_gate(29, (unsigned long)isr29, GDT_Code_Sel, 0x8E);
-    idt_set_gate(30, (unsigned long)isr30, GDT_Code_Sel, 0x8E);
-    idt_set_gate(31, (unsigned long)isr31, GDT_Code_Sel, 0x8E);
+    idt_set_gate(0,  (ptr_t)isr0,  GDT_Code_Sel, 0x8E);
+    idt_set_gate(1,  (ptr_t)isr1,  GDT_Code_Sel, 0x8E);
+    idt_set_gate(2,  (ptr_t)isr2,  GDT_Code_Sel, 0x8E);
+    idt_set_gate(3,  (ptr_t)isr3,  GDT_Code_Sel, 0x8E);
+    idt_set_gate(4,  (ptr_t)isr4,  GDT_Code_Sel, 0x8E);
+    idt_set_gate(5,  (ptr_t)isr5,  GDT_Code_Sel, 0x8E);
+    idt_set_gate(6,  (ptr_t)isr6,  GDT_Code_Sel, 0x8E);
+    idt_set_gate(7,  (ptr_t)isr7,  GDT_Code_Sel, 0x8E);
+    idt_set_gate(8,  (ptr_t)isr8,  GDT_Code_Sel, 0x8E);
+    idt_set_gate(9,  (ptr_t)isr9,  GDT_Code_Sel, 0x8E);
+    idt_set_gate(10, (ptr_t)isr10, GDT_Code_Sel, 0x8E);
+    idt_set_gate(11, (ptr_t)isr11, GDT_Code_Sel, 0x8E);
+    idt_set_gate(12, (ptr_t)isr12, GDT_Code_Sel, 0x8E);
+    idt_set_gate(13, (ptr_t)isr13, GDT_Code_Sel, 0x8E);
+    idt_set_gate(14, (ptr_t)isr14, GDT_Code_Sel, 0x8E);
+    idt_set_gate(15, (ptr_t)isr15, GDT_Code_Sel, 0x8E);
+    idt_set_gate(16, (ptr_t)isr16, GDT_Code_Sel, 0x8E);
+    idt_set_gate(17, (ptr_t)isr17, GDT_Code_Sel, 0x8E);
+    idt_set_gate(18, (ptr_t)isr18, GDT_Code_Sel, 0x8E);
+    idt_set_gate(19, (ptr_t)isr19, GDT_Code_Sel, 0x8E);
+    idt_set_gate(20, (ptr_t)isr20, GDT_Code_Sel, 0x8E);
+    idt_set_gate(21, (ptr_t)isr21, GDT_Code_Sel, 0x8E);
+    idt_set_gate(22, (ptr_t)isr22, GDT_Code_Sel, 0x8E);
+    idt_set_gate(23, (ptr_t)isr23, GDT_Code_Sel, 0x8E);
+    idt_set_gate(24, (ptr_t)isr24, GDT_Code_Sel, 0x8E);
+    idt_set_gate(25, (ptr_t)isr25, GDT_Code_Sel, 0x8E);
+    idt_set_gate(26, (ptr_t)isr26, GDT_Code_Sel, 0x8E);
+    idt_set_gate(27, (ptr_t)isr27, GDT_Code_Sel, 0x8E);
+    idt_set_gate(28, (ptr_t)isr28, GDT_Code_Sel, 0x8E);
+    idt_set_gate(29, (ptr_t)isr29, GDT_Code_Sel, 0x8E);
+    idt_set_gate(30, (ptr_t)isr30, GDT_Code_Sel, 0x8E);
+    idt_set_gate(31, (ptr_t)isr31, GDT_Code_Sel, 0x8E);
+
+    idt_set_gate(0x80, (ptr_t)isr128, GDT_Code_Sel, 0x8E);
 
 }
 
@@ -122,12 +126,12 @@ char *exception_messages[] =
     "Reserved"
 };
 
-void fault_handler(struct regs *r)
+void int_handler(struct regs *r)
 {
     if (r->int_no < 32) {
-        printf("\nException: %s\n", exception_messages[r->int_no]);
+        printf("|\n| Exception: %s\n", exception_messages[r->int_no]);
 #       if __x86_64__
-            printf("ip: 0x%x, sp:0x%x\n", r->rip, r->rsp);
+            printf("| ip: 0x%x, sp:0x%x\n", r->rip, r->rsp);
             //struct regs
             //{
             //    unsigned long long cr3, gs, fs, es, ds;				/* pushed the segs last */
@@ -136,7 +140,7 @@ void fault_handler(struct regs *r)
             //    unsigned long long rip, cs, rflags, rsp, ss;			/* pushed by the processor automatically */
             //} __attribute__((packed));
 #       else
-            printf("ip: 0x%x, sp:0x%x\n", r->eip, r->useresp);
+            printf("| ip: 0x%x, sp:0x%x\n", r->eip, r->useresp);
             //struct regs
             //{
             //    unsigned int gs, fs, es, ds;
@@ -145,8 +149,18 @@ void fault_handler(struct regs *r)
             //    unsigned int eip, cx, eflags, useresp, ss;
             //};
 #       endif
-        printf("System halted.\n");
+        printf("| System halted.\n|\n");
         while(1) {asm volatile ("hlt"); };
+    } else {
+        printf("|\n"
+               "| Interrupt: %u / 0x%x\n"
+               "|\n", r->int_no, r->int_no);
     }
+    /*
+     * EOI
+     */
+    apic_eoi();
 }
+
+
 

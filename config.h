@@ -57,7 +57,7 @@
 #define VERBOSE_MM          0
 #define VERBOSE_PIT         0
 #define VERBOSE_SMM         0
-#define VERBOSE_TESTS       0
+#define VERBOSE_TESTS       2
 #define VERBOSE_MAIN        0
 
 /*
@@ -70,7 +70,7 @@
 /*
  * settings for benchmarks
  */
-#define BENCH_HOURGLAS_SEC      2u
+#define BENCH_HOURGLAS_SEC     10u
 #define BENCH_MIN_STRIDE_POW2   4  
 #define BENCH_MAX_STRIDE_POW2   9
 #define BENCH_MIN_RANGE_POW2    12

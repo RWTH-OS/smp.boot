@@ -115,6 +115,9 @@ void main_ap(void)
      */
     mutex_lock(&(my_cpu_info()->wakelock)); 
 
+    apic_init_ap(cpu_online);     // activate localAPIC on Application Processors
+    idt_install_ap();
+
     smp_status('x');
 
     //udelay(3000000*my_id);
@@ -136,7 +139,7 @@ void main()
     IFVV printf("CPU %d/%d entering in main()\n", my_cpu_info()->cpu_id, cpu_online);
 
     /* call tests */
-    //tests_doall();
+    tests_doall();
 
     /* call a payload */
     payload_benchmark();

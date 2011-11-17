@@ -83,3 +83,10 @@ void idt_install()
     /* Points the processor's internal register to the new IDT */
     idt_load();
 }
+
+/* Installs the IDT on the Application Processors */
+void idt_install_ap()
+{
+    /* Points the processor's internal register to the new IDT */
+    idt_load();
+}

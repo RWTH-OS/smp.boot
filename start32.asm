@@ -137,8 +137,8 @@ idt_load:
 %macro ISR_EXCEPTION_WITHOUT_ERRCODE 1
     global isr %+ %1
     isr %+ %1 :
-        push byte 0
-        push byte %1
+        push dword 0
+        push dword %1
         jmp isr_common_stub
 %endmacro
 
@@ -146,7 +146,15 @@ idt_load:
     global isr %+ %1
     isr %+ %1 :
         ; Errcode is already on the stack
-        push byte %1
+        push dword %1
+        jmp isr_common_stub
+%endmacro
+
+%macro ISR_INTERRUPT 1
+    global isr %+ %1
+    isr %+ %1 :
+        push dword 0
+        push dword %1
         jmp isr_common_stub
 %endmacro
 
@@ -183,10 +191,12 @@ ISR_EXCEPTION_WITHOUT_ERRCODE 29
 ISR_EXCEPTION_WITHOUT_ERRCODE 30
 ISR_EXCEPTION_WITHOUT_ERRCODE 31
 
+ISR_INTERRUPT 128
 
 
 
-extern fault_handler
+
+extern int_handler
 isr_common_stub:
     ; save complete context (multi-purpose&integer, no fpu/sse)
     ; the structure is also defined in system.h:struct regs
@@ -202,7 +212,7 @@ isr_common_stub:
     mov gs, ax
     mov eax, esp
     push eax
-    mov eax, fault_handler
+    mov eax, int_handler
     call eax
     pop eax
     pop gs

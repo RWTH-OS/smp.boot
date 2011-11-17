@@ -8,6 +8,7 @@
 
 #define LAPIC_REG_ID        0x0020
 #define LAPIC_REG_VERSION   0x0030
+#define LAPIC_REG_EOI       0x00B0
 #define LAPIC_REG_SPURIOUS  0x00F0
 #define LAPIC_ICR_LOW       0x0300
 #define LAPIC_ICR_HIGH      0x0310
@@ -57,6 +58,35 @@ void write_ioAPIC(unsigned id, uint32_t offset, uint32_t value)
     /*  TODO: wait?! */
     *ioAPIC_Data = value;
     // TODO : restore IF to previous value
+}
+
+void send_ipi(uint8_t to, uint8_t vector)
+{
+    uint32_t value;
+    //asm volatile ("pushf \n\t cli");
+    // TODO: wait until APIC has processed a previous IPI (see: MetalSVM, arch/x86/kernel/apic.c:ipi_tlb_flush() )
+
+    IFVV printf("send_ipi()  to: %u  lapic_id: %u  vector: %u\n", (unsigned long)to, (unsigned long)hw_info.cpu[to].lapic_id, (unsigned long)vector);
+    value = read_localAPIC(LAPIC_ICR_HIGH);
+    value &= 0x00FFFFFF;
+    value |= ((uint32_t)hw_info.cpu[to].lapic_id << 24);
+    write_localAPIC(LAPIC_ICR_HIGH, value);
+
+    value = (0u << 18)   // Destination Shorthand: 00 - No Shorthand
+            |(0u << 15)  // Trigger Mode: 0 - Edge
+            |(1u << 14)  // Level: 1 - Assert (for all except INIT IPI)
+            |(1u << 12)  // Delivery Status: 1 - Send Pending
+            |(0u << 11)  // Destination Mode: 0 - Physical
+            |(0u << 8)   // Delivery Mode: 000 - Fixed
+            |vector;
+    write_localAPIC(LAPIC_ICR_LOW, value);
+    //asm volatile ("popf");
+}
+
+
+void apic_eoi(void)
+{
+    write_localAPIC(LAPIC_REG_EOI, 0);
 }
 
 extern stack_t stack[MAX_CPU];
@@ -184,3 +214,41 @@ void apic_init()
 
 
 }
+
+void apic_init_ap(unsigned id)
+{
+
+    /* support only VERSION >= 0x10 */
+
+    /* deactivate PIC */
+    //outportb(0xA1, 0xFF);
+    //outportb(0x21, 0xFF);
+
+    /* 
+     * activate local APIC 
+     */
+
+    /* Presence: CPUID.01h:EDX[bit 9] (checked already in start.asm) */
+
+    /* To initialise the BSP's local APIC, set the enable bit in the spurious
+     * interrupt vector register and set the error interrupt vector in the
+     * local vector table.  */
+    set_localAPIC(LAPIC_REG_SPURIOUS, (1<<8), (1<<8));
+
+    /*
+     * is this needed?!
+     */
+    write_localAPIC(LAPIC_REG_ID, (id&0x7F)<<24);
+
+    IFVV printf("local APIC version: 0x%x  max LVT entry: %u\n", 
+            read_localAPIC(LAPIC_REG_VERSION) && 0xFF, 
+            ((read_localAPIC(LAPIC_REG_VERSION)>>16) && 0xFF)+1);
+
+    /*
+     * according to http://www.osdever.net/tutorials/view/multiprocessing-support-for-hobby-oses-explained
+     * the spurios int vector can be ignored (use 0x1F for now...)
+     * and the lowest 4 bits are hardwired to 1 (only 0x?F can be used)
+     */
+    write_localAPIC(LAPIC_LVT_ERROR, 0x1F);       /* 0x1F: temporary vector (all other bits: 0) */
+}
+
