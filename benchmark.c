@@ -82,6 +82,7 @@ void hourglass(unsigned sec)
  */
 typedef char access_type;
 
+//#pragma GCC diagnostic ignored "-Wno-pragmas"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 uint64_t range_stride(void *buffer, size_t range, size_t stride)
 {

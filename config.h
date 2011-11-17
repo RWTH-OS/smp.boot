@@ -55,6 +55,7 @@
 #define VERBOSE_APIC        0
 #define VERBOSE_SYNC        0
 #define VERBOSE_MM          0
+#define VERBOSE_ISR         0
 #define VERBOSE_PIT         0
 #define VERBOSE_SMM         0
 #define VERBOSE_TESTS       2

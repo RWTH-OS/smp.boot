@@ -56,10 +56,7 @@ void idt_set_gate(unsigned char num, unsigned long base, unsigned short sel, uns
 void isr_install();
 
 /* apic.c */
-void apic_eoi(void);
-void send_ipi(uint8_t to, uint8_t vector);
-void apic_init();
-void apic_init_ap(unsigned id);
+#include "apic.h"
 
 /* scrn.c */
 void cls();

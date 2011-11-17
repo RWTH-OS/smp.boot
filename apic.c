@@ -28,6 +28,7 @@ uint32_t read_localAPIC(uint32_t offset)
 void write_localAPIC(uint32_t offset, uint32_t value)
 {
     volatile uint32_t *localAPIC_Register = (uint32_t*)(localAPIC+offset);
+    //IFVV printf("write_localAPIC: 0x%x  -> 0x%x\n", (ptr_t)localAPIC_Register, value);
     *localAPIC_Register = value;
 }
 void set_localAPIC(uint32_t offset, uint32_t mask, uint32_t value)
@@ -59,6 +60,9 @@ void write_ioAPIC(unsigned id, uint32_t offset, uint32_t value)
     *ioAPIC_Data = value;
     // TODO : restore IF to previous value
 }
+#define ICR_LVL_ASSERT          (1u <<14)
+#define ICR_DLV_STATUS          (1u <<12)
+#define ICR_MODE_FIXED          (0u <<8)
 
 void send_ipi(uint8_t to, uint8_t vector)
 {
@@ -79,6 +83,7 @@ void send_ipi(uint8_t to, uint8_t vector)
             |(0u << 11)  // Destination Mode: 0 - Physical
             |(0u << 8)   // Delivery Mode: 000 - Fixed
             |vector;
+    value = ICR_LVL_ASSERT | ICR_DLV_STATUS | ICR_MODE_FIXED | vector;
     write_localAPIC(LAPIC_ICR_LOW, value);
     //asm volatile ("popf");
 }
@@ -96,16 +101,21 @@ void apic_init()
     uint16_t u;
     /* the presence of a localAPIC (CPUID(EAX=1).EDX[bit 9]) was already checked in startXX.asm */
 
+    IFVV printf("apic_init()\n");
+
     /* local APIC address is in hw_info */
     localAPIC = hw_info.lapic_adr;
 
 
     /* support only VERSION >= 0x10 */
+    
+    cli();
 
     /* deactivate PIC */
     outportb(0xA1, 0xFF);
     outportb(0x21, 0xFF);
 
+    IFVV printf("apic_init: PIC deactivated.\n");
 
     /* 
      * activate local APIC 

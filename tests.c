@@ -20,6 +20,7 @@
 #include "smp.h"
 #include "sync.h"
 #include "mm.h"
+#include "cpu.h"
 
 #define IFV   if (VERBOSE > 0 || VERBOSE_TESTS > 0)
 #define IFVV  if (VERBOSE > 1 || VERBOSE_TESTS > 1)
@@ -116,6 +117,8 @@ void tests_mm(void)
 void tests_ipi(void)
 {
     unsigned myid = my_cpu_info()->cpu_id;
+
+    sti();
     if (cpu_online > 1) {
 
         if (myid == 0) {
@@ -123,11 +126,11 @@ void tests_ipi(void)
 
             //asm volatile ("int $31");
             
-            IFVV printf("Issue INT 128...\n");
+            IFVV printf("issue INT 128...\n");
             asm volatile ("int $128");
             udelay(2000000);
             
-            IFVV printf("Issue IPI vector 128 to self\n");
+            IFVV printf("send IPI vector 128 to self\n");
             send_ipi(0, 0x80);
 
             for (u = 1; u < cpu_online; u++) {
@@ -135,17 +138,25 @@ void tests_ipi(void)
                 IFVV printf("send IPI vector %u to CPU %u \n", 0x80, u);
                 send_ipi(u, 0x80);
             }
+
+            for (u = 1; u < cpu_online; u++) {
+                udelay(1000000);
+                IFVV printf("send IPI vector %u to CPU %u \n", 0x80, u);
+                smp_wakeup(u);
+            }
         } else {
 
             if (myid == 1) {
                 udelay(1000000);
-                IFVV printf("Issue INT 128 on CPU 1\n");
+                IFVV printf("issue INT 128 on CPU 1\n");
                 asm volatile ("int $128");
             }
 
             smp_status('H');
             asm volatile ("hlt");   // should be waken up by IPI, but apparantly, IS NOT.
             smp_status('.');
+            
+            smp_halt();
         }
 
     } else {

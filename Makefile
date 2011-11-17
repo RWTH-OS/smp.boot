@@ -8,11 +8,12 @@ ASMFILES=$(shell ls *.asm)
 
 CFLAGS=-c -O0
 # -O          - basic optimization
-CFLAGS+=-Wall -Wextra -Wno-main -Wno-unused-function
+CFLAGS+=-Wall -Wextra -Wno-main -Wno-unused-function -Wno-pragmas
 # -Wall       - give warnings (on most checks)
 # -Wextra     - give even more warnings (on all checks)
 # -Wno-main   - suppress warning on main and its parameters (this is a kernel!)
 # -Wno-unused-function - suppress warning about unused function (during development...)
+# -Wno-pragmas - don't warn about unknown parameters to #pragmas (GCC 4.5 does not know -Wunused-but-set-variable )
 CFLAGS+=-fstrength-reduce -fomit-frame-pointer -finline-functions -nostdinc -fno-builtin -fno-zero-initialized-in-bss 
 # -fstrengh-reduce
 # -fomit-frame-pointer

@@ -45,20 +45,34 @@ void payload_benchmark()
 
 
     if (myid == 0) printf("1 CPU hourglass (%u sec) -------------------------------\n", BENCH_HOURGLAS_SEC);
-    barrier(&barr);
 
-    if (myid == 0) {
+    barrier(&barr);
+    if (myid != 0) {
+        smp_halt();
+    } else {
+        unsigned u;
+        udelay(1000000);
         hourglass(BENCH_HOURGLAS_SEC);
+        for (u = 1; u<cpu_online; u++) {
+            smp_wakeup(u);
+        }
     }
+
 
     if (cpu_online > 1) {
         if (myid == 0) printf("2 CPUs hourglass (%u sec) ------------------------------\n", BENCH_HOURGLAS_SEC);
         barrier(&barr);
 
         if (myid == 0) {
+            unsigned u;
             hourglass(BENCH_HOURGLAS_SEC);
-        } else if (myid == 1) {
+            for (u = 1; u<cpu_online; u++) {
+                smp_wakeup(u);
+            }
+        } else if (myid == 1) { 
             hourglass(BENCH_HOURGLAS_SEC);
+        } else {
+            smp_halt();
         }
     }
 
@@ -72,12 +86,13 @@ void payload_benchmark()
         size_t max_range = (1 << BENCH_MAX_RANGE_POW2); // 2^25 = 32 MB
         size_t i, j;
         p_buffer = heap_alloc(max_range/4096);       // one page = 4kB
+        unsigned u;
 
         /* no need for pre-faulting, because pages are present after head_alloc()
          * but initialize them */
         memset(p_buffer, 0, max_range);
 
-
+        printf("Range/Stride (other CPUs in halt-state) --------------------------------\n");
         printf("str.|range%4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s\n", 
                 "4k", "8k", "16k", "32k", "64k", "128k", "256k", "512k", "1M", "2M", "4M", "8M", "16M", "32M");
         for (i=BENCH_MIN_STRIDE_POW2; i<=BENCH_MAX_STRIDE_POW2; i++) {                      /* stride */
@@ -88,6 +103,12 @@ void payload_benchmark()
             }
             printf("\n");
         }
+
+        for (u = 1; u<cpu_online; u++) {
+            smp_wakeup(u);
+        }
+    } else {
+        smp_halt();
     }
 
 #   if 0

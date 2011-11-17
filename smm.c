@@ -19,6 +19,7 @@
 #include "stddef.h"
 #include "system.h"
 #include "config.h"
+#include "cpu.h"
 
 #define IFV   if (VERBOSE > 0 || VERBOSE_SMM > 0)
 #define IFVV  if (VERBOSE > 1 || VERBOSE_SMM > 1)
@@ -51,7 +52,7 @@ void smm_deactivate(void)
     */
 
     adr = (1<<31) | (LPC_BUS << 16)  |  (LPC_DEVICE << 11)  |  (LPC_FUNC <<  8)  |  LPC_OFFSET;
-    asm volatile ("cli");
+    cli();
     OUT(CONFIG_ADDRESS, adr);
     IN(pmbase, CONFIG_DATA);
     pmbase &= 0xFF80;
@@ -80,6 +81,8 @@ void smm_deactivate(void)
     } else {
         printf("Warning: SMI was not disabled!\n");
     }
+    //sti();
+    asm volatile ("sti");
 }
 
 

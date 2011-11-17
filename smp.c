@@ -18,6 +18,8 @@
 
 #include "smp.h"
 #include "system.h"
+#include "apic.h"
+#include "cpu.h"
 
 
 stack_t stack[MAX_CPU] __attribute__(( aligned(STACK_SIZE) ));
@@ -40,4 +42,20 @@ void smp_status(char c)
     status_putch(6+my_cpu_info()->cpu_id, c);
 }
 
+void smp_halt(void)
+{
+    smp_status('z');
+    my_cpu_info()->flags |= SMP_FLAG_HALT;
+    sti();
+    while (my_cpu_info()->flags & SMP_FLAG_HALT) {
+        asm volatile ("hlt");
+    }
+    smp_status('.');
+}
+
+void smp_wakeup(unsigned cpu_id)
+{
+    stack[cpu_id].info.flags &= ~SMP_FLAG_HALT;
+    send_ipi(cpu_id, 128);
+}
 

@@ -133,6 +133,7 @@ static void PIT_measure_tsc_per_sec(void) {
         printf("fall-back: TSC per usec: %u\n", (unsigned long)(hw_info.tsc_per_usec));
     }
     //hw_info.tsc_per_sec = hw_info.tsc_per_usec*1000000;
+    
 }
 
 void pit_init(void)

@@ -25,8 +25,10 @@
 /*
  * per-cpu info structure
  */
+#define SMP_FLAG_HALT   (1u <<0)
 typedef struct {
-    unsigned cpu_id;     
+    unsigned cpu_id;   
+    unsigned flags;  
     mutex_t wakelock;
 } cpu_info_t;
 
@@ -55,6 +57,8 @@ static inline volatile cpu_info_t * my_cpu_info()
 
 void smp_status(char c);
 
+void smp_halt(void);
+void smp_wakeup(unsigned cpu_id);
 
 #endif // SMP_H
 

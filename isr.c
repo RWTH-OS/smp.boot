@@ -1,4 +1,8 @@
 #include "system.h"
+#include "smp.h"
+
+#define IFV   if (VERBOSE > 0 || VERBOSE_ISR > 0)
+#define IFVV  if (VERBOSE > 1 || VERBOSE_ISR > 1)
 
 extern void isr0();
 extern void isr1();
@@ -129,7 +133,9 @@ char *exception_messages[] =
 void int_handler(struct regs *r)
 {
     if (r->int_no < 32) {
-        printf("|\n| Exception: %s\n", exception_messages[r->int_no]);
+        printf("|\n");
+        printf("| CPU %u\n", my_cpu_info()->cpu_id);
+        printf("| Exception: %s (%u)\n", exception_messages[r->int_no], r->int_no);
 #       if __x86_64__
             printf("| ip: 0x%x, sp:0x%x\n", r->rip, r->rsp);
             //struct regs
@@ -149,12 +155,13 @@ void int_handler(struct regs *r)
             //    unsigned int eip, cx, eflags, useresp, ss;
             //};
 #       endif
-        printf("| System halted.\n|\n");
+        printf("| System halted.\n");
         while(1) {asm volatile ("hlt"); };
     } else {
-        printf("|\n"
-               "| Interrupt: %u / 0x%x\n"
-               "|\n", r->int_no, r->int_no);
+        IFV printf("/----------------------------------------\n");
+        IFV printf("| CPU %u\n", my_cpu_info()->cpu_id);
+        IFV printf("| Interrupt: %u / 0x%x\n", r->int_no, r->int_no);
+        IFV printf("\\----------------------------------------\n");
     }
     /*
      * EOI
