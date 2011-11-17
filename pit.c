@@ -19,6 +19,7 @@ static uint64_t PIT_get_tsc_per_xxx(void) {
     uint16_t counter = 0x00;    // 0 = 65.536 ?
     uint64_t tsc_start, tsc_end;
     unsigned long count;            // x86_64 : 64 bit, x86_32 : 32 bit
+    unsigned long loopcnt = 0;
 
     // setup PIT
     /* 0x34 = 0b0011'0100
@@ -42,18 +43,19 @@ static uint64_t PIT_get_tsc_per_xxx(void) {
      *  0            BCD/Binary mode: 0 = 16-bit binary, 1 = four-digit BCD     0
      */
     outportb(PIT_MCR, 0x34);    // channel 0, lo/hi byte order, mode 2 (rate generator), binary counter format
-    udelay(10); // wait until port is ready (needed on real hardware)
+    //udelay(1); // wait until port is ready (needed on real hardware)
     outportb(PIT_CHANNEL0, (uint8_t) (counter & 0xFF)); // low byte
-    udelay(10); // wait until port is ready (needed on real hardware)
+    //udelay(1); // wait until port is ready (needed on real hardware)
     outportb(PIT_CHANNEL0, (uint8_t) ((counter >> 8) & 0xFF)); // high byte
        
     tsc_start = rdtsc();    // overhead not measured because very small compared to TSC difference
 
     while (1) {
+        loopcnt++;
 #       if __x86_64__
             asm volatile (
                 "xor %%rax, %%rax\n\t"  // set RAX to 0
-                "mov $0x00, %%al\n\t" // channel 0, latch command
+                "mov 0x00, %%al\n\t" // channel 0, latch command  (1)
                 "out %%al, $0x43\n\t"    // prevent the current count from being updated
                 "in $0x40, %%al\n\t" // low byte of current count in AL
                 "mov %%al, %%ah\n\t"
@@ -63,7 +65,7 @@ static uint64_t PIT_get_tsc_per_xxx(void) {
 #       else    // __x86_32__
             asm volatile (
                 "xor %%eax, %%eax\n\t"  // set RAX to 0
-                "mov $0x00, %%al\n\t" // channel 0, latch command
+                "mov 0x00, %%al\n\t" // channel 0, latch command (1)
                 "out %%al, $0x43\n\t"    // prevent the current count from being updated
                 "in $0x40, %%al\n\t" // low byte of current count in AL
                 "mov %%al, %%ah\n\t"
@@ -72,8 +74,23 @@ static uint64_t PIT_get_tsc_per_xxx(void) {
                 : "=a" (count));
 #       endif   // __x86_??__
 
-        if (count <= (65536 - 19549) ) {    // 1193182 * (1<<14) / 1000000 = 19549.09 (ticks per 2^14 usec)
+            /*
+             * (1)
+             * this line should read "mov $0, %al" (or, in Intel Syntax: "mov al, 0")
+             * but somehow, this does not work on real hardware.
+             * The line, as is, loads effectively the byte from virtual address 0 into AL.
+             * (Same as "mov (0x00000000), %al" in AT&T Syntax.)
+             * On QEmu, it emits 0x53, on xaxis this is 0xFD.
+             * These values both lead to correct results for /count/.
+             * If this line is changed to really loading 0 into AL (which is already 0 because of "XOR rax, rax"),
+             * the /count/ always returns 0 on xaxis.
+             * Don't know why, but it works as it is.
+             * PIT on osdev.org: http://wiki.osdev.org/PIT
+             */
+
+        if (count <= (65536ul - 19549ul) ) {    // 1193182 * (1<<14) / 1000000 = 19549.09 (ticks per 2^14 usec = 16000 usec = 16 msec)
             tsc_end = rdtsc();
+            IFVV printf("PIT ticks: count=%u 64k-count=%u [%u] ", count, (65536ul-count), loopcnt);
             break;
         }
     }
@@ -86,7 +103,7 @@ static uint64_t PIT_get_tsc_per_xxx(void) {
  * average TSC per second
  */
 static void PIT_measure_tsc_per_sec(void) {
-    const unsigned pot = 4;             // cycles: power-of-two
+    const uint64_t pot = 4;             // cycles: power-of-two
     unsigned cycles = (1 << pot);       // 2^4 = 16
     unsigned c;
     uint64_t res, sum = 0;
@@ -99,6 +116,8 @@ static void PIT_measure_tsc_per_sec(void) {
         IFVV printf("TSC is variant!\n");
     }
 
+    IFVV printf("TSC per usec: %u\n", (unsigned long)(hw_info.tsc_per_usec));
+
     // TODO: use linear regression to increase accuracy
     for (c = 0; c < cycles; c++) {
         res = PIT_get_tsc_per_xxx();
@@ -106,6 +125,7 @@ static void PIT_measure_tsc_per_sec(void) {
         sum += res;
     }
 
+    IFV printf("sum: %u\n", sum);
     hw_info.tsc_per_usec = (sum >> (pot+14));
     IFV printf("TSC per usec: %u\n", (unsigned long)(hw_info.tsc_per_usec));
     if (hw_info.tsc_per_usec < 1000) {
