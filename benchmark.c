@@ -21,6 +21,7 @@
 #include "info.h"
 #include "time.h"
 #include "smp.h"
+#include "sync.h"
 
 void hourglass(unsigned sec)
 {
@@ -71,9 +72,23 @@ void hourglass(unsigned sec)
 
     //p_min = (1000*min/avg)-1000;
     //p_max = (1000*max/avg)-1000;
-    printf("[%u] cnt : min/avg/max %u : %u/%u/%u " /* "[%i.%i:%i.%i]" */ "\n", 
+    printf("[%u] cnt : min/avg/max %8u : %u/%u/%u " /* "[%i.%i:%i.%i]" */ "\n", 
             my_cpu_info()->cpu_id,
             cnt, min, avg, max /* , p_min/10, abs(p_min)%10, p_max/10, abs(p_max)%10 */ );
+}
+
+void load_until_flag(void *buffer, size_t size, flag_t *flag)
+{
+    typedef uint32_t mytype;
+    size_t s;
+    mytype *p = buffer;
+
+    while (!flag_trywait(flag)) {
+        for (s=0; s<size/sizeof(mytype); s+=(64/sizeof(mytype))) {
+            p[s]++;              /* read/write */
+        }
+    }
+
 }
 
 /*

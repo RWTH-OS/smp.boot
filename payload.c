@@ -53,7 +53,7 @@ void payload_benchmark()
 
 
 
-    if (myid == 0) printf("1 CPU hourglass (%u sec) -------------------------------\n", BENCH_HOURGLAS_SEC);
+    if (myid == 0) printf("1 CPU hourglass (%u sec) ----------------------------------------------\n", BENCH_HOURGLAS_SEC);
 
     barrier(&barr);
     if (myid != 0) {
@@ -70,46 +70,39 @@ void payload_benchmark()
 
 
     if (cpu_online > 1) {
-        if (myid == 0) printf("2 CPUs hourglass (%u sec) ------------------------------\n", BENCH_HOURGLAS_SEC);
+        if (myid == 0) printf("2 CPUs hourglass (%u sec) ---------------------------------------------\n", BENCH_HOURGLAS_SEC);
         barrier(&barr);
 
-        if (myid == 0) {
+        if (myid <= 1) {    /* IDs 0 and 1 */
             unsigned u;
 
             barrier(&barr2);
             for (u=0; u<4; u++) {
-
-                barrier(&barr2);
-
-                hourglass(BENCH_HOURGLAS_SEC);
-
-                flag_signal(&flag);
-                barrier(&barr2);
-            }
-            for (u = 2; u<cpu_online; u++) {
-                smp_wakeup(u);
-            }
-        } else if (myid == 1) { 
-            unsigned u;
-
-            barrier(&barr2);
-            for (u=0; u<4; u++) {
-                size_t size, s;
-                switch (u) {        /* Cache Ranges valid for xaxis, Core i7 */
-                    case 0: size=8*1024; break;         /* fits into L1 Cache */
-                    case 1: size=128*1024; break;       /* fits into L2 Cache */
-                    case 2: size=4*1024*1024; break;    /* fits into L3 Cache */
-                    case 3: size=16*1024*1024; break;   /* larger than Cache */
-                }
-                printf("[1] Range %5u kB: ", size/1024);
-                barrier(&barr2);
-                while (!flag_trywait(&flag)) {
-                    for (s=0; s<size/4; s+=(64/4)) {
-                        p_contender[s]++;              /* read/write */
+                size_t size;
+                if (myid == 1) {
+                    switch (u) {        /* Cache Ranges valid for xaxis, Core i7 */
+                        case 0: size=8*1024; break;         /* fits into L1 Cache */
+                        case 1: size=128*1024; break;       /* fits into L2 Cache */
+                        case 2: size=4*1024*1024; break;    /* fits into L3 Cache */
+                        case 3: size=16*1024*1024; break;   /* larger than Cache */
                     }
+                    printf("[1] Range %5u kB: ", size/1024);
+                }
+                barrier(&barr2);
+
+                if (myid == 0) {
+                    hourglass(BENCH_HOURGLAS_SEC);
+                    flag_signal(&flag);
+                } else {
+                    load_until_flag(p_contender, size, &flag);
                 }
 
                 barrier(&barr2);
+            }
+            if (myid == 0) {
+                for (u = 2; u<cpu_online; u++) {
+                    smp_wakeup(u);
+                }
             }
         } else {
             smp_halt();
@@ -117,7 +110,7 @@ void payload_benchmark()
     }
 
     if (cpu_online > 4) {     /* assuming, that the upper half of cores are hyperthreads */
-        if (myid == 0) printf("2 CPUs hourglass (hyper-threads) (%u sec) --------------\n", BENCH_HOURGLAS_SEC);
+        if (myid == 0) printf("2 CPUs hourglass (hyper-threads) (%u sec) -----------------------------\n", BENCH_HOURGLAS_SEC);
         barrier(&barr);
 
         if (myid == 0) {
@@ -201,7 +194,7 @@ void payload_benchmark()
 
             barrier(&barr2);
             for (u=0; u<4; u++) {
-                size_t size, s;
+                size_t size;
                 switch (u) {        /* Cache Ranges valid for xaxis, Core i7 */
                     case 0: size=8*1024; break;         /* fits into L1 Cache */
                     case 1: size=128*1024; break;       /* fits into L2 Cache */
@@ -210,11 +203,8 @@ void payload_benchmark()
                 }
                 printf("Range/Stride (one CPU working on %u kB) --------------\n", size/1024);
                 barrier(&barr2);
-                while (!flag_trywait(&flag)) {
-                    for (s=0; s<size/4; s+=(64/4)) {
-                        p_contender[s]++;              /* read/write */
-                    }
-                }
+
+                load_until_flag(p_contender, size, &flag);
 
                 barrier(&barr2);
             }
