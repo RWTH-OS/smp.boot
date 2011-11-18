@@ -71,8 +71,8 @@ void hourglass(unsigned sec)
 
     //p_min = (1000*min/avg)-1000;
     //p_max = (1000*max/avg)-1000;
-    printf("[%u] %u sec hourglass: cnt : min/avg/max %u : %u/%u/%u " /* "[%i.%i:%i.%i]" */ "\n", 
-            my_cpu_info()->cpu_id, sec, 
+    printf("[%u] cnt : min/avg/max %u : %u/%u/%u " /* "[%i.%i:%i.%i]" */ "\n", 
+            my_cpu_info()->cpu_id,
             cnt, min, avg, max /* , p_min/10, abs(p_min)%10, p_max/10, abs(p_max)%10 */ );
 }
 

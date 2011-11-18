@@ -46,6 +46,12 @@ void payload_benchmark()
     }
     mutex_unlock(&mut);
 
+    static uint32_t * p_contender = NULL;
+    if (myid == 1) {
+        p_contender = heap_alloc(16*1024*1024 / 4096);       // one page = 4kB
+    }
+
+
 
     if (myid == 0) printf("1 CPU hourglass (%u sec) -------------------------------\n", BENCH_HOURGLAS_SEC);
 
@@ -55,6 +61,7 @@ void payload_benchmark()
     } else {
         unsigned u;
         udelay(1000000);
+        printf("others halt         ");
         hourglass(BENCH_HOURGLAS_SEC);
         for (u = 1; u<cpu_online; u++) {
             smp_wakeup(u);
@@ -68,12 +75,42 @@ void payload_benchmark()
 
         if (myid == 0) {
             unsigned u;
-            hourglass(BENCH_HOURGLAS_SEC);
+
+            barrier(&barr2);
+            for (u=0; u<4; u++) {
+
+                barrier(&barr2);
+
+                hourglass(BENCH_HOURGLAS_SEC);
+
+                flag_signal(&flag);
+                barrier(&barr2);
+            }
             for (u = 2; u<cpu_online; u++) {
                 smp_wakeup(u);
             }
         } else if (myid == 1) { 
-            hourglass(BENCH_HOURGLAS_SEC);
+            unsigned u;
+
+            barrier(&barr2);
+            for (u=0; u<4; u++) {
+                size_t size, s;
+                switch (u) {        /* Cache Ranges valid for xaxis, Core i7 */
+                    case 0: size=8*1024; break;         /* fits into L1 Cache */
+                    case 1: size=128*1024; break;       /* fits into L2 Cache */
+                    case 2: size=4*1024*1024; break;    /* fits into L3 Cache */
+                    case 3: size=16*1024*1024; break;   /* larger than Cache */
+                }
+                printf("[1] Range %5u kB: ", size/1024);
+                barrier(&barr2);
+                while (!flag_trywait(&flag)) {
+                    for (s=0; s<size/4; s+=(64/4)) {
+                        p_contender[s]++;              /* read/write */
+                    }
+                }
+
+                barrier(&barr2);
+            }
         } else {
             smp_halt();
         }
@@ -161,15 +198,13 @@ void payload_benchmark()
              * do some work on different memory ranges to spill caches
              */
             unsigned u;
-            static uint32_t * p_contender = NULL;
-            p_contender = heap_alloc(16*1024*1024 / 4096);       // one page = 4kB
 
             barrier(&barr2);
             for (u=0; u<4; u++) {
                 size_t size, s;
-                switch (u) {
+                switch (u) {        /* Cache Ranges valid for xaxis, Core i7 */
                     case 0: size=8*1024; break;         /* fits into L1 Cache */
-                    case 1: size=16*1024; break;        /* fits into L2 Cache */
+                    case 1: size=128*1024; break;       /* fits into L2 Cache */
                     case 2: size=4*1024*1024; break;    /* fits into L3 Cache */
                     case 3: size=16*1024*1024; break;   /* larger than Cache */
                 }
@@ -188,6 +223,12 @@ void payload_benchmark()
         }
     }
     barrier(&barr);
+
+    if (myid==1) {
+        printf("{{{ take your last photo }}}");
+        udelay(20*1000*1000);
+        printf("\n");
+    }
 }
 
 void payload_demo()
