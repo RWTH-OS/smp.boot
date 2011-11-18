@@ -30,6 +30,7 @@ int smp_init(void)
     unsigned u;
     for (u=0; u<MAX_CPU; u++) {
         stack[u].info.cpu_id = u;
+        stack[u].info.flags = 0;
         //if (u<4) printf("stack[%u].info.cpu_id at 0x%x value: %u\n", u, &(stack[u].info.cpu_id), stack[u].info.cpu_id);
         mutex_init(&(stack[u].info.wakelock));  // state: unlocked
     }
@@ -44,18 +45,22 @@ void smp_status(char c)
 
 void smp_halt(void)
 {
+    unsigned if_backup;
     smp_status('z');
     my_cpu_info()->flags |= SMP_FLAG_HALT;
-    sti();
+    if_backup = sti();
     while (my_cpu_info()->flags & SMP_FLAG_HALT) {
         asm volatile ("hlt");
     }
     smp_status('.');
+    if (!if_backup) cli();
 }
 
 void smp_wakeup(unsigned cpu_id)
 {
     stack[cpu_id].info.flags &= ~SMP_FLAG_HALT;
+    udelay(5);
     send_ipi(cpu_id, 128);
+    udelay(5);
 }
 

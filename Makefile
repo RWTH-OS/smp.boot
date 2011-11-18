@@ -52,7 +52,7 @@ default : tags kernel32.bin kernel64.bin
 
 help :
 	@echo 'Makefile for Multiboot kernel'
-	@echo 'available tagets:'
+	@echo 'available targets:'
 	@echo '  default         default target is: tags kernel32 kernel64'
 	@echo '  debug           show internal variables (for debug purposes)'
 	@echo '  tags            create ctags table'

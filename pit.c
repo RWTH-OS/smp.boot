@@ -15,6 +15,20 @@ enum PIT {
     PIT_MCR = 0x43  // mode and command register (write only, ready ignored)
 };
 
+#define PIT_CMD_CHANNEL0        (0<<6)
+#define PIT_CMD_CHANNEL1        (1<<6)
+#define PIT_CMD_CHANNEL2        (2<<6)
+#define PIT_CMD_RW_LSB          (1<<4)
+#define PIT_CMD_RW_MSB          (2<<4)
+#define PIT_CMD_RW_LSBMSB       (3<<4)
+#define PIT_CMD_MODE_INTERRUPT  (0<<1)
+#define PIT_CMD_MODE_ONE_SHOT   (1<<1)
+#define PIT_CMD_MODE_RATE_GEN   (2<<1)
+#define PIT_CMD_MODE_SQUARE     (3<<1)
+#define PIT_CMD_MODE_SW_STROBE  (4<<1)
+#define PIT_CMD_MODE_HW_STROBE  (5<<1)
+#define PIT_CMD_BCD             (1<<0)
+
 static uint64_t PIT_get_tsc_per_xxx(void) {
     uint16_t counter = 0x00;    // 0 = 65.536 ?
     uint64_t tsc_start, tsc_end;
@@ -42,7 +56,8 @@ static uint64_t PIT_get_tsc_per_xxx(void) {
      *                  1 1 1 = Mode 3 (square wave generator, same as 011b)
      *  0            BCD/Binary mode: 0 = 16-bit binary, 1 = four-digit BCD     0
      */
-    outportb(PIT_MCR, 0x34);    // channel 0, lo/hi byte order, mode 2 (rate generator), binary counter format
+    //outportb(PIT_MCR, 0x34);    // channel 0, lo/hi byte order, mode 2 (rate generator), binary counter format (not BCD)
+    outportb(PIT_MCR, PIT_CMD_CHANNEL0 | PIT_CMD_RW_LSBMSB | PIT_CMD_MODE_RATE_GEN );    
     //udelay(1); // wait until port is ready (needed on real hardware)
     outportb(PIT_CHANNEL0, (uint8_t) (counter & 0xFF)); // low byte
     //udelay(1); // wait until port is ready (needed on real hardware)
@@ -78,11 +93,12 @@ static uint64_t PIT_get_tsc_per_xxx(void) {
              * (1)
              * this line should read "mov $0, %al" (or, in Intel Syntax: "mov al, 0")
              * but somehow, this does not work on real hardware.
-             * The line, as is, loads effectively the byte from virtual address 0 into AL.
+             * The line, as it is, loads effectively the byte from virtual address 0 into AL.
              * (Same as "mov (0x00000000), %al" in AT&T Syntax.)
              * On QEmu, it emits 0x53, on xaxis this is 0xFD.
              * These values both lead to correct results for /count/.
-             * If this line is changed to really loading 0 into AL (which is already 0 because of "XOR rax, rax"),
+             * If this line is changed to really loading 0 into AL (which is already 0 because of "XOR rax, rax")
+             * or if this line is removed,
              * the /count/ always returns 0 on xaxis.
              * Don't know why, but it works as it is.
              * PIT on osdev.org: http://wiki.osdev.org/PIT
@@ -94,6 +110,8 @@ static uint64_t PIT_get_tsc_per_xxx(void) {
             break;
         }
     }
+
+    // TODO : deactivate PIT!
 
 
     return (tsc_end - tsc_start) ;

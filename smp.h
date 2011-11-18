@@ -28,7 +28,7 @@
 #define SMP_FLAG_HALT   (1u <<0)
 typedef struct {
     unsigned cpu_id;   
-    unsigned flags;  
+    volatile unsigned flags;
     mutex_t wakelock;
 } cpu_info_t;
 

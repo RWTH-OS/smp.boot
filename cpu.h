@@ -49,12 +49,17 @@ static inline void halt()
 void reboot();
 void stop();
 
-inline static void sti(void) {
-    asm volatile ("sti");
+inline static unsigned sti(void) {
+    ptr_t flags;
+    asm volatile ("pushf; sti; pop %0" : "=r"(flags) : : "memory");
+    return (flags & (1<<9));
 }
 
-inline static void cli(void) {
-    asm volatile ("cli");
+/* return if IF was previously set (to use sti afterwards conditionally) */
+inline static unsigned cli(void) {
+    ptr_t flags;
+    asm volatile ("pushf; cli; pop %0" : "=r"(flags) : : "memory");
+    return (flags & (1<<9));
 }
 
 inline static void cpuid(uint32_t func, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx) {

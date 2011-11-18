@@ -67,7 +67,8 @@ void write_ioAPIC(unsigned id, uint32_t offset, uint32_t value)
 void send_ipi(uint8_t to, uint8_t vector)
 {
     uint32_t value;
-    //asm volatile ("pushf \n\t cli");
+    unsigned if_backup;
+    if_backup = cli();
     // TODO: wait until APIC has processed a previous IPI (see: MetalSVM, arch/x86/kernel/apic.c:ipi_tlb_flush() )
 
     IFVV printf("send_ipi()  to: %u  lapic_id: %u  vector: %u\n", (unsigned long)to, (unsigned long)hw_info.cpu[to].lapic_id, (unsigned long)vector);
@@ -76,6 +77,7 @@ void send_ipi(uint8_t to, uint8_t vector)
     value |= ((uint32_t)hw_info.cpu[to].lapic_id << 24);
     write_localAPIC(LAPIC_ICR_HIGH, value);
 
+    /*
     value = (0u << 18)   // Destination Shorthand: 00 - No Shorthand
             |(0u << 15)  // Trigger Mode: 0 - Edge
             |(1u << 14)  // Level: 1 - Assert (for all except INIT IPI)
@@ -83,9 +85,10 @@ void send_ipi(uint8_t to, uint8_t vector)
             |(0u << 11)  // Destination Mode: 0 - Physical
             |(0u << 8)   // Delivery Mode: 000 - Fixed
             |vector;
+            */
     value = ICR_LVL_ASSERT | ICR_DLV_STATUS | ICR_MODE_FIXED | vector;
     write_localAPIC(LAPIC_ICR_LOW, value);
-    //asm volatile ("popf");
+    if (if_backup) sti();
 }
 
 
@@ -109,7 +112,7 @@ void apic_init()
 
     /* support only VERSION >= 0x10 */
     
-    cli();
+    cli();  // no interrupts!
 
     /* deactivate PIC */
     outportb(0xA1, 0xFF);

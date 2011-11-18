@@ -38,6 +38,9 @@ void smm_deactivate(void)
     // TODO: how to read pmbase correctly from pci_config? Are there MetalSVM-functions to do this?
     uint32_t adr;
     uint32_t smi_en;
+    unsigned if_backup;
+
+    if_backup = cli();
 
     /*
     union {
@@ -52,7 +55,6 @@ void smm_deactivate(void)
     */
 
     adr = (1<<31) | (LPC_BUS << 16)  |  (LPC_DEVICE << 11)  |  (LPC_FUNC <<  8)  |  LPC_OFFSET;
-    cli();
     OUT(CONFIG_ADDRESS, adr);
     IN(pmbase, CONFIG_DATA);
     pmbase &= 0xFF80;
@@ -61,7 +63,6 @@ void smm_deactivate(void)
 
 
     adr = pmbase+0x30;                          /* SMI_EN I/O register is at pmbase+0x30 */
-    asm volatile ("cli");
 
     /* read SMI_EN and display */
     IN(smi_en, adr);
@@ -81,8 +82,7 @@ void smm_deactivate(void)
     } else {
         printf("Warning: SMI was not disabled!\n");
     }
-    //sti();
-    asm volatile ("sti");
+    if (if_backup) sti();
 }
 
 

@@ -92,7 +92,7 @@ void payload_benchmark()
          * but initialize them */
         memset(p_buffer, 0, max_range);
 
-        printf("Range/Stride (other CPUs in halt-state) --------------------------------\n");
+        printf("Range/Stride (other CPUs in halt-state) ----------------\n");
         printf("str.|range%4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s\n", 
                 "4k", "8k", "16k", "32k", "64k", "128k", "256k", "512k", "1M", "2M", "4M", "8M", "16M", "32M");
         for (i=BENCH_MIN_STRIDE_POW2; i<=BENCH_MAX_STRIDE_POW2; i++) {                      /* stride */

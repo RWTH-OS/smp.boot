@@ -117,8 +117,9 @@ void tests_mm(void)
 void tests_ipi(void)
 {
     unsigned myid = my_cpu_info()->cpu_id;
+    unsigned if_backup;
 
-    sti();
+    if_backup = sti();
     if (cpu_online > 1) {
 
         if (myid == 0) {
@@ -162,6 +163,7 @@ void tests_ipi(void)
     } else {
         printf("tests_ipi: can only be executed with more than one CPU\n");
     }
+    if (!if_backup) cli();  // restore previous state of interrupt flag
     barrier(&barr_all);
 }
 
