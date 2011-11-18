@@ -47,11 +47,6 @@ void tests_barrier(void)
         barrier(&barr2);
     }
 
-    if (myid == 0) {
-        barr_all.max = cpu_online;
-        /* wait until all others are in the following barrier */
-        while (barr_all.cnt < (barr_all.max-1)) { };
-    }
     barrier(&barr_all);
     for (u=0; u<20; u++) {
 
@@ -61,6 +56,42 @@ void tests_barrier(void)
     }
     IFV printf("[%u] leaving test_barrier()\n", myid);
     barrier(&barr_all);
+}
+
+void tests_flag(void)
+{
+    unsigned myid = my_cpu_info()->cpu_id;
+    static flag_t flag = FLAG_INITIALIZER;
+    
+    barrier(&barr_all);
+
+    if (myid == 0) {
+        udelay(1000000);
+        printf("[0] signal flag\n");
+        flag_signal(&flag);
+
+        udelay(1000000);
+        printf("[0] signal second flag\n");
+        flag_signal(&flag);
+
+        udelay(2000000);
+        printf("[0] signal third flag\n");
+        flag_signal(&flag);
+
+    } else if (myid == 1) {
+        flag_wait(&flag);
+        printf("[1] detected flag\n");
+        flag_wait(&flag);
+        printf("[1] detected second flag\n");
+
+        while (!flag_trywait(&flag)) {
+            udelay(100000);
+            printf("z");
+        }
+        printf("[1] detected third flag\n");
+
+    }
+
 }
 
 void tests_mm(void)
@@ -170,9 +201,16 @@ void tests_ipi(void)
 void tests_doall(void)
 {
     unsigned myid = my_cpu_info()->cpu_id;
+    if (myid == 0) {
+        barr_all.max = cpu_online;
+        /* wait until all others are in the following barrier */
+        while (barr_all.cnt < (barr_all.max-1)) { };
+    }
+    barrier(&barr_all);
 
     IFV printf("[%u] calling test_barrier()\n", myid);
     tests_barrier();
+    tests_flag();
 
     //tests_mm();
 

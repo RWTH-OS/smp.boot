@@ -31,15 +31,18 @@ extern volatile unsigned cpu_online;
  */
 
 static mutex_t mut = MUTEX_INITIALIZER;
-static barrier_t barr = BARRIER_INITIALIZER(MAX_CPU+1);
+static barrier_t barr = BARRIER_INITIALIZER(MAX_CPU+1); // this barrier will be set to cpu_online
+static barrier_t barr2 = BARRIER_INITIALIZER(2);        // barrier for two
+static flag_t flag = FLAG_INITIALIZER;
 
 void payload_benchmark()
 {
     unsigned myid = my_cpu_info()->cpu_id;
     mutex_lock(&mut);
     if (barr.max == MAX_CPU+1) {
+        /* first one sets barr.max to the actual count of CPUs */
         barr.max = cpu_online;
-        smm_deactivate();
+        smm_deactivate();       // ...and (try to) deactivate SMM
     }
     mutex_unlock(&mut);
 
@@ -66,10 +69,27 @@ void payload_benchmark()
         if (myid == 0) {
             unsigned u;
             hourglass(BENCH_HOURGLAS_SEC);
-            for (u = 1; u<cpu_online; u++) {
+            for (u = 2; u<cpu_online; u++) {
                 smp_wakeup(u);
             }
         } else if (myid == 1) { 
+            hourglass(BENCH_HOURGLAS_SEC);
+        } else {
+            smp_halt();
+        }
+    }
+
+    if (cpu_online > 4) {     /* assuming, that the upper half of cores are hyperthreads */
+        if (myid == 0) printf("2 CPUs hourglass (hyper-threads) (%u sec) --------------\n", BENCH_HOURGLAS_SEC);
+        barrier(&barr);
+
+        if (myid == 0) {
+            unsigned u;
+            hourglass(BENCH_HOURGLAS_SEC);
+            for (u = 1; u<cpu_online; u++) {
+                if (u != cpu_online/2) smp_wakeup(u);
+            }
+        } else if (myid == cpu_online/2) { 
             hourglass(BENCH_HOURGLAS_SEC);
         } else {
             smp_halt();
@@ -103,15 +123,83 @@ void payload_benchmark()
             }
             printf("\n");
         }
+        
+        if (cpu_online > 1) {
+            unsigned u;
+            smp_wakeup(1);
+            /*
+             * redo benchmark while CPU(1) is working, too
+             */
+
+            barrier(&barr2);
+            for (u=0; u<4; u++) {
+
+                barrier(&barr2);
+                for (i=BENCH_MIN_STRIDE_POW2; i<=BENCH_MAX_STRIDE_POW2; i++) {                      /* stride */
+                    printf("%3u      ", (1<<i));
+                    for (j=BENCH_MIN_RANGE_POW2; j<=BENCH_MAX_RANGE_POW2; j++) {                /* range */
+                        unsigned long ret = range_stride(p_buffer, (1<<j), (1<<i));
+                        printf(" %4u", ret);
+                    }
+                    printf("\n");
+                }
+
+                flag_signal(&flag);
+                barrier(&barr2);
+            }
+
+        }
 
         for (u = 1; u<cpu_online; u++) {
             smp_wakeup(u);
         }
     } else {
         smp_halt();
-    }
 
-#   if 0
+        if (myid == 1) {
+            /*
+             * do some work on different memory ranges to spill caches
+             */
+            unsigned u;
+            static uint32_t * p_contender = NULL;
+            p_contender = heap_alloc(16*1024*1024 / 4096);       // one page = 4kB
+
+            barrier(&barr2);
+            for (u=0; u<4; u++) {
+                size_t size, s;
+                switch (u) {
+                    case 0: size=8*1024; break;         /* fits into L1 Cache */
+                    case 1: size=16*1024; break;        /* fits into L2 Cache */
+                    case 2: size=4*1024*1024; break;    /* fits into L3 Cache */
+                    case 3: size=16*1024*1024; break;   /* larger than Cache */
+                }
+                printf("Range/Stride (one CPU working on %u kB) --------------\n", size/1024);
+                barrier(&barr2);
+                while (!flag_trywait(&flag)) {
+                    for (s=0; s<size/4; s+=(64/4)) {
+                        p_contender[s]++;              /* read/write */
+                    }
+                }
+
+                barrier(&barr2);
+            }
+
+
+        }
+    }
+    barrier(&barr);
+}
+
+void payload_demo()
+{
+    unsigned myid = my_cpu_info()->cpu_id;
+    mutex_lock(&mut);
+    if (barr.max == MAX_CPU+1) {
+        /* first one sets barr.max to the actual count of CPUs */
+        barr.max = cpu_online;
+    }
+    mutex_unlock(&mut);
+
     /* needs at least two CPUs */
     if (cpu_online >= 2) {
         if (myid == 0) {
@@ -132,6 +220,5 @@ void payload_benchmark()
     } else {
         printf("only one CPU active, this task needs at least two.\n");
     }
-#   endif
 }
 

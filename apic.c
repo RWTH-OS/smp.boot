@@ -172,6 +172,8 @@ void apic_init()
     }
     
 
+
+
     /* set up status monitor for APs */
     status_putch(5, '[');
     status_putch(6, '.');
