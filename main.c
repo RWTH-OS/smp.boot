@@ -24,6 +24,7 @@ barrier_t mainbarrier = BARRIER_INITIALIZER(MAX_CPU); /* max is later reduced to
 extern volatile unsigned cpu_online;    // from apic.c
 void main();                            // further down in this file
 
+static char name_version[] = "BareMetalKernel " SVN_REV;
 /*
  * this is the entry function only for the BSP
  */
@@ -61,6 +62,12 @@ void main_bsp(void)
     IFV puts("apic initialized\n");
 
     IFV puts("my kernel is running in main_bsp now...\n");
+
+    char *p = name_version;
+    unsigned u;
+    for (u=40; u<75 && *p != 0; u++) {
+        status_putch(u, *p++);
+    }
 
     //unsigned eax, ebx, ecx, edx;
     //cpuid(0x80000001, &eax, &ebx, &ecx, &edx);
@@ -126,6 +133,7 @@ void main_ap(void)
     barrier(&mainbarrier);
     main();
 }
+
 
 #include "payload.h"
 #include "tests.h"

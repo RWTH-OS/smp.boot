@@ -28,7 +28,11 @@ CFLAGS+=-I .
 
 # default nbr of CPUs for QEMU smp
 SMP=2
+# default command line for QEMU
 CMDLINE=test
+
+SVNDEF := -D'SVN_REV="$(shell svnversion -n .)"'
+CFLAGS += $(SVNDEF)
 
 C32FLAGS=$(CFLAGS)
 C64FLAGS=$(CFLAGS) -ffreestanding -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3 -mno-3dnow
@@ -41,6 +45,7 @@ C64FLAGS=$(CFLAGS) -ffreestanding -mcmodel=large -mno-red-zone -mno-mmx -mno-sse
 # -mno-sse2
 # -mno-sse3
 # -mno-3dnow
+
 
 CC32=gcc -m32
 CC64=gcc -m64
