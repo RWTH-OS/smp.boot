@@ -128,6 +128,54 @@ void payload_benchmark()
 
     barrier(&barr);
 
+    if (cpu_online > 1) {
+        volatile unsigned long *p_buffer = NULL;
+
+        if (myid == 0) printf("Worker benchmark (%u sec) -----------------------------\n", BENCH_HOURGLAS_SEC);
+
+        /*
+         * need some buffers with different cache strategies:
+         *  - no cache
+         *  - write-through
+         *  - write-back
+         */
+        if (myid == 0) {
+            p_buffer = heap_alloc(16*1024*1024 / 4096);       // one page = 4kB
+
+            /*
+             * repeat benchmark for these dimensions:
+             *   - cache (no, write-through, write-back)
+             *   - range (<L1, <L2, <L3, >L3)
+             *   - stride (only cache line size: 64)
+             *   - access type (read, write, update, atomic)
+             *
+             * results:
+             *   - min, avg, max
+             */
+            worker(p_buffer,       8*1024, 64, AT_READ, BENCH_HOURGLAS_SEC);
+            worker(p_buffer,     265*1024, 64, AT_READ, BENCH_HOURGLAS_SEC);
+            worker(p_buffer, 16*1024*1024, 64, AT_READ, BENCH_HOURGLAS_SEC);
+
+            worker(p_buffer,       8*1024, 64, AT_WRITE, BENCH_HOURGLAS_SEC);
+            worker(p_buffer,     265*1024, 64, AT_WRITE, BENCH_HOURGLAS_SEC);
+            worker(p_buffer, 16*1024*1024, 64, AT_WRITE, BENCH_HOURGLAS_SEC);
+
+            worker(p_buffer,       8*1024, 64, AT_UPDATE, BENCH_HOURGLAS_SEC);
+            worker(p_buffer,     265*1024, 64, AT_UPDATE, BENCH_HOURGLAS_SEC);
+            worker(p_buffer, 16*1024*1024, 64, AT_UPDATE, BENCH_HOURGLAS_SEC);
+
+            worker(p_buffer,       8*1024, 64, AT_ATOMIC, BENCH_HOURGLAS_SEC);
+            worker(p_buffer,     265*1024, 64, AT_ATOMIC, BENCH_HOURGLAS_SEC);
+            worker(p_buffer, 16*1024*1024, 64, AT_ATOMIC, BENCH_HOURGLAS_SEC);
+        }
+
+        barrier(&barr);
+    }
+
+
+
+
+
     /*
      * allocate Buffer for memory benchmarks
      */

@@ -22,11 +22,12 @@
 #include "time.h"
 #include "smp.h"
 #include "sync.h"
+#include "benchmark.h"
 
 void hourglass(unsigned sec)
 {
     uint64_t tsc, tsc_last, tsc_end, diff;
-    unsigned long min = 0xFFFFFFFF, avg = 0, cnt = 0, max = 0;
+    unsigned long long min = 0xFFFFFFFF, avg = 0, cnt = 0, max = 0;
     //int i = -1, j;
     //long p_min, p_max;
 
@@ -39,6 +40,7 @@ void hourglass(unsigned sec)
     while (tsc < tsc_end) {
         tsc_last = tsc;
         tsc = rdtsc();
+
         diff = tsc-tsc_last;
         if (diff < min) min = diff;
         if (diff > max) max = diff;
@@ -56,11 +58,13 @@ void hourglass(unsigned sec)
     while (tsc < tsc_end) {
         tsc_last = tsc;
         tsc = rdtsc();
+
         diff = tsc-tsc_last;
         if (diff < min) min = diff;
         if (diff > max) max = diff;
-        avg += diff;
+        avg += diff;        /* TODO: avg need not to be added up; it's just (tsc_end-tsc_start) ! */
         cnt++;
+
 #       if 0  //RECORD_GAPS
         if (diff > GAP_THRESHOLD && i < COUNT_GAPS-1) {
             benchdata.hourglass.gaps[++i].start = tsc_last;
@@ -68,13 +72,38 @@ void hourglass(unsigned sec)
         }
 #       endif  // RECORD_GAPS
     }
-    avg /= cnt;
+
+
+#   if ! __x86_64__
+    /*
+     * in 32 bit mode:
+     * shift avg (sum of gaps) to the right, until it fits in 32 bits
+     */
+    unsigned shift = 0;
+    while (avg > 0xFFFFFFFF) {
+        avg >>= 1;
+        shift++;
+    }
+#   endif
+
+    /* unsigned long: 32 or 64 bits (native size, cf. ptr_t) */
+    avg = (unsigned long)avg / (unsigned long)cnt;
+
+#   if ! __x86_64__
+    /*
+     * in 32 bit mode:
+     * we had a division by 2^shift before the division by cnt,
+     * undo this by a left-shift (multiply result with 2^shift).
+     * This reduces the precision, but avoids a 64 bit division in 32 bit kernel (requiring a builtin).
+     */
+    avg <<= shift;
+#   endif
 
     //p_min = (1000*min/avg)-1000;
     //p_max = (1000*max/avg)-1000;
     printf("[%u] cnt : min/avg/max %8u : %u/%u/%u " /* "[%i.%i:%i.%i]" */ "\n", 
             my_cpu_info()->cpu_id,
-            cnt, min, avg, max /* , p_min/10, abs(p_min)%10, p_max/10, abs(p_max)%10 */ );
+            (ptr_t)cnt, (ptr_t)min, (ptr_t)avg, (ptr_t)max /* , p_min/10, abs(p_min)%10, p_max/10, abs(p_max)%10 */ );
 }
 
 void load_until_flag(void *buffer, size_t size, flag_t *flag)
@@ -124,3 +153,70 @@ uint64_t range_stride(void *buffer, size_t range, size_t stride)
     }
     return (rdtsc()-tsc)/(256*1024*1024);
 }
+
+#if __x86_64__
+#define RAX   "rax"
+#else
+#define RAX   "eax"
+#endif
+
+void worker(volatile unsigned long *p_buffer, size_t range, size_t stride, access_t type, unsigned sec)
+{
+    uint64_t tsc, tsc_last, tsc_start, tsc_end, diff, min = 0xFFFFffffFFFFffff, max = 0, avg, cnt = 0;
+    volatile unsigned long *p = p_buffer;
+    unsigned long dummy;
+
+    tsc = tsc_start = rdtsc();
+    tsc_end = tsc_start + sec * 1000000ull * hw_info.tsc_per_usec;
+
+    while (tsc < tsc_end) {
+        tsc_last = tsc;
+        tsc = rdtsc();
+
+        diff = tsc - tsc_last;
+        if (diff < min) min = diff;
+        if (diff > max) max = diff;
+        cnt++;
+
+        if (p_buffer != NULL) {
+            switch (type) {
+                case AT_READ :
+                    asm volatile ("mov %0, %%" RAX : "=a"(dummy) : "m"(*p));
+                    //dummy = *p;
+                    break;
+                case AT_WRITE :
+                    asm volatile ("mov %%" RAX ", %0" : "=m"(*p) : "a"(dummy));
+                    //*p = dummy;
+                    break;
+                case AT_UPDATE :
+                    *p += dummy;
+                    break;
+                case AT_ATOMIC :
+                    dummy = __sync_add_and_fetch(p, 1);
+                    break;
+            }
+
+            p += stride/sizeof(unsigned long);
+            if (p > (unsigned long*)(p_buffer+range)) p = p_buffer;
+        }
+    }
+#   if __x86_64__
+    avg = (tsc-tsc_start)/cnt;
+#   else
+    /*
+     * no 64 bit division in 32 bit mode: shift right, divide in 32 bit, shift back left
+     */ 
+    unsigned shift = 0;
+    avg = tsc - tsc_start;
+    while (avg > 0xFFFFffff) {
+        avg >>= 1;
+        shift++;
+    }
+    avg = (unsigned long)avg/(unsigned long)cnt;
+    avg >>= shift;
+#   endif
+    printf("t%ur%us%u : min/avg/max : %u/%u/%u\n", 
+            (unsigned long)type, (unsigned long)range, (unsigned long)stride, 
+            (unsigned long)min, (unsigned long)avg, (unsigned long)max);
+}
+
