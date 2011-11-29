@@ -212,10 +212,16 @@ isr_common_stub:
      mov rax, cr3       ; CR 3
      push rax
 
+     mov rax, cr2       ; CR 2
+     push rax
+
      mov rdi, rsp           ; Param in RDI (RSP == pointer to saved registers on stack)
      call int_handler       ; int_handler(struct regs *r)
 
      ; restore context from stack
+     pop rax        ; just remove cr2
+     ;mov cr2, rax
+
      pop rax
      mov cr3, rax
 
@@ -271,7 +277,7 @@ isr_common_stub:
     wrmsr
 
     mov ebx, cr0
-    or ebx, 0x8000_0001
+    or ebx, 0x8000_0001       ; Bit 32 (PG): enable paging; Bit 0 (PE): protection enable
     mov cr0, ebx
 
     lgdt [GDT64.Pointer]      ; same as BSP

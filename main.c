@@ -24,7 +24,13 @@ barrier_t mainbarrier = BARRIER_INITIALIZER(MAX_CPU); /* max is later reduced to
 extern volatile unsigned cpu_online;    // from apic.c
 void main();                            // further down in this file
 
-static char name_version[] = "BareMetalKernel " SVN_REV;
+#if __x86_64__
+#define VERSION_BITS "64"
+#else
+#define VERSION_BITS "32"
+#endif
+static char name_version[] = "BareMetalKernel" VERSION_BITS " " SVN_REV " OPT=" OPT;
+
 /*
  * this is the entry function only for the BSP
  */

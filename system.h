@@ -25,7 +25,7 @@
 #if __x86_64__
 struct regs
 {
-	unsigned long long cr3, gs, fs, es, ds;				/* pushed the segs last */
+	unsigned long long cr2, cr3, gs, fs, es, ds;				/* pushed the segs last */
 	unsigned long long r15, r14, r13, r12, r11, r10, r9, r8, rdi, rsi, rbp, _zero, rbx, rdx, rcx, rax ;
 	unsigned long long int_no, err_code;			/* our 'push byte #' and ecodes do this */
 	unsigned long long rip, cs, rflags, rsp, ss;			/* pushed by the processor automatically */
@@ -33,7 +33,7 @@ struct regs
 #else
 struct regs
 {
-    unsigned int gs, fs, es, ds;
+    unsigned int cr2, cr3, gs, fs, es, ds;
     unsigned int edi, esi, ebp, esp, ebx, edx, ecx, eax;
     unsigned int int_no, err_code;
     unsigned int eip, cx, eflags, useresp, ss;

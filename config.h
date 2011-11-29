@@ -71,7 +71,7 @@
 /*
  * settings for benchmarks
  */
-#if 0
+#if 1
 /* real workload for benchmarks (set #if 1) */
 #define BENCH_HOURGLAS_SEC     10u
 //#define BENCH_MIN_STRIDE_POW2   4  
@@ -79,10 +79,11 @@
 //#define BENCH_MAX_STRIDE_POW2   9
 #define BENCH_MAX_STRIDE_POW2   7
 #define BENCH_MIN_RANGE_POW2    12
-#define BENCH_MAX_RANGE_POW2    25
+//#define BENCH_MAX_RANGE_POW2    25
+#define BENCH_MAX_RANGE_POW2    16
 #else
 /* short workload for quick testing (set #if 0) */
-#define BENCH_HOURGLAS_SEC      2u 
+#define BENCH_HOURGLAS_SEC      1u 
 #define BENCH_MIN_STRIDE_POW2   4  
 #define BENCH_MAX_STRIDE_POW2   5
 #define BENCH_MIN_RANGE_POW2    12

@@ -117,6 +117,12 @@ void tests_mm(void)
             printf("p_shared[1023] = 0x%x (should be 0x01010101)\n", p_shared[1023]);
             printf("p_shared2[2048] = 0x%x (should be 0x22222222)\n", p_shared2[2048]);
 
+            barrier(&barr);
+            p_shared[0] = 0xdeadbeef;
+            p_shared2[0] = 0xdeadbeef;
+            p_shared3[0] = 0xdeadbeef;
+            barrier(&barr);
+            p_shared4[1] = 0xdeadc0de;
 
             printf("CPU 0: udelay 5 Sek.\n");
             udelay(5*1000*1000);
@@ -134,6 +140,13 @@ void tests_mm(void)
             memset((void*)p_shared, 1, 4096);
             memset((void*)p_shared2, 0x22, 4*4096);
             barrier(&barr);
+            
+            barrier(&barr);
+            p_shared4[0] = 0xdeadbeef;
+            barrier(&barr);
+            p_shared[1] = 0xdeadc0de;
+            p_shared2[1] = 0xdeadc0de;
+            p_shared3[1] = 0xdeadc0de;
 
             printf("CPU 1: udelay 10 Sek.\n");
             udelay(10*1000*1000);
@@ -209,12 +222,12 @@ void tests_doall(void)
     barrier(&barr_all);
 
     IFV printf("[%u] calling test_barrier()\n", myid);
-    tests_barrier();
-    tests_flag();
+    //tests_barrier();
+    //tests_flag();
 
-    //tests_mm();
+    tests_mm();
 
-    tests_ipi();
+    //tests_ipi();
 
     printf("[%u] exit tests_doall()\n", myid);
 }

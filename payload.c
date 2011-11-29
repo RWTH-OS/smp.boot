@@ -48,9 +48,11 @@ void payload_benchmark()
 
     static uint32_t * p_contender = NULL;
     if (myid == 1) {
-        p_contender = heap_alloc(16*1024*1024 / 4096);       // one page = 4kB
+        p_contender = heap_alloc(16*1024*1024 / PAGE_SIZE);       // one page = 4kB
+        //virt_to_phys(p_contender);
+        p_contender[0] = 42;
+        printf("[1] p_contender = 0x%x .. 0x%x\n", (ptr_t)p_contender, (ptr_t)p_contender+16*1024*1024);
     }
-
 
 
     if (myid == 0) printf("1 CPU hourglass (%u sec) ----------------------------------------------\n", BENCH_HOURGLAS_SEC);
@@ -140,7 +142,7 @@ void payload_benchmark()
          *  - write-back
          */
         if (myid == 0) {
-            p_buffer = heap_alloc(16*1024*1024 / 4096);       // one page = 4kB
+            p_buffer = heap_alloc(16*1024*1024 / PAGE_SIZE);       // one page = 4kB
 
             /*
              * repeat benchmark for these dimensions:
@@ -148,6 +150,7 @@ void payload_benchmark()
              *   - range (<L1, <L2, <L3, >L3)
              *   - stride (only cache line size: 64)
              *   - access type (read, write, update, atomic)
+             *   - use huge-pages (to avoid TLB effects), 4k pages (with TLB effects)
              *
              * results:
              *   - min, avg, max

@@ -130,8 +130,12 @@ char *exception_messages[] =
     "Reserved"
 };
 
+extern volatile unsigned cpu_online;
 void int_handler(struct regs *r)
 {
+    unsigned bak = cpu_online;
+    cpu_online = 0; // set CPU-ONLINE to 0 to disable mutex in printf, restore later
+
     if (r->int_no < 32) {
         printf("|\n");
         printf("| CPU %u\n", my_cpu_info()->cpu_id);
@@ -140,23 +144,35 @@ void int_handler(struct regs *r)
             printf("| ip: 0x%x, sp:0x%x\n", r->rip, r->rsp);
             //struct regs
             //{
-            //    unsigned long long cr3, gs, fs, es, ds;				/* pushed the segs last */
+            //    unsigned long long cr2, cr3, gs, fs, es, ds;				/* pushed the segs last */
             //    unsigned long long r15, r14, r13, r12, r11, r10, r9, r8, rdi, rsi, rbp, _zero, rbx, rdx, rcx, rax ;
             //    unsigned long long int_no, err_code;			/* our 'push byte #' and ecodes do this */
             //    unsigned long long rip, cs, rflags, rsp, ss;			/* pushed by the processor automatically */
             //} __attribute__((packed));
 #       else
-            printf("| ip: 0x%x, sp:0x%x\n", r->eip, r->useresp);
+            printf("| ip: 0x%x, sp:0x%x\n", r->eip, r->esp);
             //struct regs
             //{
-            //    unsigned int gs, fs, es, ds;
+            //    unsigned int cr2, cr3, gs, fs, es, ds;
             //    unsigned int edi, esi, ebp, esp, ebx, edx, ecx, eax;
             //    unsigned int int_no, err_code;
             //    unsigned int eip, cx, eflags, useresp, ss;
             //};
 #       endif
-        printf("| System halted.\n");
-        while(1) {asm volatile ("hlt"); };
+        if (r->int_no == 14) {
+            printf("| page-fault");
+            if ((r->err_code & (1<<1)) == 1) printf("(rd):"); else printf("(wr):");
+            if ((r->err_code & (1<<0)) == 0) printf("not-present "); else printf("protection ");
+            if ((r->err_code & (1<<2)) == 0) printf("ring 0 "); else printf("ring 3 ");
+            if ((r->err_code & (1<<3)) == 1) printf("reserved ");
+            if ((r->err_code & (1<<3)) == 1) printf("instr.fetch ");
+            printf("\n");
+            printf("| address: 0x%x\n", r->cr2);
+        }
+        if (r->int_no != 15) {
+            printf("| System halted.\n");
+            while(1) {asm volatile ("hlt"); };
+        }
     } else {
         IFV printf("/----------------------------------------\n");
         IFV printf("| CPU %u\n", my_cpu_info()->cpu_id);
@@ -167,6 +183,7 @@ void int_handler(struct regs *r)
      * EOI
      */
     apic_eoi();
+    cpu_online = bak;
 }
 
 

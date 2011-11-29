@@ -205,16 +205,22 @@ isr_common_stub:
     push es
     push fs
     push gs
+    mov eax, cr3
+    push eax
+    mov eax, cr2
+    push eax
     mov ax, GDT32.Code
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
-    mov eax, esp
-    push eax
+    mov eax, esp            ; Stack-Pointer to EAX
+    push eax                ; push EAX; 1st Parameter to int_handler()
     mov eax, int_handler
     call eax
-    pop eax
+    pop eax ; Param (esp)
+    pop eax ; cr2
+    pop eax ; cr3
     pop gs
     pop fs
     pop es

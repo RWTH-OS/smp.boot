@@ -6,7 +6,9 @@ HFILES=$(shell ls *.h)
 
 ASMFILES=$(shell ls *.asm)
 
-CFLAGS=-c -O0
+OPT=0
+
+CFLAGS=-c -O$(OPT)
 # -O          - basic optimization
 CFLAGS+=-Wall -Wextra -Wno-main -Wno-unused-function -Wno-pragmas
 # -Wall       - give warnings (on most checks)
@@ -31,7 +33,7 @@ SMP=2
 # default command line for QEMU
 CMDLINE=test
 
-SVNDEF := -D'SVN_REV="$(shell svnversion -n .)"'
+SVNDEF := -D'SVN_REV="$(shell svnversion -n .)"' -D'OPT="$(OPT)"'
 CFLAGS += $(SVNDEF)
 
 C32FLAGS=$(CFLAGS)

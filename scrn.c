@@ -245,8 +245,7 @@ mutex_t mutex_printf = MUTEX_INITIALIZER;
 extern unsigned cpu_online;
 #endif
 
-void
-printf (const char *format, ...)
+void printf (const char *format, ...)
 {
   int c;
   char buf[20];

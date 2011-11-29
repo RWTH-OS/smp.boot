@@ -164,7 +164,7 @@ void worker(volatile unsigned long *p_buffer, size_t range, size_t stride, acces
 {
     uint64_t tsc, tsc_last, tsc_start, tsc_end, diff, min = 0xFFFFffffFFFFffff, max = 0, avg, cnt = 0;
     volatile unsigned long *p = p_buffer;
-    unsigned long dummy;
+    volatile unsigned long dummy;
 
     tsc = tsc_start = rdtsc();
     tsc_end = tsc_start + sec * 1000000ull * hw_info.tsc_per_usec;
@@ -177,6 +177,8 @@ void worker(volatile unsigned long *p_buffer, size_t range, size_t stride, acces
         if (diff < min) min = diff;
         if (diff > max) max = diff;
         cnt++;
+
+        //if (type == AT_WRITE) printf("|%x", p);
 
         if (p_buffer != NULL) {
             switch (type) {
@@ -197,7 +199,7 @@ void worker(volatile unsigned long *p_buffer, size_t range, size_t stride, acces
             }
 
             p += stride/sizeof(unsigned long);
-            if (p > (unsigned long*)(p_buffer+range)) p = p_buffer;
+            if ((ptr_t)p >= (ptr_t)p_buffer+range) p = p_buffer;
         }
     }
 #   if __x86_64__
