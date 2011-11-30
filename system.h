@@ -41,6 +41,23 @@ struct regs
 #endif
 
 
+/*
+ * int i;
+ * int array[] = {1,2,3,4};
+ * foreach(i, array) {
+ *   printf("%i\n", i);
+ * }
+ */
+#define foreach(item, array) \
+        for(int keep = 1, \
+                count = 0,\
+                size = sizeof (array) / sizeof *(array); \
+                keep && count != size; \
+                keep = !keep, count++) \
+        for(item = array[count]; keep; keep = !keep)
+
+
+
 
 /* lib.c */
 #include "lib.h"

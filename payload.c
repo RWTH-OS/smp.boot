@@ -54,7 +54,7 @@ void payload_benchmark()
         //printf("[1] p_contender = 0x%x .. 0x%x\n", (ptr_t)p_contender, (ptr_t)p_contender+16*1024*1024);
     }
 
-
+#if 0
     if (myid == 0) printf("1 CPU hourglass (%u sec) ----------------------------------------------\n", BENCH_HOURGLAS_SEC);
 
     barrier(&barr);
@@ -127,27 +127,18 @@ void payload_benchmark()
             smp_halt();
         }
     }
+#endif
 
     barrier(&barr);
 
     if (cpu_online > 1) {
         volatile unsigned long *p_buffer = NULL;
-#if 0
         size_t bench_range, bench_stride, worker_range, worker_stride;
-        unsigned num_workers;
+        unsigned worker_num;
         access_t atype;
-#endif
+        static barrier_t barr_dyn = BARRIER_INITIALIZER(MAX_CPU);
 
         if (myid == 0) printf("Worker benchmark (%u sec) -----------------------------\n", BENCH_HOURGLAS_SEC);
-#if 0
-#define foreach(item, array) \
-        for(int keep = 1, \
-                count = 0,\
-                size = sizeof (array) / sizeof *(array); \
-                keep && count != size; \
-                keep = !keep, count++) \
-        for(item = (array) + count; keep; keep = !keep)
-#endif
 
         /*
          * need some buffers with different cache strategies:
@@ -158,12 +149,50 @@ void payload_benchmark()
          * (don't forget to flush the TLB after changing!)
          */
 
-#if 0
-        size_t bench_ranges[] = {8*1024, 256*1024, 16*1024*1024};
-        foreach (bench_range, bench_ranges) {
-            if (myid == 0) printf("bench_range: 0x%8x\n");
+        unsigned worker_nums[] = {0, 1, 2};
+        size_t worker_ranges[] = {8*KB, 16*KB, 256*KB};//, 4*MB, 16*MB};
+        size_t worker_strides[]= {64};
+        size_t bench_ranges[]  = {8*KB, 256*KB, 16*MB};
+        size_t bench_strides[] = {64};
+        access_t atypes[] = {AT_READ, AT_WRITE, AT_UPDATE, AT_ATOMIC};
+
+        foreach (worker_num, worker_nums) {
+            if (worker_num >= cpu_online) { break; }
+
+            barrier(&barr);
+            if (myid == 0) barr_dyn.max = worker_num+1;
+            barrier(&barr);
+
+            if (myid > worker_num) smp_halt();
+            else {
+                foreach (worker_range, worker_ranges) {
+                    foreach (worker_stride, worker_strides) {
+                        if (myid==0) printf("== %u worker(s) on range %x (stride %u)\n", worker_num, worker_range, worker_stride);
+                        /*
+                         * start worker
+                         */
+                        foreach (bench_range, bench_ranges) {
+                            foreach (bench_stride, bench_strides) {
+                                if (myid == 0) printf("---- bench: range: %x (stride %u) \n", bench_range, bench_stride, atype);
+                                foreach (atype, atypes) {
+                                    if (myid == 0) printf("atype %u  ", atype);
+                                    /* 
+                                     * start benchmark 
+                                     */
+                                    udelay(100*1000);
+                                    barrier(&barr_dyn);
+                                }
+                                if (myid == 0) printf("\n");
+                            }
+                        }
+                    }
+                }
+                if (myid == 0) {
+                    unsigned u;
+                    for (u=worker_num+1; u<cpu_online; u++) smp_wakeup(u);
+                }
+            }
         }
-#endif
 
 
         /*
@@ -173,12 +202,14 @@ void payload_benchmark()
          *   - stride (only cache line size: 64)
          *   - access type (read, write, update, atomic)
          *   - use huge-pages (to avoid TLB effects), 4k pages (with TLB effects)
+         *   - worker(s) on same/other pages as/than load
+         *   - concurrent atomic access to one (or some) variables (lock-free, but contended)
          *
          * results:
          *   - min, avg, max
          */
 
-
+#if 0
         if (myid == 0) {
             p_buffer = heap_alloc(16*1024*1024 / PAGE_SIZE);       // one page = 4kB
 
@@ -198,6 +229,7 @@ void payload_benchmark()
             worker(p_buffer,     265*1024, 64, AT_ATOMIC, BENCH_HOURGLAS_SEC);
             worker(p_buffer, 16*1024*1024, 64, AT_ATOMIC, BENCH_HOURGLAS_SEC);
         }
+#endif
 
         barrier(&barr);
     }
