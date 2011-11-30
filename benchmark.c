@@ -106,14 +106,14 @@ void hourglass(unsigned sec)
             (ptr_t)cnt, (ptr_t)min, (ptr_t)avg, (ptr_t)max /* , p_min/10, abs(p_min)%10, p_max/10, abs(p_max)%10 */ );
 }
 
-void load_until_flag(void *buffer, size_t size, flag_t *flag)
+void load_until_flag(void *buffer, size_t size, size_t stride, flag_t *flag)
 {
-    typedef uint32_t mytype;
+    typedef ptr_t mytype;
     size_t s;
     mytype *p = buffer;
 
     while (!flag_trywait(flag)) {
-        for (s=0; s<size/sizeof(mytype); s+=(64/sizeof(mytype))) {
+        for (s=0; s<size/sizeof(mytype); s+=(stride/sizeof(mytype))) {
             p[s]++;              /* read/write */
         }
     }

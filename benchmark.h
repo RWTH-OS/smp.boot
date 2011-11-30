@@ -22,7 +22,7 @@
 
 
 void hourglass(unsigned sec);
-void load_until_flag(void *buffer, size_t size, flag_t *flag);
+void load_until_flag(void *buffer, size_t size, size_t stride, flag_t *flag);
 uint64_t range_stride(void *buffer, size_t range, size_t stride);
 
 typedef enum {AT_READ, AT_WRITE, AT_UPDATE, AT_ATOMIC} access_t;

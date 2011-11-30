@@ -315,6 +315,7 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
         pt[ipt].page.frame = frame;
         pt[ipt].page.rw = 1;
         pt[ipt].page.p = 1;
+        //pt[ipt].page.pwt = 1;
         /* invalidate TLB for page containing the address just mapped */
         __asm__ volatile ("invlpg %0" : : "m"(*((int*)((ptr_t)frame<<PAGE_BITS))));
     }

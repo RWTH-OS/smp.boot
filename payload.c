@@ -148,9 +148,9 @@ void payload_benchmark()
 
     if (cpu_online > 1) {
         volatile unsigned long *p_buffer = NULL;
-        size_t bench_range, bench_stride, worker_range, worker_stride;
-        unsigned worker_num;
-        access_t atype;
+        size_t worker_range, worker_stride, load_range, load_stride;
+        unsigned load_nbr;
+        access_t worker_atype;
         static barrier_t barr_dyn = BARRIER_INITIALIZER(MAX_CPU);
 
         if (myid == 0) printf("Worker benchmark (%u sec) -----------------------------\n", BENCH_HOURGLAS_SEC);
@@ -178,61 +178,61 @@ void payload_benchmark()
          *   - min, avg, max
          */
 
-        unsigned worker_nums[] = {0, 1, 3};
-        size_t worker_ranges[] = {4*KB, 256*KB, 4*MB, 16*MB};
-        size_t worker_strides[]= {64};
-        size_t bench_ranges[]  = {4*KB, 256*KB, 16*MB};
-        size_t bench_strides[] = {64};
-        access_t atypes[] = {AT_READ, AT_WRITE, AT_UPDATE, AT_ATOMIC};
+        unsigned load_nbrs[] = {0, 1, 3};
+        size_t load_ranges[] = {4*KB, 256*KB, 4*MB, 16*MB};
+        size_t load_strides[]= {64};
+        size_t worker_ranges[]  = {4*KB, 256*KB, 16*MB};
+        size_t worker_strides[] = {64};
+        access_t worker_atypes[] = {AT_READ, AT_WRITE, AT_UPDATE, AT_ATOMIC};
         static flag_t flags[MAX_CPU];
 
         for (unsigned u=0; u<MAX_CPU; u++) flag_init(&flags[u]);
 
-        foreach (worker_num, worker_nums) {
-            if (worker_num >= cpu_online) { break; }
+        foreach (load_nbr, load_nbrs) {
+            if (load_nbr >= cpu_online) { break; }
 
             barrier(&barr);
-            if (myid == 0) barr_dyn.max = worker_num+1;
+            if (myid == 0) barr_dyn.max = load_nbr+1;
             barrier(&barr);
 
-            if (myid > worker_num) smp_halt();
+            if (myid > load_nbr) smp_halt();
             else {
-                foreach (worker_range, worker_ranges) {
-                    foreach (worker_stride, worker_strides) {
-                        if (myid==0) printf("== %u worker(s) on range %5u kB (stride %u) [rd, wr, upd, atomic]\n", worker_num, worker_range>>10, worker_stride);
+                foreach (load_range, load_ranges) {
+                    foreach (load_stride, load_strides) {
+                        if (myid==0) printf("== %u load(s) on range %5u kB (stride %u) [rd, wr, upd, atomic]\n", load_nbr, load_range>>10, load_stride);
                         if (myid == 0) {
                             /*
                              * start worker (benchmark)
                              */
                             udelay(100*1000);
-                            foreach (bench_range, bench_ranges) {
-                                foreach (bench_stride, bench_strides) {
-                                    //printf("---- bench: range: %x (stride %u) (rd, wr, upd, atomic) \n", bench_range, bench_stride, atype);
-                                    printf("r %5u kB: ", bench_range>>10);
-                                    foreach (atype, atypes) {
+                            foreach (worker_range, worker_ranges) {
+                                foreach (worker_stride, worker_strides) {
+                                    //printf("---- bench: range: %x (stride %u) (rd, wr, upd, atomic) \n", worker_range, worker_stride, worker_atype);
+                                    printf("r %5u kB: ", worker_range>>10);
+                                    foreach (worker_atype, worker_atypes) {
                                         /* 
                                          * start benchmark 
                                          */
-                                        worker(p_buffer, worker_range, worker_stride, atype, BENCH_HOURGLAS_SEC);
+                                        worker(p_buffer, worker_range, worker_stride, worker_atype, BENCH_HOURGLAS_SEC);
                                     }
                                     printf("\n");
                                 }
                             }
-                            for (unsigned u=1; u<=worker_num; u++) flag_signal(&flags[u]);
+                            for (unsigned u=1; u<=load_nbr; u++) flag_signal(&flags[u]);
                         } else {
                             /*
                              * start load
                              */
-                            load_until_flag(p_contender, worker_range, &flags[myid]);
+                            load_until_flag(p_contender, load_range, load_stride, &flags[myid]);
                         }
                         barrier(&barr_dyn);
-                        if (worker_num == 0) goto label_break;
+                        if (load_nbr == 0) goto label_break;
                     }
                 }
 label_break:
                 if (myid == 0) {
                     unsigned u;
-                    for (u=worker_num+1; u<cpu_online; u++) smp_wakeup(u);
+                    for (u=load_nbr+1; u<cpu_online; u++) smp_wakeup(u);
                 }
             }
         }
@@ -339,7 +339,7 @@ label_break:
                 printf("Range/Stride (one CPU working on %u kB) --------------\n", size/1024);
                 barrier(&barr2);
 
-                load_until_flag(p_contender, size, &flag);
+                load_until_flag(p_contender, size, 64, &flag);
 
                 barrier(&barr2);
             }
