@@ -22,7 +22,7 @@
 void udelay(unsigned long us)
 {
     uint64_t tsc_now, tsc_end;
-    smp_status('u');
+    smp_status(STATUS_DELAY);
     tsc_now = rdtsc();
     //printf("tsc %u, tsc_per_usec = %u\n", tsc_now, hw_info.tsc_per_usec);
     tsc_end = tsc_now + (us * hw_info.tsc_per_usec);
@@ -30,6 +30,6 @@ void udelay(unsigned long us)
         tsc_now = rdtsc();
         //printf("tsc %lu\n", tsc_now.u64);
     }
-    smp_status('.');
+    smp_status(STATUS_RUNNING);
 }
 

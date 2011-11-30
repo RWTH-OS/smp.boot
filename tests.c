@@ -199,7 +199,7 @@ void tests_ipi(void)
 
             smp_status('H');
             __asm__ volatile ("hlt");   // should be waken up by IPI, but apparantly, IS NOT.
-            smp_status('.');
+            smp_status(STATUS_RUNNING);
             
             smp_halt();
         }

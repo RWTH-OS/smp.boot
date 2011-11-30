@@ -30,7 +30,7 @@ int mutex_trylock(mutex_t *m);
 typedef struct {
     volatile unsigned cnt;
     volatile unsigned epoch;
-    unsigned max;
+    volatile unsigned max;
 } barrier_t;
 //#define BARRIER_INITIALIZER(m)  (barrier_t){ .cnt=0, .epoch=0, .max=m };
 #define BARRIER_INITIALIZER(m)  { .cnt=0, .epoch=0, .max=m };

@@ -21,5 +21,8 @@ typedef u64 uint64_t;
 typedef unsigned long size_t;   // size of a pointer; 32/64 bit safe
 typedef unsigned long ptr_t;    // size of a pointer; 32/64 bit safe
 
+#define KB  (1024)
+#define MB  (1024 * KB)
+#define GB  (1024 * MB)
 
 #endif

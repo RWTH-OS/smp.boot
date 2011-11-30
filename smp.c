@@ -46,13 +46,13 @@ void smp_status(char c)
 void smp_halt(void)
 {
     unsigned if_backup;
-    smp_status('z');
+    smp_status(STATUS_HALT);
     my_cpu_info()->flags |= SMP_FLAG_HALT;
     if_backup = sti();
     while (my_cpu_info()->flags & SMP_FLAG_HALT) {
         __asm__ volatile ("hlt");
     }
-    smp_status('.');
+    smp_status(STATUS_RUNNING);
     if (!if_backup) cli();
 }
 

@@ -132,7 +132,7 @@ void main_ap(void)
     apic_init_ap(cpu_online);     // activate localAPIC on Application Processors
     idt_install_ap();
 
-    smp_status('x');
+    smp_status(STATUS_RUNNING);
 
     //udelay(3000000*my_id);
     //printf("new[%d]: cpu_info = %x cpu_id = %x\n", cpu_online, my_cpu_info(), my_cpu_info()->cpu_id);

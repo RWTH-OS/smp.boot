@@ -35,12 +35,12 @@ void mutex_init(mutex_t *m)
 /* 1: free, 0: locked */
 void mutex_lock(mutex_t *m)
 {
-    smp_status('m');
+    smp_status(STATUS_MUTEX);
     while (!__sync_bool_compare_and_swap(m, 1, 0)) {};
     // CAS: (type *ptr, type oldval, type newval)
     // bool version of CAS: return true if test was successful and values were swapped
     // repeat while test was not successful
-    smp_status('.');
+    smp_status(STATUS_RUNNING);
 }
 
 int mutex_trylock(mutex_t *m)
@@ -76,7 +76,7 @@ void barrier(barrier_t *b)
         printf("barrier on CPU %u at 0x%x (%u/%u)\n", my_cpu_info()->cpu_id, b, c, b->max);
     }
 
-    smp_status('b');
+    smp_status(STATUS_BARRIER);
     /* every participant increments the counter and gets a unique ID into c */
     if (c == b->max) {
         /* last: become master for this episode: */
@@ -92,7 +92,7 @@ void barrier(barrier_t *b)
         while (e == b->epoch) {};
     }
     /* episode ends, next epoch (e+1) begins */
-    smp_status('.');
+    smp_status(STATUS_RUNNING);
 }
 
 
@@ -109,10 +109,10 @@ void flag_signal(flag_t *flag)
 void flag_wait(flag_t *flag)
 {
     unsigned n = flag->next + 1;
-    smp_status('f');
+    smp_status(STATUS_FLAG);
     while (flag->flag < n) {};
     __sync_add_and_fetch(&flag->next, 1);
-    smp_status('.');
+    smp_status(STATUS_RUNNING);
 }
 
 int flag_trywait(flag_t *flag)

@@ -55,6 +55,17 @@ static inline volatile cpu_info_t * my_cpu_info()
     return (cpu_info_t volatile * )p;
 }
 
+#define STATUS_WAKEUP   '^'
+#define STATUS_RUNNING  '.'
+#define STATUS_MUTEX    'm'
+#define STATUS_BARRIER  'b'
+#define STATUS_FLAG     'f'
+#define STATUS_DELAY    'd'
+#define STATUS_HALT     '-'
+#define STATUS_ERROR    'E'
+#define STATUS_STOP     '_'
+#define STATUS_NOTUP    '|'
+
 void smp_status(char c);
 
 void smp_halt(void);

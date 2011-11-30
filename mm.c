@@ -112,7 +112,7 @@ frame_t get_free_frame(unsigned type)
             last_frame_4k++;
             if (last_frame_4k >= (MAX_MEM / PAGE_SIZE)) {
                 printf("ERROR: out of memory!\n");
-                smp_status('E');
+                smp_status(STATUS_ERROR);
                 while (1) __asm__ volatile ("hlt");
             }
         }
@@ -125,7 +125,7 @@ frame_t get_free_frame(unsigned type)
             last_frame_pt++;
             if (last_frame_pt >= (MAX_MEM / PAGE_SIZE)) {
                 printf("ERROR: out of memory!\n");
-                smp_status('E');
+                smp_status(STATUS_ERROR);
                 while (1) __asm__ volatile ("hlt");
             }
         }
@@ -134,7 +134,7 @@ frame_t get_free_frame(unsigned type)
         return last_frame_pt;
     }
     printf("ERROR: type %d not supported!\n", type);
-    smp_status('E');
+    smp_status(STATUS_ERROR);
     while (1) __asm__ volatile ("hlt");
 }
 
@@ -247,7 +247,7 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
 {
     if (flags != 0) {
         printf("ERROR (map_frame_to_adr): flags %d not supported, yet!\n", flags);
-        smp_status('E');
+        smp_status(STATUS_ERROR);
         while (1) __asm__ volatile ("hlt");
     }
     IFVV printf("map_frame_to_adr(frame=0x%x, adr=0x%x, flags=0x%x)\n", frame, adr, flags);

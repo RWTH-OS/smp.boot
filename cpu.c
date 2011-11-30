@@ -94,7 +94,7 @@ void reboot()
 #endif
 
     //udelay(100);
-    smp_status('_');
+    smp_status(STATUS_STOP);
 
     while (1) __asm__ volatile ("hlt");
 }
@@ -108,7 +108,7 @@ void stop()
     mutex_unlock(&m);
 
     IFV printf("halt CPU %d (now %d down)\n", my_cpu_info()->cpu_id, cpus_halted);
-    smp_status('_');
+    smp_status(STATUS_STOP);
     if (cpus_halted < cpu_online) {
         while (1) __asm__ volatile ("hlt");
     } else {

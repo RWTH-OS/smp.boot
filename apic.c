@@ -176,17 +176,17 @@ void apic_init()
 
     /* set up status monitor for APs */
     status_putch(5, '[');
-    status_putch(6, '.');
+    status_putch(6, STATUS_RUNNING);
     status_putch(6+hw_info.cpu_cnt, ']');
 
     /* now send IPIs to the APs */
     for (u = 1; u < hw_info.cpu_cnt; u++) {
         if (u >= hw_info.cmd_maxcpu || ((hw_info.cmd_cpumask & (1 << u)) == 0)) {
-            status_putch(6+u, '|');
+            status_putch(6+u, STATUS_NOTUP);
             IFV printf("SMP: skip AP#%u\n", u);
             continue;
         }
-        status_putch(6+u, '^');
+        status_putch(6+u, STATUS_WAKEUP);
         *ptr_apid = u;
         IFV printf("SMP: try to wake up AP#%u\n", u);
         IFVV printf("  #%u: send INIT IPI\n", u);
