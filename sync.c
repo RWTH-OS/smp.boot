@@ -58,7 +58,7 @@ void mutex_unlock(mutex_t *m)
 
 void barrier_init(barrier_t *b, int max)
 {
-    *b = BARRIER_INITIALIZER(max);
+    *b = (barrier_t)BARRIER_INITIALIZER(max);
 }
 
 void barrier(barrier_t *b)
@@ -98,7 +98,7 @@ void barrier(barrier_t *b)
 
 void flag_init(flag_t *flag)
 {
-    *flag = FLAG_INITIALIZER;
+    *flag = (flag_t)FLAG_INITIALIZER;
 }
 
 void flag_signal(flag_t *flag)

@@ -62,7 +62,7 @@ void reboot()
 
 #if 1
     char temp;
-    asm volatile ("CLI");
+    __asm__ volatile ("CLI");
     /* empty keyboard buffer */
     do {
         temp = inportb(KBRD_INTRFC);
@@ -86,8 +86,8 @@ void reboot()
  
     IDTR.length = 0;
     IDTR.base = (unsigned long)0;
-    asm( "lidt %0" : : "m"(IDTR) );
-    asm volatile ("int $32");
+    __asm__( "lidt %0" : : "m"(IDTR) );
+    __asm__ volatile ("int $32");
 
     udelay(1000*1000);
     status_putch(s++, '+');
@@ -96,7 +96,7 @@ void reboot()
     //udelay(100);
     smp_status('_');
 
-    while (1) asm volatile ("hlt");
+    while (1) __asm__ volatile ("hlt");
 }
 void stop()
 {
@@ -110,7 +110,7 @@ void stop()
     IFV printf("halt CPU %d (now %d down)\n", my_cpu_info()->cpu_id, cpus_halted);
     smp_status('_');
     if (cpus_halted < cpu_online) {
-        while (1) asm volatile ("hlt");
+        while (1) __asm__ volatile ("hlt");
     } else {
         reboot();
     }

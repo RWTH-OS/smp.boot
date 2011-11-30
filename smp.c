@@ -50,7 +50,7 @@ void smp_halt(void)
     my_cpu_info()->flags |= SMP_FLAG_HALT;
     if_backup = sti();
     while (my_cpu_info()->flags & SMP_FLAG_HALT) {
-        asm volatile ("hlt");
+        __asm__ volatile ("hlt");
     }
     smp_status('.');
     if (!if_backup) cli();

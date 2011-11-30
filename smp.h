@@ -48,9 +48,9 @@ static inline volatile cpu_info_t * my_cpu_info()
 {
     void volatile * p;
 #   ifdef __x86_64__
-    asm volatile("movq %%rsp, %%rax \n\t andq %%rdx, %%rax" : "=a"(p) : "d" ( ~STACK_MASK ));
+    __asm__ volatile("movq %%rsp, %%rax \n\t andq %%rdx, %%rax" : "=a"(p) : "d" ( ~STACK_MASK ));
 #   else
-    asm volatile("movl %%esp, %%eax \n\t andl %%edx, %%eax" : "=a"(p) : "d" ( ~STACK_MASK ));
+    __asm__ volatile("movl %%esp, %%eax \n\t andl %%edx, %%eax" : "=a"(p) : "d" ( ~STACK_MASK ));
 #   endif
     return (cpu_info_t volatile * )p;
 }

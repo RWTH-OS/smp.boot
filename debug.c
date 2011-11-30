@@ -100,9 +100,9 @@ static inline void stackdump(int from, int to)
     long *sp;
     long *p;
 #   ifdef __x86_64__
-    asm volatile ("mov %%rsp, %%rax" : "=a"(sp));
+    __asm__ volatile ("mov %%rsp, %%rax" : "=a"(sp));
 #   else
-    asm volatile ("mov %%esp, %%eax" : "=a"(sp));
+    __asm__ volatile ("mov %%esp, %%eax" : "=a"(sp));
 #   endif
     printf("sp: %x\n", sp);
     for (p = sp-to; p <= sp-from; p++) {

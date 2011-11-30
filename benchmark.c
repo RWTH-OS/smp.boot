@@ -183,11 +183,11 @@ void worker(volatile unsigned long *p_buffer, size_t range, size_t stride, acces
         if (p_buffer != NULL) {
             switch (type) {
                 case AT_READ :
-                    asm volatile ("mov %0, %%" RAX : "=a"(dummy) : "m"(*p));
+                    __asm__ volatile ("mov %0, %%" RAX : "=a"(dummy) : "m"(*p));
                     //dummy = *p;
                     break;
                 case AT_WRITE :
-                    asm volatile ("mov %%" RAX ", %0" : "=m"(*p) : "a"(dummy));
+                    __asm__ volatile ("mov %%" RAX ", %0" : "=m"(*p) : "a"(dummy));
                     //*p = dummy;
                     break;
                 case AT_UPDATE :

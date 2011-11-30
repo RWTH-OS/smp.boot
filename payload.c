@@ -50,8 +50,8 @@ void payload_benchmark()
     if (myid == 1) {
         p_contender = heap_alloc(16*1024*1024 / PAGE_SIZE);       // one page = 4kB
         //virt_to_phys(p_contender);
-        p_contender[0] = 42;
-        printf("[1] p_contender = 0x%x .. 0x%x\n", (ptr_t)p_contender, (ptr_t)p_contender+16*1024*1024);
+        //p_contender[0] = 42;
+        //printf("[1] p_contender = 0x%x .. 0x%x\n", (ptr_t)p_contender, (ptr_t)p_contender+16*1024*1024);
     }
 
 
@@ -132,29 +132,56 @@ void payload_benchmark()
 
     if (cpu_online > 1) {
         volatile unsigned long *p_buffer = NULL;
+#if 0
+        size_t bench_range, bench_stride, worker_range, worker_stride;
+        unsigned num_workers;
+        access_t atype;
+#endif
 
         if (myid == 0) printf("Worker benchmark (%u sec) -----------------------------\n", BENCH_HOURGLAS_SEC);
+#if 0
+#define foreach(item, array) \
+        for(int keep = 1, \
+                count = 0,\
+                size = sizeof (array) / sizeof *(array); \
+                keep && count != size; \
+                keep = !keep, count++) \
+        for(item = (array) + count; keep; keep = !keep)
+#endif
 
         /*
          * need some buffers with different cache strategies:
          *  - no cache
          *  - write-through
          *  - write-back
+         * Or a way to change attributes for a range of pages...
+         * (don't forget to flush the TLB after changing!)
          */
+
+#if 0
+        size_t bench_ranges[] = {8*1024, 256*1024, 16*1024*1024};
+        foreach (bench_range, bench_ranges) {
+            if (myid == 0) printf("bench_range: 0x%8x\n");
+        }
+#endif
+
+
+        /*
+         * repeat benchmark for these dimensions:
+         *   - cache (no, write-through, write-back)
+         *   - range (<L1, <L2, <L3, >L3)
+         *   - stride (only cache line size: 64)
+         *   - access type (read, write, update, atomic)
+         *   - use huge-pages (to avoid TLB effects), 4k pages (with TLB effects)
+         *
+         * results:
+         *   - min, avg, max
+         */
+
+
         if (myid == 0) {
             p_buffer = heap_alloc(16*1024*1024 / PAGE_SIZE);       // one page = 4kB
 
-            /*
-             * repeat benchmark for these dimensions:
-             *   - cache (no, write-through, write-back)
-             *   - range (<L1, <L2, <L3, >L3)
-             *   - stride (only cache line size: 64)
-             *   - access type (read, write, update, atomic)
-             *   - use huge-pages (to avoid TLB effects), 4k pages (with TLB effects)
-             *
-             * results:
-             *   - min, avg, max
-             */
             worker(p_buffer,       8*1024, 64, AT_READ, BENCH_HOURGLAS_SEC);
             worker(p_buffer,     265*1024, 64, AT_READ, BENCH_HOURGLAS_SEC);
             worker(p_buffer, 16*1024*1024, 64, AT_READ, BENCH_HOURGLAS_SEC);

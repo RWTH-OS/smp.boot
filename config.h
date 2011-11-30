@@ -71,7 +71,7 @@
 /*
  * settings for benchmarks
  */
-#if 1
+#if 0
 /* real workload for benchmarks (set #if 1) */
 #define BENCH_HOURGLAS_SEC     10u
 //#define BENCH_MIN_STRIDE_POW2   4  

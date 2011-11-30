@@ -42,7 +42,7 @@ static inline void halt()
 {
     printf("System halted.");
     while (1) {
-        asm volatile ("hlt");
+        __asm__ volatile ("hlt");
     }
 }
 
@@ -51,23 +51,23 @@ void stop();
 
 inline static unsigned sti(void) {
     ptr_t flags;
-    asm volatile ("pushf; sti; pop %0" : "=r"(flags) : : "memory");
+    __asm__ volatile ("pushf; sti; pop %0" : "=r"(flags) : : "memory");
     return (flags & (1<<9));
 }
 
 /* return if IF was previously set (to use sti afterwards conditionally) */
 inline static unsigned cli(void) {
     ptr_t flags;
-    asm volatile ("pushf; cli; pop %0" : "=r"(flags) : : "memory");
+    __asm__ volatile ("pushf; cli; pop %0" : "=r"(flags) : : "memory");
     return (flags & (1<<9));
 }
 
 inline static void cpuid(uint32_t func, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx) {
-    asm volatile ("cpuid" : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx) : "a"(func));
+    __asm__ volatile ("cpuid" : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx) : "a"(func));
 }
 
 inline static void cpuid2(uint32_t func, uint32_t subfunc, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx) {
-    asm volatile ("cpuid" : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx) : "a"(func), "c"(subfunc));
+    __asm__ volatile ("cpuid" : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx) : "a"(func), "c"(subfunc));
 }
 
 inline static uint32_t cpuid_eax(uint32_t code) {

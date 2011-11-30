@@ -26,7 +26,7 @@ inline static uint64_t rdtsc(void)
 		uint64_t u64;
 		uint32_t u32[2];
 	} x;
-	asm volatile ("lfence\n\t rdtsc\n\t lfence" : "=a" (x.u32[0]), "=d"(x.u32[1]));
+	__asm__ volatile ("lfence\n\t rdtsc\n\t lfence" : "=a" (x.u32[0]), "=d"(x.u32[1]));
 	return x.u64;
 }
 

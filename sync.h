@@ -32,7 +32,8 @@ typedef struct {
     volatile unsigned epoch;
     unsigned max;
 } barrier_t;
-#define BARRIER_INITIALIZER(m)  (barrier_t){ .cnt=0, .epoch=0, .max=m };
+//#define BARRIER_INITIALIZER(m)  (barrier_t){ .cnt=0, .epoch=0, .max=m };
+#define BARRIER_INITIALIZER(m)  { .cnt=0, .epoch=0, .max=m };
 void barrier_init(barrier_t *b, int max);
 void barrier(barrier_t *b);
 
@@ -40,7 +41,8 @@ typedef struct {
     volatile unsigned flag;
     volatile unsigned next;
 } flag_t;
-#define FLAG_INITIALIZER  (flag_t){ .flag=0, .next=0 };
+//#define FLAG_INITIALIZER  (flag_t){ .flag=0, .next=0 };
+#define FLAG_INITIALIZER  { .flag=0, .next=0 };
 void flag_init(flag_t *flag);
 void flag_signal(flag_t *flag);
 void flag_wait(flag_t *flag);

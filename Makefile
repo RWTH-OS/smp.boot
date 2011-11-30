@@ -8,7 +8,7 @@ ASMFILES=$(shell ls *.asm)
 
 OPT=0
 
-CFLAGS=-c -O$(OPT)
+CFLAGS=-c -O$(OPT) -std=c99
 # -O          - basic optimization
 CFLAGS+=-Wall -Wextra -Wno-main -Wno-unused-function -Wno-pragmas
 # -Wall       - give warnings (on most checks)

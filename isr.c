@@ -171,7 +171,7 @@ void int_handler(struct regs *r)
         }
         if (r->int_no != 15) {
             printf("| System halted.\n");
-            while(1) {asm volatile ("hlt"); };
+            while(1) {__asm__ volatile ("hlt"); };
         }
     } else {
         IFV printf("/----------------------------------------\n");

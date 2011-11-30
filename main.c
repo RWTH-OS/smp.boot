@@ -20,6 +20,7 @@ hw_info_t hw_info;
  *  - dynamic memory management (at least, malloc() should be implemented)
  */
 barrier_t mainbarrier = BARRIER_INITIALIZER(MAX_CPU); /* max is later reduced to the actual number of CPUs */
+//barrier_t mainbarrier = {.cnt=0,.epoch=0,.max=16}; //(barrier_t){ .cnt=0, .epoch=0, .max=16 }; /* max is later reduced to the actual number of CPUs */
 
 extern volatile unsigned cpu_online;    // from apic.c
 void main();                            // further down in this file
@@ -91,9 +92,9 @@ void main_bsp(void)
         printf("offset of stack[0] : 0x%x ", &(stack[0]));
         ptr_t sp;
 #       if __x86_64__
-        asm volatile("movq %%rsp, %%rax" : "=a"(sp) );
+        __asm__ volatile("movq %%rsp, %%rax" : "=a"(sp) );
 #       else
-        asm volatile("movl %%esp, %%eax" : "=a"(sp) );
+        __asm__ volatile("movl %%esp, %%eax" : "=a"(sp) );
 #       endif
         printf("my sp: 0x%x ", sp);
         printf("my_cpu_info: 0x%x ", my_cpu_info());

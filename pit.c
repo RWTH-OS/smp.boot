@@ -68,7 +68,7 @@ static uint64_t PIT_get_tsc_per_xxx(void) {
     while (1) {
         loopcnt++;
 #       if __x86_64__
-            asm volatile (
+            __asm__ volatile (
                 "xor %%rax, %%rax\n\t"  // set RAX to 0
                 "mov 0x00, %%al\n\t" // channel 0, latch command  (1)
                 "out %%al, $0x43\n\t"    // prevent the current count from being updated
@@ -78,7 +78,7 @@ static uint64_t PIT_get_tsc_per_xxx(void) {
                 "rol $8, %%ax\n\t"  // correct order
                 : "=a" (count));
 #       else    // __x86_32__
-            asm volatile (
+            __asm__ volatile (
                 "xor %%eax, %%eax\n\t"  // set RAX to 0
                 "mov 0x00, %%al\n\t" // channel 0, latch command (1)
                 "out %%al, $0x43\n\t"    // prevent the current count from being updated

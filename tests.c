@@ -169,10 +169,10 @@ void tests_ipi(void)
         if (myid == 0) {
             unsigned u;
 
-            //asm volatile ("int $31");
+            //__asm__ volatile ("int $31");
             
             IFVV printf("issue INT 128...\n");
-            asm volatile ("int $128");
+            __asm__ volatile ("int $128");
             udelay(2000000);
             
             IFVV printf("send IPI vector 128 to self\n");
@@ -194,11 +194,11 @@ void tests_ipi(void)
             if (myid == 1) {
                 udelay(1000000);
                 IFVV printf("issue INT 128 on CPU 1\n");
-                asm volatile ("int $128");
+                __asm__ volatile ("int $128");
             }
 
             smp_status('H');
-            asm volatile ("hlt");   // should be waken up by IPI, but apparantly, IS NOT.
+            __asm__ volatile ("hlt");   // should be waken up by IPI, but apparantly, IS NOT.
             smp_status('.');
             
             smp_halt();

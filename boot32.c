@@ -42,7 +42,7 @@ static void cpu_features()
     } vendor;
     void cpuid(unsigned func)
     {
-        asm volatile ("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(func));
+        __asm__ volatile ("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(func));
     }
 
     /* it was checked before, that the CPUID instruction is available */
@@ -343,7 +343,7 @@ void get_info()
         
 
 skip_acpi:
-    asm ("nop");        /* instruction needed for label */
+    __asm__ ("nop");        /* instruction needed for label */
 
 /*
  * now read multiprocessor tables

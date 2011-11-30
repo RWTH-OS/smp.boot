@@ -113,7 +113,7 @@ frame_t get_free_frame(unsigned type)
             if (last_frame_4k >= (MAX_MEM / PAGE_SIZE)) {
                 printf("ERROR: out of memory!\n");
                 smp_status('E');
-                while (1) asm volatile ("hlt");
+                while (1) __asm__ volatile ("hlt");
             }
         }
         BIT_CLEAR(freemap[frame_to_freemap_index(last_frame_4k)], frame_to_freemap_bit(last_frame_4k));
@@ -126,7 +126,7 @@ frame_t get_free_frame(unsigned type)
             if (last_frame_pt >= (MAX_MEM / PAGE_SIZE)) {
                 printf("ERROR: out of memory!\n");
                 smp_status('E');
-                while (1) asm volatile ("hlt");
+                while (1) __asm__ volatile ("hlt");
             }
         }
         BIT_CLEAR(freemap[frame_to_freemap_index(last_frame_pt)], frame_to_freemap_bit(last_frame_pt));
@@ -135,7 +135,7 @@ frame_t get_free_frame(unsigned type)
     }
     printf("ERROR: type %d not supported!\n", type);
     smp_status('E');
-    while (1) asm volatile ("hlt");
+    while (1) __asm__ volatile ("hlt");
 }
 
 /*  --------------------------------------------------------------------------- */
@@ -150,7 +150,7 @@ static void *map_temporary(frame_t frame)
     const page_t tmp_page = 0x1FF;                              /* this page is mapped initially in 32 AND 64 bit mode */
     void * const tmp_map = (void*)(tmp_page << PAGE_BITS);      /* just below 2 MB */
 #   if __x86_64__
-        static pt_entry_t * const  pt = (pt_entry_t*)0x5000;    /* initialized there in start64.asm */
+        static pt_entry_t * const  pt = (pt_entry_t*)0x5000;    /* initialized there in start64.__asm__ */
 #   else
         static pt_entry_t * const  pt = (pt_entry_t*)0x2000;    /* initialized in LABEL:385 [LABEL:155] */
 #   endif
@@ -160,7 +160,7 @@ static void *map_temporary(frame_t frame)
     pt[tmp_page].page.rw = 1;
     pt[tmp_page].page.p = 1;
     /* invalidate TLB for page containing the address tmp_map */
-    asm volatile ("invlpg %0" : : "m"(*(int*)tmp_map));
+    __asm__ volatile ("invlpg %0" : : "m"(*(int*)tmp_map));
     return tmp_map;
 }
 
@@ -248,7 +248,7 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
     if (flags != 0) {
         printf("ERROR (map_frame_to_adr): flags %d not supported, yet!\n", flags);
         smp_status('E');
-        while (1) asm volatile ("hlt");
+        while (1) __asm__ volatile ("hlt");
     }
     IFVV printf("map_frame_to_adr(frame=0x%x, adr=0x%x, flags=0x%x)\n", frame, adr, flags);
 
@@ -316,7 +316,7 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
         pt[ipt].page.rw = 1;
         pt[ipt].page.p = 1;
         /* invalidate TLB for page containing the address just mapped */
-        asm volatile ("invlpg %0" : : "m"(*((int*)((ptr_t)frame<<PAGE_BITS))));
+        __asm__ volatile ("invlpg %0" : : "m"(*((int*)((ptr_t)frame<<PAGE_BITS))));
     }
 #   else
     unsigned ipd1 = pd1_index(adr);
@@ -347,8 +347,8 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
         //pt[ipt].page.pcd = 1;        /* TEMPORARY: page-level cache disable */
 
         /* invalidate TLB for page containing the address just mapped */
-        //asm volatile ("invlpg %0" : : "m"(*((int*)((ptr_t)frame<<PAGE_BITS))));
-        asm volatile ("invlpg %0" : : "m"(*(int*)adr));
+        //__asm__ volatile ("invlpg %0" : : "m"(*((int*)((ptr_t)frame<<PAGE_BITS))));
+        __asm__ volatile ("invlpg %0" : : "m"(*(int*)adr));
     }
 #   endif
     IFVV printf("map_frame_to_adr: done\n");
@@ -366,7 +366,7 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
 mutex_t pt_mutex = MUTEX_INITIALIZER_LOCKED;
 
 /*
- * In 64 bit mode, paging is enabled by start64.asm and the first 2 MB are identity-mapped.
+ * In 64 bit mode, paging is enabled by start64.__asm__ and the first 2 MB are identity-mapped.
  * In 32 bit mode, the paging not activated, yet.
  */
 int mm_init()
@@ -376,7 +376,7 @@ int mm_init()
 
 #   if __x86_64__
     /* read address of page table PML4 (first level) from register cr3 */
-    asm volatile ("mov %%cr3, %%rax" : "=a"(pd1));
+    __asm__ volatile ("mov %%cr3, %%rax" : "=a"(pd1));
 #   else    /* 32 bit */
 
     pd1 = (pd1_entry_t*)0x1000;
@@ -412,8 +412,8 @@ int mm_init()
     pt[512].page.rw = 1;
     pt[512].page.p = 1;
 
-    asm volatile ("mov %%eax, %%cr3" : : "a"(pd1));     /* set cr3 to page-directory */
-    asm volatile ("mov %%cr0, %%eax "
+    __asm__ volatile ("mov %%eax, %%cr3" : : "a"(pd1));     /* set cr3 to page-directory */
+    __asm__ volatile ("mov %%cr0, %%eax "
             "\n\t or $0x80000000, %%eax "
             "\n\t mov %%eax, %%cr0" ::: "eax");          /*  activate paging with cr0[31] */
 #   endif   /*  64/32 bit */
