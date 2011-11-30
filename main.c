@@ -30,6 +30,7 @@ void main();                            // further down in this file
 #else
 #define VERSION_BITS "32"
 #endif
+#include "version.h"
 static char name_version[] = "BareMetalKernel" VERSION_BITS " " SVN_REV " OPT=" OPT;
 
 /*
