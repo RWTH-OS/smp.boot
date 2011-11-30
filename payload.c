@@ -46,15 +46,29 @@ void payload_benchmark()
     }
     mutex_unlock(&mut);
 
-    static uint32_t * p_contender = NULL;
-    if (myid == 1) {
-        p_contender = heap_alloc(16*1024*1024 / PAGE_SIZE);       // one page = 4kB
+    size_t buffer_size = 16 * MB;
+    static void *p_buffer = NULL;
+
+    if (myid == 0) {
+        p_buffer = heap_alloc(buffer_size / PAGE_SIZE);       // one page = 4kB
+        /* no need for pre-faulting, because pages are present after head_alloc()
+         * but initialize them */
+        memset(p_buffer, 0, buffer_size);
+    }
+
+    size_t contender_size = 16 * MB;
+    static void *p_contender = NULL;
+
+    if (myid == 0) {
+        p_contender = heap_alloc(contender_size / PAGE_SIZE);       // one page = 4kB
         //virt_to_phys(p_contender);
         //p_contender[0] = 42;
         //printf("[1] p_contender = 0x%x .. 0x%x\n", (ptr_t)p_contender, (ptr_t)p_contender+16*1024*1024);
+        memset(p_contender, 0, contender_size);
     }
 
-#if 0
+    barrier(&barr);
+
     if (myid == 0) printf("1 CPU hourglass (%u sec) ----------------------------------------------\n", BENCH_HOURGLAS_SEC);
 
     barrier(&barr);
@@ -71,6 +85,7 @@ void payload_benchmark()
     }
 
 
+#if 0
     if (cpu_online > 1) {
         if (myid == 0) printf("2 CPUs hourglass (%u sec) ---------------------------------------------\n", BENCH_HOURGLAS_SEC);
         barrier(&barr);
@@ -149,52 +164,6 @@ void payload_benchmark()
          * (don't forget to flush the TLB after changing!)
          */
 
-        unsigned worker_nums[] = {0, 1, 2};
-        size_t worker_ranges[] = {8*KB, 16*KB, 256*KB};//, 4*MB, 16*MB};
-        size_t worker_strides[]= {64};
-        size_t bench_ranges[]  = {8*KB, 256*KB, 16*MB};
-        size_t bench_strides[] = {64};
-        access_t atypes[] = {AT_READ, AT_WRITE, AT_UPDATE, AT_ATOMIC};
-
-        foreach (worker_num, worker_nums) {
-            if (worker_num >= cpu_online) { break; }
-
-            barrier(&barr);
-            if (myid == 0) barr_dyn.max = worker_num+1;
-            barrier(&barr);
-
-            if (myid > worker_num) smp_halt();
-            else {
-                foreach (worker_range, worker_ranges) {
-                    foreach (worker_stride, worker_strides) {
-                        if (myid==0) printf("== %u worker(s) on range %x (stride %u)\n", worker_num, worker_range, worker_stride);
-                        /*
-                         * start worker
-                         */
-                        foreach (bench_range, bench_ranges) {
-                            foreach (bench_stride, bench_strides) {
-                                if (myid == 0) printf("---- bench: range: %x (stride %u) \n", bench_range, bench_stride, atype);
-                                foreach (atype, atypes) {
-                                    if (myid == 0) printf("atype %u  ", atype);
-                                    /* 
-                                     * start benchmark 
-                                     */
-                                    udelay(100*1000);
-                                    barrier(&barr_dyn);
-                                }
-                                if (myid == 0) printf("\n");
-                            }
-                        }
-                    }
-                }
-                if (myid == 0) {
-                    unsigned u;
-                    for (u=worker_num+1; u<cpu_online; u++) smp_wakeup(u);
-                }
-            }
-        }
-
-
         /*
          * repeat benchmark for these dimensions:
          *   - cache (no, write-through, write-back)
@@ -208,6 +177,67 @@ void payload_benchmark()
          * results:
          *   - min, avg, max
          */
+
+        unsigned worker_nums[] = {0, 1, 3};
+        size_t worker_ranges[] = {4*KB, 256*KB, 4*MB, 16*MB};
+        size_t worker_strides[]= {64};
+        size_t bench_ranges[]  = {4*KB, 256*KB, 16*MB};
+        size_t bench_strides[] = {64};
+        access_t atypes[] = {AT_READ, AT_WRITE, AT_UPDATE, AT_ATOMIC};
+        static flag_t flags[MAX_CPU];
+
+        for (unsigned u=0; u<MAX_CPU; u++) flag_init(&flags[u]);
+
+        foreach (worker_num, worker_nums) {
+            if (worker_num >= cpu_online) { break; }
+
+            barrier(&barr);
+            if (myid == 0) barr_dyn.max = worker_num+1;
+            barrier(&barr);
+
+            if (myid > worker_num) smp_halt();
+            else {
+                foreach (worker_range, worker_ranges) {
+                    foreach (worker_stride, worker_strides) {
+                        if (myid==0) printf("== %u worker(s) on range %5u kB (stride %u) [rd, wr, upd, atomic]\n", worker_num, worker_range>>10, worker_stride);
+                        if (myid == 0) {
+                            /*
+                             * start worker (benchmark)
+                             */
+                            udelay(100*1000);
+                            foreach (bench_range, bench_ranges) {
+                                foreach (bench_stride, bench_strides) {
+                                    //printf("---- bench: range: %x (stride %u) (rd, wr, upd, atomic) \n", bench_range, bench_stride, atype);
+                                    printf("r %5u kB: ", bench_range>>10);
+                                    foreach (atype, atypes) {
+                                        /* 
+                                         * start benchmark 
+                                         */
+                                        worker(p_buffer, worker_range, worker_stride, atype, BENCH_HOURGLAS_SEC);
+                                    }
+                                    printf("\n");
+                                }
+                            }
+                            for (unsigned u=1; u<=worker_num; u++) flag_signal(&flags[u]);
+                        } else {
+                            /*
+                             * start load
+                             */
+                            load_until_flag(p_contender, worker_range, &flags[myid]);
+                        }
+                        barrier(&barr_dyn);
+                        if (worker_num == 0) goto label_break;
+                    }
+                }
+label_break:
+                if (myid == 0) {
+                    unsigned u;
+                    for (u=worker_num+1; u<cpu_online; u++) smp_wakeup(u);
+                }
+            }
+        }
+
+
 
 #if 0
         if (myid == 0) {
@@ -242,15 +272,10 @@ void payload_benchmark()
      * allocate Buffer for memory benchmarks
      */
     if (myid == 0) {
-        static void * p_buffer = NULL;
-        size_t max_range = (1 << BENCH_MAX_RANGE_POW2); // 2^25 = 32 MB
         size_t i, j;
-        p_buffer = heap_alloc(max_range/4096);       // one page = 4kB
         unsigned u;
+        //size_t max_range = (1 << BENCH_MAX_RANGE_POW2); // 2^25 = 32 MB
 
-        /* no need for pre-faulting, because pages are present after head_alloc()
-         * but initialize them */
-        memset(p_buffer, 0, max_range);
 
         printf("Range/Stride (other CPUs in halt-state) ----------------\n");
         printf("str.|range%4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s %4s\n", 

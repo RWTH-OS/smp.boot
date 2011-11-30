@@ -217,8 +217,9 @@ void worker(volatile unsigned long *p_buffer, size_t range, size_t stride, acces
     avg = (unsigned long)avg/(unsigned long)cnt;
     avg >>= shift;
 #   endif
-    printf("t%ur%us%u : min/avg/max : %u/%u/%u\n", 
+    /*printf("t%ur%us%u : min/avg/max : %u/%u/%u\n", 
             (unsigned long)type, (unsigned long)range, (unsigned long)stride, 
-            (unsigned long)min, (unsigned long)avg, (unsigned long)max);
+            (unsigned long)min, (unsigned long)avg, (unsigned long)max);*/
+    printf("%u/%u/%u ", (unsigned long)min, (unsigned long)avg, (unsigned long)max);
 }
 

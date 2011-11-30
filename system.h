@@ -55,6 +55,8 @@ struct regs
                 keep && count != size; \
                 keep = !keep, count++) \
         for(item = array[count]; keep; keep = !keep)
+//#define foreach(item, array) \-
+//    for (int count=0, size = sizeof(array)/sizeof *(array), item=array[count]; count < size; count++)
 
 
 
