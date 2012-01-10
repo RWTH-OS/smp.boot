@@ -60,6 +60,15 @@ typedef struct {
         uint32_t adr;
     } ioapic[MAX_IOAPIC];
 
+    /* PCI-Express Config Space */
+    uint32_t pcie_cnt;
+    struct {
+        ptr_t base_adr;
+        uint16_t grp_nbr;
+        uint8_t bus_start;
+        uint8_t bus_end;
+    } pcie_cfg[MAX_PCIE];
+
     /* TSC */
     //uint64_t tsc_per_sec;
     uint32_t tsc_per_usec;      

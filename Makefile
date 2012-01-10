@@ -180,7 +180,7 @@ depend : .depend
 
 tags : $(CFILES) boot32.c $(HFILES) $(ASMFILES)
 	@echo CTAGS
-	@ctags -R
+	@ctags -R *.c *.h *.asm
 
 # start QEMU with 32 or 64 bit
 q32 : kernel32.bin
@@ -196,6 +196,8 @@ s32 : kernel32.bin
 s64 : kernel64.bin
 	qemu-system-x86_64 -smp $(SMP) -kernel kernel64.bin -append "$(CMDLINE)"
 
+xaxis : kernel32.bin kernel64.bin
+	scp kernel??.bin root@xaxis:/boot/
 
 # housekeeping
 clean :

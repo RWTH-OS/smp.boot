@@ -31,6 +31,11 @@
 #define MAX_IOAPIC 1
 
 /*
+ * maximum number of PCI Express config spaces
+ */
+#define MAX_PCIE  1
+
+/*
  * page frame for SMP startup code (phys. adr. is SMP_FRAME << 12)
  */
 #define SMP_FRAME  0x88
@@ -51,14 +56,15 @@
  * VERBOSE (first line) has global effect over all subsequent settings
  */
 #define VERBOSE             0
-#define VERBOSE_BOOT        0
+#define VERBOSE_BOOT        2
 #define VERBOSE_APIC        0
 #define VERBOSE_SYNC        0
 #define VERBOSE_MM          0
 #define VERBOSE_ISR         0
 #define VERBOSE_PIT         0
 #define VERBOSE_SMM         0
-#define VERBOSE_TESTS       2
+#define VERBOSE_PCI         2
+#define VERBOSE_TESTS       0
 #define VERBOSE_MAIN        0
 
 /*

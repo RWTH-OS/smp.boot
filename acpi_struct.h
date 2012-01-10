@@ -189,6 +189,22 @@ typedef struct {
 } __attribute__((packed)) madt_lapic_nmi_t;
 
 
+/*
+ * MADT - Multiple APIC Description Table
+ * (see: http://wiki.osdev.org/PCI_Express)
+ */
+#define MCFG_SIGNATURE  ('M'|'C'<<8|'F'<<16|'G'<<24)
+typedef struct {
+    desc_hdr_t header;                  /* signature: APIC */
+    uint64_t reserved;
+    struct {
+        uint64_t base_adr;
+        uint16_t grp_nbr;
+        uint8_t bus_start;
+        uint8_t bus_end;
+        uint32_t reserved;
+    } entry[];
+} __attribute__((packed)) mcfg_t;
 
 #endif // ACPI_INTERN_H
 

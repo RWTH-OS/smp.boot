@@ -29,6 +29,13 @@ void init_video();
 void itoa (char *buf, int base, long d);
 void printf (const char *format, ...);
 
+static inline void halt()
+{
+    while (1) {
+        __asm__ volatile ("hlt");
+    }
+}
+
 /*
  * read CPU features (mostly from CPUID)
  * see: http://osdev.berlios.de/cpuid.html
@@ -177,6 +184,40 @@ static int read_madt(ptr_t offset)
     return 0;
 }
 
+static int read_mcfg(ptr_t offset)
+{
+    unsigned i;
+    mcfg_t *p_mcfg = (mcfg_t*)offset;
+    check_sum(p_mcfg, p_mcfg->header.length);
+
+    /* some static information */
+    IFVV printf("MCFG Header Signature: %c%c%c%c len %u \n", 
+            (p_mcfg->header.signature >> 0) & 0xFF,
+            (p_mcfg->header.signature >> 8) & 0xFF,
+            (p_mcfg->header.signature >> 16) & 0xFF,
+            (p_mcfg->header.signature >> 24) & 0xFF,
+            p_mcfg->header.length
+            );
+
+    for (i=0; i<(p_mcfg->header.length-44)/16; i++) {
+        if ((ptr_t)((void*)&(p_mcfg->entry[i])-(void*)p_mcfg) > p_mcfg->header.length) break;
+        IFVV printf("MCFG[%u] base %llx pci segm %hx bus: %x-%x\n", i, 
+                p_mcfg->entry[i].base_adr, 
+                p_mcfg->entry[i].grp_nbr,
+                p_mcfg->entry[i].bus_start,
+                p_mcfg->entry[i].bus_end);
+        if (i >= MAX_PCIE) {
+            printf("ERROR: more PCI Express config spaces than supported!");
+            halt();
+        }
+        hw_info.pcie_cfg[hw_info.pcie_cnt].base_adr  = p_mcfg->entry[i].base_adr;
+        hw_info.pcie_cfg[hw_info.pcie_cnt].grp_nbr   = p_mcfg->entry[i].grp_nbr;
+        hw_info.pcie_cfg[hw_info.pcie_cnt].bus_start = p_mcfg->entry[i].bus_start;
+        hw_info.pcie_cfg[hw_info.pcie_cnt].bus_end   = p_mcfg->entry[i].bus_end;
+        hw_info.pcie_cnt++;
+    }
+
+}
 
 /*
  * functions for Multiprocessor Specification ================================================================
@@ -316,9 +357,12 @@ void get_info()
     for (i=0; i<(rsdt->header.length-sizeof(desc_hdr_t))/sizeof(uint32_t); i++) {
         desc_hdr_t *hdr = (desc_hdr_t*)(ptr_t)rsdt->entry[i];
 
-        //char str[5] = { 0 };
-        //memcpy(str, &hdr->signature, 4);
-        //printf("RSDT Entry[%u]: 0x%x %s (size: %u)\t", i, rsdt->entry[i], str, len);
+        IFVV {
+            char str[5] = { 0 };
+            unsigned len = hdr->length;
+            memcpy(str, &hdr->signature, 4);
+            printf("RSDT Entry[%u]: 0x%x %s (size: %u)\n", i, rsdt->entry[i], str, len);
+        }
 
         /* signature to table translation: see APICspec40a.pdf, Table 5-5, p. 114 */
         switch (hdr->signature) {
@@ -326,14 +370,18 @@ void get_info()
                 //printf("Fixed ACPI Descr. Table (FADT)\n");
                 //break;
             case MADT_SIGNATURE :  /* APIC -> MADT  */
-                //printf("Multiple APIC Descr. T. (MADT)\n");
+                IFVV printf("Multiple APIC Descr. T. (MADT)\n");
                 read_madt(rsdt->entry[i]);
                 break;
+            case MCFG_SIGNATURE :
+                IFVV printf("PCIe configuration table (MCFG)\n");
+                read_mcfg(rsdt->entry[i]);
             //default :
                 //printf("not supported, yet\n");
 
         };
     }
+    //IFVV printf("halt to read output...\n"); halt();
     
 
     if (hw_info.lapic_adr != 0) {

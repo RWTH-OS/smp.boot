@@ -7,6 +7,7 @@
 #include "pit.h"
 #include "debug.h"
 #include "cpu.h"
+#include "pci.h"
 
 #define IFV   if (VERBOSE > 0 || VERBOSE_MAIN > 0)
 #define IFVV  if (VERBOSE > 1 || VERBOSE_MAIN > 1)
@@ -68,6 +69,10 @@ void main_bsp(void)
     
     apic_init();    /* this is where the APs are waked up */
     IFV puts("apic initialized\n");
+
+    pci_init();
+    IFV puts("pci initialized\n");
+
 
     IFV puts("my kernel is running in main_bsp now...\n");
 
