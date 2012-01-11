@@ -201,7 +201,7 @@ static int read_mcfg(ptr_t offset)
 
     for (i=0; i<(p_mcfg->header.length-44)/16; i++) {
         if ((ptr_t)((void*)&(p_mcfg->entry[i])-(void*)p_mcfg) > p_mcfg->header.length) break;
-        IFVV printf("MCFG[%u] base %llx pci segm %hx bus: %x-%x\n", i, 
+        IFVV printf("MCFG[%u] base 0x%x pci segm %u bus: %u-%u\n", i, 
                 p_mcfg->entry[i].base_adr, 
                 p_mcfg->entry[i].grp_nbr,
                 p_mcfg->entry[i].bus_start,
@@ -216,7 +216,7 @@ static int read_mcfg(ptr_t offset)
         hw_info.pcie_cfg[hw_info.pcie_cnt].bus_end   = p_mcfg->entry[i].bus_end;
         hw_info.pcie_cnt++;
     }
-
+    return 0;
 }
 
 /*
@@ -381,7 +381,10 @@ void get_info()
 
         };
     }
-    //IFVV printf("halt to read output...\n"); halt();
+    IFVV {
+        printf("halt to read output...\n");
+        halt();
+    }
     
 
     if (hw_info.lapic_adr != 0) {

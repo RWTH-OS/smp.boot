@@ -56,7 +56,7 @@
  * VERBOSE (first line) has global effect over all subsequent settings
  */
 #define VERBOSE             0
-#define VERBOSE_BOOT        2
+#define VERBOSE_BOOT        0
 #define VERBOSE_APIC        0
 #define VERBOSE_SYNC        0
 #define VERBOSE_MM          0

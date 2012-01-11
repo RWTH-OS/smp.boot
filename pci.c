@@ -39,9 +39,10 @@ uint16_t pci_config_read(uint16_t bus, uint16_t slot, uint16_t func, uint16_t of
     uint32_t adr;
     uint16_t value;
 
-    adr = 0x8000000ul | ((uint32_t)bus << 16) | ((uint32_t)slot << 11) | (func << 8) | (offset & 0xfc);
+    adr = 0x80000000ul | ((uint32_t)bus << 16) | ((uint32_t)slot << 11) | (func << 8) | (offset & 0xfc);
     mutex_lock(&pci_mutex);
     outportl(CONFIG_ADR, adr);
+    udelay(100);
     value = (uint16_t)((inportl(CONFIG_DATA) >> ((offset & 2)*8)) & 0xFFFF);
     mutex_unlock(&pci_mutex);
     return value;
@@ -76,12 +77,12 @@ void pci_init()
     /*
      * read PCI devices
      */
-    for (bus=0; bus<2; bus++) {
-        for (slot=0; slot<64; slot++) {
+    for (bus=0; bus<16; bus++) {
+        for (slot=0; slot<32; slot++) {
             vendor = pci_config_read(bus, slot, 0, 0);
             if (vendor != 0xFFFF) {
                 device = pci_config_read(bus, slot, 0, 2);
-                printf(" %2x:%2x  [%4x:%4x]\n", bus, slot, vendor, device);
+                printf("PCI: %2x:%2x  [%4x:%4x]\n", bus, slot, vendor, device);
             }
         }
     }
@@ -112,10 +113,12 @@ void pci_init()
                 vendor = pcie_config_read(bus, slot, 0, 0);
                 if (vendor != 0xFFFF) {
                     device = pci_config_read(bus, slot, 0, 2);
-                    printf(" %2x:%2x  [%4x:%4x]\n", bus, slot, vendor, device);
+                    printf("PCIe: %2x:%2x  [%4x:%4x]\n", bus, slot, vendor, device);
                 }
             }
         }
+    } else {
+        IFVV printf("PCIe: not found in ACPI tables.\n");
     }
 
     IFV printf("pci_init() finished.\n");
