@@ -64,6 +64,7 @@
 #define VERBOSE_PIT         0
 #define VERBOSE_SMM         0
 #define VERBOSE_PCI         2
+#define VERBOSE_DRIVER      1
 #define VERBOSE_TESTS       0
 #define VERBOSE_MAIN        0
 

@@ -16,10 +16,10 @@
  * =====================================================================================
  */
 
-#include "stddef.h"
 #include "cpu.h"
 #include "sync.h"
 #include "info.h"
+#include "driver.h"
 
 
 #define IFV   if (VERBOSE > 0 || VERBOSE_PCI > 0)
@@ -42,7 +42,7 @@ uint16_t pci_config_read(uint16_t bus, uint16_t slot, uint16_t func, uint16_t of
     adr = 0x80000000ul | ((uint32_t)bus << 16) | ((uint32_t)slot << 11) | (func << 8) | (offset & 0xfc);
     mutex_lock(&pci_mutex);
     outportl(CONFIG_ADR, adr);
-    udelay(100);
+    //udelay(100);
     value = (uint16_t)((inportl(CONFIG_DATA) >> ((offset & 2)*8)) & 0xFFFF);
     mutex_unlock(&pci_mutex);
     return value;
@@ -82,7 +82,8 @@ void pci_init()
             vendor = pci_config_read(bus, slot, 0, 0);
             if (vendor != 0xFFFF) {
                 device = pci_config_read(bus, slot, 0, 2);
-                printf("PCI: %2x:%2x  [%4x:%4x]\n", bus, slot, vendor, device);
+                IFV printf("PCI: %2x:%2x  [%4x:%4x]\n", bus, slot, vendor, device);
+                driver_check_pci(vendor, device, bus, slot);
             }
         }
     }
@@ -107,13 +108,15 @@ void pci_init()
         /*
          * read PCIe devices
          */
-        for (bus=0; bus<2; bus++) {
-            for (slot=0; slot<64; slot++) {
-                //vendor = pci_config_read(bus, slot, 0, 0);
-                vendor = pcie_config_read(bus, slot, 0, 0);
-                if (vendor != 0xFFFF) {
-                    device = pci_config_read(bus, slot, 0, 2);
-                    printf("PCIe: %2x:%2x  [%4x:%4x]\n", bus, slot, vendor, device);
+        if (pcie_configured) {
+            for (bus=0; bus<2; bus++) {
+                for (slot=0; slot<64; slot++) {
+                    //vendor = pci_config_read(bus, slot, 0, 0);
+                    vendor = pcie_config_read(bus, slot, 0, 0);
+                    if (vendor != 0xFFFF) {
+                        device = pci_config_read(bus, slot, 0, 2);
+                        IFV printf("PCIe: %2x:%2x  [%4x:%4x]\n", bus, slot, vendor, device);
+                    }
                 }
             }
         }

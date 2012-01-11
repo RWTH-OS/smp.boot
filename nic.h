@@ -1,12 +1,12 @@
 /*
  * =====================================================================================
  *
- *       Filename:  pci.h
+ *       Filename:  nic.h
  *
  *    Description:  
  *
  *        Version:  1.0
- *        Created:  14.12.2011 10:04:01
+ *        Created:  11.01.2012 13:27:43
  *       Revision:  none
  *       Compiler:  gcc
  *
@@ -16,12 +16,12 @@
  * =====================================================================================
  */
 
-#ifndef PCI_H
-#define PCI_H
+#ifndef NIC_H
+#define NIC_H
 
 #include "stddef.h"
 
-uint16_t pci_config_read(uint16_t bus, uint16_t slot, uint16_t func, uint16_t offset);
-void pci_init();
+int rtl8139_init(unsigned bus, unsigned slot);
 
-#endif // PCI_H
+#endif // NIC_H
+
