@@ -199,7 +199,8 @@ void payload_benchmark()
             else {
                 foreach (load_range, load_ranges) {
                     foreach (load_stride, load_strides) {
-                        if (myid==0) printf("== %u load(s) on range %5u kB (stride %u) [rd, wr, upd, atomic]\n", load_nbr, load_range>>10, load_stride);
+                        if (myid==0) printf("== %u load(s) on range %5u kB (stride %u) [rd, wr, upd, atomic]\n", 
+                                load_nbr, load_range>>10, load_stride);
                         if (myid == 0) {
                             /*
                              * start worker (benchmark)
@@ -207,7 +208,8 @@ void payload_benchmark()
                             udelay(100*1000);
                             foreach (worker_range, worker_ranges) {
                                 foreach (worker_stride, worker_strides) {
-                                    //printf("---- bench: range: %x (stride %u) (rd, wr, upd, atomic) \n", worker_range, worker_stride, worker_atype);
+                                    //printf("---- bench: range: %x (stride %u) (rd, wr, upd, atomic) \n", 
+                                    //              worker_range, worker_stride, worker_atype);
                                     printf("r %5u kB: ", worker_range>>10);
                                     foreach (worker_atype, worker_atypes) {
                                         /* 

@@ -211,6 +211,21 @@ void tests_ipi(void)
     barrier(&barr_all);
 }
 
+void tests_keyboard(void)
+{
+    unsigned u;
+    unsigned scancode;
+    printf("polling ~30 secs for keyboard scan codes (press some keys...)\n");
+    for (u=0; u<64; u++) {
+        scancode = keyboard_get_scancode();
+        printf("%x ", scancode);
+        udelay(500*1000);
+    }
+    printf("\n");
+
+
+}
+
 void tests_doall(void)
 {
     unsigned myid = my_cpu_info()->cpu_id;
@@ -225,9 +240,11 @@ void tests_doall(void)
     //tests_barrier();
     //tests_flag();
 
-    tests_mm();
+    //tests_mm();
 
     //tests_ipi();
+
+    tests_keyboard();
 
     printf("[%u] exit tests_doall()\n", myid);
 }
