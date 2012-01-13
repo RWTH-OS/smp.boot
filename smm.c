@@ -32,9 +32,11 @@
 #define LPC_OFFSET 0x40
 #define CONFIG_ADDRESS 0xCF8
 #define CONFIG_DATA    0xCFC
+static uint32_t bak_smi_en;
+static uint32_t pmbase = 0;             
+
 void smm_deactivate(void)
 {
-    uint32_t pmbase = 0x400;                    /* on xaxis; correct value can be read from PCI config */
     // TODO: how to read pmbase correctly from pci_config? Are there MetalSVM-functions to do this?
     uint32_t adr;
     uint32_t smi_en;
@@ -66,6 +68,7 @@ void smm_deactivate(void)
 
     /* read SMI_EN and display */
     IN(smi_en, adr);
+    bak_smi_en = smi_en;
     IFVV printf("SMI_EN: 0x%x \n", smi_en);
 
     /* set to 0 (only writable bits will be changed...) */
@@ -83,6 +86,12 @@ void smm_deactivate(void)
         printf("Warning: SMI was not disabled!\n");
     }
     if (if_backup) sti();
+}
+
+void smm_restore(void)
+{
+    if (pmbase != 0)
+        OUT(pmbase+0x30, bak_smi_en);
 }
 
 

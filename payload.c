@@ -179,11 +179,13 @@ void payload_benchmark()
          */
 
         unsigned load_nbrs[] = {0, 1, 3};
-        size_t load_ranges[] = {4*KB, 256*KB, 4*MB, 16*MB};
+        //size_t load_ranges[] = {4*KB, 256*KB, 4*MB, 16*MB};
+        size_t load_ranges[] = {4*KB, 4*MB, 16*MB};
         size_t load_strides[]= {64};
         size_t worker_ranges[]  = {4*KB, 256*KB, 16*MB};
         size_t worker_strides[] = {64};
-        access_t worker_atypes[] = {AT_READ, AT_WRITE, AT_UPDATE, AT_ATOMIC};
+        //access_t worker_atypes[] = {AT_READ, AT_WRITE, AT_UPDATE, AT_ATOMIC};
+        access_t worker_atypes[] = {AT_UPDATE};
         static flag_t flags[MAX_CPU];
 
         for (unsigned u=0; u<MAX_CPU; u++) flag_init(&flags[u]);
@@ -351,11 +353,6 @@ label_break:
     }
     barrier(&barr);
 
-    if (myid==1) {
-        printf("{{{ take your last photo }}}");
-        udelay(20*1000*1000);
-        printf("\n");
-    }
 }
 
 void payload_demo()

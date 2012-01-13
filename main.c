@@ -168,10 +168,10 @@ void main()
     IFVV printf("CPU %d/%d entering in main()\n", my_cpu_info()->cpu_id, cpu_online);
 
     /* call tests */
-    tests_doall();
+    //tests_doall();
 
     /* call a payload */
-    //payload_benchmark();
+    payload_benchmark();
 
     /* all CPUs leaving the payload: go to sleep */
     stop();

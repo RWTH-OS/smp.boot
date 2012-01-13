@@ -19,6 +19,7 @@
 #include "system.h"
 #include "sync.h"
 #include "smp.h"
+#include "smm.h"
 #include "config.h"
 #include "cpu.h"
 
@@ -41,17 +42,11 @@ extern volatile unsigned cpu_online;
 void reboot()
 {
     int s= 9 + cpu_online, i;
+    char msg[] = "Reboot in                  ";
+    char *m = &msg[0];
     
-    status_putch(s++, 'R');
-    status_putch(s++, 'e');
-    status_putch(s++, 'b');
-    status_putch(s++, 'o');
-    status_putch(s++, 'o');
-    status_putch(s++, 't');
-    status_putch(s++, ' ');
-    status_putch(s++, 'i');
-    status_putch(s++, 'n');
-    status_putch(s++, ' ');
+    while (*m != 0) status_putch(s++, *m++);
+    s = 9 + cpu_online + 10;
 
     for (i=1; i<=5; i++) {
         status_putch(s++, '6'-i);
@@ -113,6 +108,7 @@ void stop()
         while (1) __asm__ volatile ("hlt");
     } else {
 #       if SCROLLBACK_BUF_SIZE
+            smm_restore();
             video_scrollback();
 #       endif
         reboot();

@@ -65,7 +65,7 @@
 #define VERBOSE_SMM         0
 #define VERBOSE_PCI         0
 #define VERBOSE_KEYBOARD    0
-#define VERBOSE_DRIVER      1
+#define VERBOSE_DRIVER      0
 #define VERBOSE_TESTS       0
 #define VERBOSE_MAIN        0
 

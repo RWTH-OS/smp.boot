@@ -261,10 +261,10 @@ void tests_doall(void)
 
     //if (myid == 0) tests_keyboard();
     
-    unsigned u;
+    /*unsigned u;
     for (u=0; u<30; u++) {
         printf("[%u] line %u\n", myid, u);
-    }
+    }*/
 
     printf("[%u] exit tests_doall()\n", myid);
 }
