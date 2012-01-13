@@ -70,6 +70,13 @@
 #define VERBOSE_MAIN        0
 
 /*
+ * scrollback buffer
+ * (set to 0 to deactivate)
+ */
+#define SCROLLBACK_BUF_SIZE   (1024*80)
+
+
+/*
  * preliminary: CPU Frequency
  * (until it can be correctly measured)
  */

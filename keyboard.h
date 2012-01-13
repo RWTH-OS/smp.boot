@@ -22,6 +22,13 @@
 #include "stddef.h"
 
 typedef enum {kbm_poll, kbm_interrupt} kb_mode_t;
+#define KEY_ESC       200
+#define KEY_UP        201
+#define KEY_DOWN      202
+#define KEY_PGUP      205
+#define KEY_PGDOWN    206
+#define KEY_HOME      207
+#define KEY_END       208
 
 uint32_t keyboard_get_scancode();
 uint8_t scancode_to_keycode(uint32_t scancode);

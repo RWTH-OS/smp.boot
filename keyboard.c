@@ -107,9 +107,10 @@ uint8_t scancode_to_keycode(uint32_t scancode)
         case 0x1d : BIT_SET(kb_modifier, KBM_CTRL); break; 
         case 0x9d : BIT_CLEAR(kb_modifier, KBM_CTRL); break; 
 
+        case 0x01 : return KEY_ESC;
         case 0x02 : return IS_BIT_CLEAR(kb_modifier, KBM_SHIFT) ? '1' : '!'; break;
         case 0x03 : return IS_BIT_CLEAR(kb_modifier, KBM_SHIFT) ? '2' : '"'; break;
-        case 0x04 : return IS_BIT_CLEAR(kb_modifier, KBM_SHIFT) ? '3' : '§'; break;
+        case 0x04 : return IS_BIT_CLEAR(kb_modifier, KBM_SHIFT) ? '3' : '3'; break; // compiler says: '§' is a multibyte character...
         case 0x05 : return IS_BIT_CLEAR(kb_modifier, KBM_SHIFT) ? '4' : '$'; break;
         case 0x06 : return IS_BIT_CLEAR(kb_modifier, KBM_SHIFT) ? '5' : '%'; break;
         case 0x07 : return IS_BIT_CLEAR(kb_modifier, KBM_SHIFT) ? '6' : '&'; break;
@@ -148,6 +149,13 @@ uint8_t scancode_to_keycode(uint32_t scancode)
         case 0x31 : return IS_BIT_CLEAR(kb_modifier, KBM_SHIFT) ? 'n' : 'N'; break;
         case 0x32 : return IS_BIT_CLEAR(kb_modifier, KBM_SHIFT) ? 'm' : 'M'; break;
         case 0x39 : return ' '; break;
+
+        case 0xe048 : return KEY_UP; break;
+        case 0xe050 : return KEY_DOWN; break;
+        case 0xe049 : return KEY_PGUP; break;
+        case 0xe051 : return KEY_PGDOWN; break;
+        case 0xe047 : return KEY_HOME; break;
+        case 0xe04f : return KEY_END; break;
     }
     return 0;
 }

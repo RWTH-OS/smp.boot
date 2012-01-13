@@ -84,6 +84,10 @@ void status_putch(int x, int c);
 void puts(char *str);
 void settextcolor(unsigned char forecolor, unsigned char backcolor);
 void init_video();
+#if SCROLLBACK_BUF_SIZE
+void init_video_scrollback(void);
+void video_scrollback(void);
+#endif
 void itoa (char *buf, int base, long d);
 void printf (const char *format, ...);
 

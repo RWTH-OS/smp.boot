@@ -112,6 +112,9 @@ void stop()
     if (cpus_halted < cpu_online) {
         while (1) __asm__ volatile ("hlt");
     } else {
+#       if SCROLLBACK_BUF_SIZE
+            video_scrollback();
+#       endif
         reboot();
     }
 

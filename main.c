@@ -57,6 +57,10 @@ void main_bsp(void)
     mm_init();
     IFVV printf("my_cpu_info()->cpu_id: %u\n", my_cpu_info()->cpu_id);
 
+#if SCROLLBACK_BUF_SIZE
+    init_video_scrollback();
+#endif
+
     idt_install();
     IFV puts("idt installed\n");
     //udelay(DELAY);

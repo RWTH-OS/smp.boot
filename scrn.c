@@ -19,6 +19,15 @@ static uint8_t csr_x = 0, csr_y = 0;
 static uint8_t screen_h = 25;              /* screen height (currently constant, but may be set according to multiboot info) */
 static uint8_t screen_w = 80;              /* screen width  (currently constant, but may be set according to multiboot info) */
 
+#if !defined(EARLY) && SCROLLBACK_BUF_SIZE
+static char* buf_scrollback = NULL;
+static unsigned buf_x = 0, buf_y = 0;
+#endif
+
+#ifndef EARLY
+extern volatile unsigned cpu_online;
+#endif
+
 /* Scrolls the screen */
 void scroll(void)
 {
@@ -91,6 +100,14 @@ void cls()
     *  hardware cursor */
     csr_x = 0;
     csr_y = 0;
+#   if !defined(EARLY) && SCROLLBACK_BUF_SIZE
+    buf_x = 0;
+    buf_y++;
+    if (buf_y > SCROLLBACK_BUF_SIZE) {
+        buf_y = 0;
+        printf("Scrollback overflow!\n");
+    }
+#   endif
     move_csr();
 }
 
@@ -104,18 +121,27 @@ void putch(char c)
     if(c == 0x08)
     {
         if(csr_x != 0) csr_x--;
+#       if !defined(EARLY) && SCROLLBACK_BUF_SIZE
+        buf_x = csr_x;
+#       endif
     }
     /* Handles a tab by incrementing the cursor's x, but only
     *  to a point that will make it divisible by 8 */
     else if(c == 0x09)
     {
         csr_x = (csr_x + 8) & ~(8 - 1);
+#       if !defined(EARLY) && SCROLLBACK_BUF_SIZE
+        buf_x = csr_x;
+#       endif
     }
     /* Handles a 'Carriage Return', which simply brings the
     *  cursor back to the margin */
     else if(c == '\r')
     {
         csr_x = 0;
+#       if !defined(EARLY) && SCROLLBACK_BUF_SIZE
+        buf_x = csr_x;
+#       endif
     }
     /* We handle our newlines the way DOS and the BIOS do: we
     *  treat it as if a 'CR' was also there, so we bring the
@@ -124,6 +150,14 @@ void putch(char c)
     {
         csr_x = 0;
         csr_y++;
+#       if !defined(EARLY) && SCROLLBACK_BUF_SIZE
+        buf_x = csr_x;
+        buf_y++;
+        if (buf_y > SCROLLBACK_BUF_SIZE) {
+            buf_y = 0;
+            printf("Scrollback overflow!\n");
+        }
+#       endif
     }
     /* Any character greater than and including a space, is a
     *  printable character. The equation for finding the index
@@ -134,6 +168,12 @@ void putch(char c)
         where = textmemptr + (csr_y * screen_w + csr_x);
         *where = c | att;	/* Character AND attributes: color */
         csr_x++;
+#       if !defined(EARLY) && SCROLLBACK_BUF_SIZE
+            if (buf_scrollback != NULL) {
+                buf_scrollback[buf_y*80+buf_x] = c;
+            }
+            buf_x = csr_x;
+#       endif
     }
 
     /* If the cursor has reached the edge of the screen's width, we
@@ -186,6 +226,48 @@ void init_video(void)
     csr_y = 1;      /* skip first line (used as status monitor) */
 }
 
+#if !defined(EARLY) && SCROLLBACK_BUF_SIZE
+#include "mm.h"
+#include "keyboard.h"
+void init_video_scrollback(void)
+{
+    printf("scrollback buffer initialized\n");
+    buf_scrollback = heap_alloc(SCROLLBACK_BUF_SIZE / PAGE_SIZE);
+}
+void video_scrollback(void)
+{
+    unsigned s= 9 + cpu_online;
+    char msg[] = "SCROLLBACK (exit with ESC)";
+    char *m = &msg[0];
+    unsigned offset_y = 0;
+    unsigned x, y;
+    uint8_t key;
+    unsigned do_exit = 0;
+
+    while (*m != 0) status_putch(s++, *m++);
+
+    while (!do_exit) {
+        if (offset_y > SCROLLBACK_BUF_SIZE) offset_y = SCROLLBACK_BUF_SIZE;
+        for (y=0; y<23; y++) {
+            for (x=0; x<80; x++) {
+                textmemptr[(y+1)*80+x] = 0x0F00 | buf_scrollback[(y+offset_y)*80+x];
+            }
+        }
+
+        key = wait_for_key();
+        switch(key) {
+            case KEY_ESC  : do_exit = 1; break;
+            case KEY_UP   : if (offset_y > 0) offset_y--; break;
+            case KEY_DOWN : offset_y++; break;
+            case KEY_PGDOWN : offset_y+=20; break;
+            case KEY_HOME : offset_y = 0; break;
+            case KEY_END : offset_y = buf_y; //break;
+            case KEY_PGUP   : if (offset_y > 20) offset_y-=20; else offset_y = 0; break;
+        }
+    }
+
+}
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // the following is from the multiboot specification
@@ -242,7 +324,6 @@ void itoa (char *buf, int base, long d)
    function printf. */
 #ifndef EARLY
 mutex_t mutex_printf = MUTEX_INITIALIZER;
-extern unsigned cpu_online;
 #endif
 
 void printf (const char *format, ...)

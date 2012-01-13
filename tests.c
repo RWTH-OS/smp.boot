@@ -21,6 +21,7 @@
 #include "sync.h"
 #include "mm.h"
 #include "cpu.h"
+#include "keyboard.h"
 
 #define IFV   if (VERBOSE > 0 || VERBOSE_TESTS > 0)
 #define IFVV  if (VERBOSE > 1 || VERBOSE_TESTS > 1)
@@ -258,7 +259,12 @@ void tests_doall(void)
 
     //tests_ipi();
 
-    if (myid == 0) tests_keyboard();
+    //if (myid == 0) tests_keyboard();
+    
+    unsigned u;
+    for (u=0; u<30; u++) {
+        printf("[%u] line %u\n", myid, u);
+    }
 
     printf("[%u] exit tests_doall()\n", myid);
 }
