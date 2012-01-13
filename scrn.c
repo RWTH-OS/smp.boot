@@ -287,6 +287,13 @@ void printf (const char *format, ...)
               goto string;
               break;
 
+              /*
+            case 'c':
+              value = __builtin_va_arg(ap, char);
+              putch(value);
+              break;
+              */
+
             case 's':
               p = __builtin_va_arg(ap, char*);
               if (! p)

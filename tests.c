@@ -214,7 +214,7 @@ void tests_ipi(void)
 void tests_keyboard(void)
 {
     unsigned u;
-    unsigned scancode;
+    unsigned scancode, keycode;
     printf("polling ~30 secs for keyboard scan codes (press some keys...)\n");
     for (u=0; u<64; u++) {
         scancode = keyboard_get_scancode();
@@ -223,6 +223,20 @@ void tests_keyboard(void)
     }
     printf("\n");
 
+    printf("polling ~30 secs for keyboard input (press some keys...)\n");
+    for (u=0; u<64; u++) {
+        scancode = keyboard_get_scancode();
+        keycode = scancode_to_keycode(scancode);
+        if (keycode) putch(keycode); 
+        printf(".");
+        udelay(500*1000);
+    }
+    printf("\n");
+
+    printf("press any key...");
+    keycode = wait_for_key();
+    putch((uint8_t)keycode);
+    printf("\n");
 
 }
 
@@ -244,7 +258,8 @@ void tests_doall(void)
 
     //tests_ipi();
 
-    tests_keyboard();
+    if (myid == 0) tests_keyboard();
 
     printf("[%u] exit tests_doall()\n", myid);
 }
+
