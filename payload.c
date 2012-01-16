@@ -82,7 +82,6 @@ void payload_benchmark()
     barrier(&barr);
     if (collective_only(0x0001)) {
 
-        unsigned u;
         udelay(1000000);
         printf("others halt         ");
         hourglass(BENCH_HOURGLAS_SEC);
@@ -178,10 +177,6 @@ void payload_benchmark()
          *   - min, avg, max
          */
 
-                    case 0: size=16*1024; break;        /* fits into L1 Cache (32 kB per core) */
-                    case 1: size=128*1024; break;       /* fits into L2 Cache (256 kB per core) */
-                    case 2: size=4*1024*1024; break;    /* fits into L3 Cache (8 MB shared) */
-                    case 3: size=16*1024*1024; break;   /* larger than Cache */
 
         unsigned load_nbrs[] = {0, 1, 3, 7};
         size_t load_ranges[] = {16*KB, 128*KB, 4*MB, 16*MB};
