@@ -20,6 +20,7 @@
 #define SMP_H
 
 #include "system.h"
+#include "config.h"
 #include "sync.h"
 
 /*
@@ -31,6 +32,7 @@ typedef struct {
     volatile unsigned flags;
     mutex_t wakelock;
 } cpu_info_t;
+
 
 /*
  * Stack (growing downwards with per-cpu info structure on opposite (lower) end, where the stack should never grow to)

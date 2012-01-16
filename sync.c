@@ -27,6 +27,7 @@
  * printf() uses a mutex => mutex_*() should not use printf() !!!
  */
 
+extern volatile unsigned cpu_online;
 
 void mutex_init(mutex_t *m)
 {
@@ -125,4 +126,46 @@ int flag_trywait(flag_t *flag)
         return 1;
     }
 }
-      
+ 
+/*
+ * collective only()
+ * the CPUs not in mask go into smp_halt() until collective_end()
+ */
+static mutex_t coll_mutex = MUTEX_INITIALIZER;
+static unsigned coll_master = 0;
+static cpumask_t coll_mask;
+unsigned collective_only(cpumask_t mask)
+{
+    unsigned myid = my_cpu_info()->cpu_id;
+    if (mask & ((cpumask_t)1 << myid)) {
+        IFVV printf("coll_only[%u]: continue\n", myid);
+        /* proceed... */
+        if (mutex_trylock(&coll_mutex)) {
+            IFVV printf("coll_only[%u]: Master!\n", myid);
+            coll_master = myid;
+            coll_mask = mask;
+        }
+        return 1;
+    } else {
+        IFVV printf("coll_only[%u]: halt\n", myid);
+        smp_halt();
+    }
+    return 0;
+}
+void collective_end()
+{
+    unsigned myid = my_cpu_info()->cpu_id;
+    unsigned u;
+    if (coll_master == myid) {
+        IFVV printf("coll_end[%u]: Master! (mask=0x%x)\n", myid, coll_mask);
+        /* I'm master */
+        for (u=0; u<cpu_online; u++) {
+            if ((coll_mask & ((cpumask_t)1 << u)) == 0) {
+                IFVV printf("coll_end[%u]: wake up %u\n", myid, u);
+                smp_wakeup(u);
+            }
+        }
+        mutex_unlock(&coll_mutex);
+    }
+
+}

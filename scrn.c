@@ -239,7 +239,7 @@ void init_video_scrollback(void)
 void video_scrollback(void)
 {
     unsigned s= 9 + cpu_online;
-    char msg[] = "SCROLLBACK (exit with ESC)";
+    char msg[] = "SCROLLBACK (exit with ESC) ";
     char *m = &msg[0];
     unsigned offset_y = 0;
     unsigned x, y;

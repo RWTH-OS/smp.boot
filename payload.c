@@ -38,6 +38,10 @@ static flag_t flag = FLAG_INITIALIZER;
 void payload_benchmark()
 {
     unsigned myid = my_cpu_info()->cpu_id;
+
+    /*
+     * count and collect all processors (collective barrier)
+     */
     mutex_lock(&mut);
     if (barr.max == MAX_CPU+1) {
         /* first one sets barr.max to the actual count of CPUs */
@@ -49,9 +53,13 @@ void payload_benchmark()
     size_t buffer_size = 16 * MB;
     static void *p_buffer = NULL;
 
+    /*
+     * Memory allocation
+     */
     if (myid == 0) {
         p_buffer = heap_alloc(buffer_size / PAGE_SIZE);       // one page = 4kB
         /* no need for pre-faulting, because pages are present after head_alloc()
+         * (we don't have demand paging)
          * but initialize them */
         memset(p_buffer, 0, buffer_size);
     }
@@ -72,25 +80,25 @@ void payload_benchmark()
     if (myid == 0) printf("1 CPU hourglass (%u sec) ----------------------------------------------\n", BENCH_HOURGLAS_SEC);
 
     barrier(&barr);
-    if (myid != 0) {
-        smp_halt();
-    } else {
+    if (collective_only(0x0001)) {
+
         unsigned u;
         udelay(1000000);
         printf("others halt         ");
         hourglass(BENCH_HOURGLAS_SEC);
-        for (u = 1; u<cpu_online; u++) {
-            smp_wakeup(u);
-        }
+
+        collective_end();
     }
+    barrier(&barr);
 
 
-#if 0
+#if 1
     if (cpu_online > 1) {
         if (myid == 0) printf("2 CPUs hourglass (%u sec) ---------------------------------------------\n", BENCH_HOURGLAS_SEC);
         barrier(&barr);
 
-        if (myid <= 1) {    /* IDs 0 and 1 */
+        if (collective_only(0x0003)) {   /* IDs 0 and 1 */
+
             unsigned u;
 
             barrier(&barr2);
@@ -111,18 +119,13 @@ void payload_benchmark()
                     hourglass(BENCH_HOURGLAS_SEC);
                     flag_signal(&flag);
                 } else {
-                    load_until_flag(p_contender, size, &flag);
+                    load_until_flag(p_contender, size, 32, &flag);
                 }
 
                 barrier(&barr2);
             }
-            if (myid == 0) {
-                for (u = 2; u<cpu_online; u++) {
-                    smp_wakeup(u);
-                }
-            }
-        } else {
-            smp_halt();
+
+            collective_end();
         }
     }
 
@@ -130,16 +133,13 @@ void payload_benchmark()
         if (myid == 0) printf("2 CPUs hourglass (hyper-threads) (%u sec) -----------------------------\n", BENCH_HOURGLAS_SEC);
         barrier(&barr);
 
-        if (myid == 0) {
-            unsigned u;
-            hourglass(BENCH_HOURGLAS_SEC);
-            for (u = 1; u<cpu_online; u++) {
-                if (u != cpu_online/2) smp_wakeup(u);
+        if (collective_only(0x0001 | (1 << (cpu_online/2)))) {
+            if (myid == 0) {
+                hourglass(BENCH_HOURGLAS_SEC);
+            } else { 
+                hourglass(BENCH_HOURGLAS_SEC);
             }
-        } else if (myid == cpu_online/2) { 
-            hourglass(BENCH_HOURGLAS_SEC);
-        } else {
-            smp_halt();
+            collective_end();
         }
     }
 #endif
@@ -178,14 +178,17 @@ void payload_benchmark()
          *   - min, avg, max
          */
 
-        unsigned load_nbrs[] = {0, 1, 3};
-        //size_t load_ranges[] = {4*KB, 256*KB, 4*MB, 16*MB};
-        size_t load_ranges[] = {4*KB, 4*MB, 16*MB};
+                    case 0: size=16*1024; break;        /* fits into L1 Cache (32 kB per core) */
+                    case 1: size=128*1024; break;       /* fits into L2 Cache (256 kB per core) */
+                    case 2: size=4*1024*1024; break;    /* fits into L3 Cache (8 MB shared) */
+                    case 3: size=16*1024*1024; break;   /* larger than Cache */
+
+        unsigned load_nbrs[] = {0, 1, 3, 7};
+        size_t load_ranges[] = {16*KB, 128*KB, 4*MB, 16*MB};
         size_t load_strides[]= {64};
-        size_t worker_ranges[]  = {4*KB, 256*KB, 16*MB};
+        size_t worker_ranges[]  = {16*KB, 128*KB, 4*MB, 16*MB};
         size_t worker_strides[] = {64};
-        //access_t worker_atypes[] = {AT_READ, AT_WRITE, AT_UPDATE, AT_ATOMIC};
-        access_t worker_atypes[] = {AT_UPDATE};
+        access_t worker_atypes[] = {AT_READ, AT_WRITE, AT_UPDATE, AT_ATOMIC};
         static flag_t flags[MAX_CPU];
 
         for (unsigned u=0; u<MAX_CPU; u++) flag_init(&flags[u]);
@@ -240,30 +243,6 @@ label_break:
                 }
             }
         }
-
-
-
-#if 0
-        if (myid == 0) {
-            p_buffer = heap_alloc(16*1024*1024 / PAGE_SIZE);       // one page = 4kB
-
-            worker(p_buffer,       8*1024, 64, AT_READ, BENCH_HOURGLAS_SEC);
-            worker(p_buffer,     265*1024, 64, AT_READ, BENCH_HOURGLAS_SEC);
-            worker(p_buffer, 16*1024*1024, 64, AT_READ, BENCH_HOURGLAS_SEC);
-
-            worker(p_buffer,       8*1024, 64, AT_WRITE, BENCH_HOURGLAS_SEC);
-            worker(p_buffer,     265*1024, 64, AT_WRITE, BENCH_HOURGLAS_SEC);
-            worker(p_buffer, 16*1024*1024, 64, AT_WRITE, BENCH_HOURGLAS_SEC);
-
-            worker(p_buffer,       8*1024, 64, AT_UPDATE, BENCH_HOURGLAS_SEC);
-            worker(p_buffer,     265*1024, 64, AT_UPDATE, BENCH_HOURGLAS_SEC);
-            worker(p_buffer, 16*1024*1024, 64, AT_UPDATE, BENCH_HOURGLAS_SEC);
-
-            worker(p_buffer,       8*1024, 64, AT_ATOMIC, BENCH_HOURGLAS_SEC);
-            worker(p_buffer,     265*1024, 64, AT_ATOMIC, BENCH_HOURGLAS_SEC);
-            worker(p_buffer, 16*1024*1024, 64, AT_ATOMIC, BENCH_HOURGLAS_SEC);
-        }
-#endif
 
         barrier(&barr);
     }
@@ -335,9 +314,9 @@ label_break:
             for (u=0; u<4; u++) {
                 size_t size;
                 switch (u) {        /* Cache Ranges valid for xaxis, Core i7 */
-                    case 0: size=8*1024; break;         /* fits into L1 Cache */
-                    case 1: size=128*1024; break;       /* fits into L2 Cache */
-                    case 2: size=4*1024*1024; break;    /* fits into L3 Cache */
+                    case 0: size=16*1024; break;        /* fits into L1 Cache (32 kB per core) */
+                    case 1: size=128*1024; break;       /* fits into L2 Cache (256 kB per core) */
+                    case 2: size=4*1024*1024; break;    /* fits into L3 Cache (8 MB shared) */
                     case 3: size=16*1024*1024; break;   /* larger than Cache */
                 }
                 printf("Range/Stride (one CPU working on %u kB) --------------\n", size/1024);

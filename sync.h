@@ -19,6 +19,8 @@
 #ifndef SYNC_H
 #define SYNC_H
 
+#include "types.h"
+
 typedef volatile int mutex_t;
 #define MUTEX_INITIALIZER           ((mutex_t)1)
 #define MUTEX_INITIALIZER_LOCKED    ((mutex_t)0)
@@ -48,6 +50,8 @@ void flag_signal(flag_t *flag);
 void flag_wait(flag_t *flag);
 int flag_trywait(flag_t *flag);
 
+unsigned collective_only(cpumask_t mask);
+void collective_end();
 
 #endif  // SYNC_H
 

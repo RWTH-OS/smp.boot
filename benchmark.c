@@ -80,7 +80,7 @@ void hourglass(unsigned sec)
      * shift avg (sum of gaps) to the right, until it fits in 32 bits
      */
     unsigned shift = 0;
-    while (avg > 0xFFFFFFFF) {
+    while (avg > 0xFFFFFFFFull) {
         avg >>= 1;
         shift++;
     }
