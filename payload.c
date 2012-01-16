@@ -57,7 +57,7 @@ void payload_benchmark()
      * Memory allocation
      */
     if (myid == 0) {
-        p_buffer = heap_alloc(buffer_size / PAGE_SIZE);       // one page = 4kB
+        p_buffer = heap_alloc(buffer_size / PAGE_SIZE, BENCH_WORK_FLAGS);       // one page = 4kB
         /* no need for pre-faulting, because pages are present after head_alloc()
          * (we don't have demand paging)
          * but initialize them */
@@ -68,7 +68,7 @@ void payload_benchmark()
     static void *p_contender = NULL;
 
     if (myid == 0) {
-        p_contender = heap_alloc(contender_size / PAGE_SIZE);       // one page = 4kB
+        p_contender = heap_alloc(contender_size / PAGE_SIZE, BENCH_LOAD_FLAGS);       // one page = 4kB
         //virt_to_phys(p_contender);
         //p_contender[0] = 42;
         //printf("[1] p_contender = 0x%x .. 0x%x\n", (ptr_t)p_contender, (ptr_t)p_contender+16*1024*1024);
@@ -101,14 +101,22 @@ void payload_benchmark()
             unsigned u;
 
             barrier(&barr2);
-            for (u=0; u<4; u++) {
-                size_t size;
+            for (u=0; u<12; u++) {
+                size_t size = 1;
                 if (myid == 1) {
                     switch (u) {        /* Cache Ranges valid for xaxis, Core i7 */
-                        case 0: size=8*1024; break;         /* fits into L1 Cache */
-                        case 1: size=128*1024; break;       /* fits into L2 Cache */
-                        case 2: size=4*1024*1024; break;    /* fits into L3 Cache */
-                        case 3: size=16*1024*1024; break;   /* larger than Cache */
+                        case  0: size=16*1024; break;         /* fits into L1 Cache */
+                        case  1: size=128*1024; break;       /* fits into L2 Cache */
+                        case  2: size=256*1024; break;       /* fits into L2 Cache */
+                        case  3: size=512*1024; break;       /* fits into L2 Cache */
+                        case  4: size=1*1024*1024; break;    /* fits into L3 Cache */
+                        case  5: size=2*1024*1024; break;    /* fits into L3 Cache */
+                        case  6: size=3*1024*1024; break;    /* fits into L3 Cache */
+                        case  7: size=4*1024*1024; break;    /* fits into L3 Cache */
+                        case  8: size=5*1024*1024; break;    /* fits into L3 Cache */
+                        case  9: size=6*1024*1024; break;    /* fits into L3 Cache */
+                        case 10: size=8*1024*1024; break;    /* fits into L3 Cache */
+                        case 11: size=16*1024*1024; break;   /* larger than Cache */
                     }
                     printf("[1] Range %5u kB: ", size/1024);
                 }
@@ -145,6 +153,7 @@ void payload_benchmark()
 
     barrier(&barr);
 
+#if 0
     if (cpu_online > 1) {
         volatile unsigned long *p_buffer = NULL;
         size_t worker_range, worker_stride, load_range, load_stride;
@@ -241,14 +250,45 @@ label_break:
 
         barrier(&barr);
     }
-
-
-
+#endif
 
 
     /*
-     * allocate Buffer for memory benchmarks
+     * similar worker-benchmark, but different cuts through the parameter dimensions.
      */
+    if (cpu_online > 1) {
+        if (myid==0) printf("1 worker on range 128kB (L2$), load on range 16kB .. 16MB -------------------\n");
+
+        if (collective_only(0x0003)) {
+            unsigned r;
+            static flag_t flag = FLAG_INITIALIZER;
+
+            for (r = 16*KB; r <= 16*MB; r *= 2) {
+                barrier(&barr2);
+                if (myid == 0) {
+                    /* benchmark/worker */
+                    udelay(10*1000);
+
+                    printf("load %5u kB : ", r>>10);
+                    worker(p_buffer, 128*KB, 32, AT_UPDATE, BENCH_HOURGLAS_SEC);
+                    printf("\n");
+
+                    flag_signal(&flag);
+                } else {
+                    /* load */
+                    load_until_flag(p_contender, r, 32, &flag);
+                }
+            }
+
+            collective_end();
+        }
+    }
+    barrier(&barr);
+
+    /*
+     * memory benchmark
+     */
+#if 0
     if (myid == 0) {
         size_t i, j;
         unsigned u;
@@ -325,6 +365,7 @@ label_break:
 
         }
     }
+#endif
     barrier(&barr);
 
 }

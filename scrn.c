@@ -232,7 +232,7 @@ void init_video(void)
 void init_video_scrollback(void)
 {
     printf("scrollback buffer initialized\n");
-    buf_scrollback = heap_alloc(SCROLLBACK_BUF_SIZE / PAGE_SIZE);
+    buf_scrollback = heap_alloc(SCROLLBACK_BUF_SIZE / PAGE_SIZE, 0);
     memset(buf_scrollback, ' ', SCROLLBACK_BUF_SIZE);
     buf_y = 0;
 }

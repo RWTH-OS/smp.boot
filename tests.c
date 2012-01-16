@@ -107,13 +107,13 @@ void tests_mm(void)
     if (cpu_online >= 2) {
         if (myid == 0) {
             /* call Task for CPU 0 */
-            p_shared = heap_alloc(1);   // one page = 4kB
-            p_shared2 = heap_alloc(4);   // one page = 16kB
+            p_shared = heap_alloc(1, 0);   // one page = 4kB
+            p_shared2 = heap_alloc(4, 0);   // one page = 16kB
             printf("[0] p_shared = 0x%x\n", p_shared);
             printf("[0] p_shared2 = 0x%x\n", p_shared2);
             udelay(1*1000*1000);
             barrier(&barr);
-            p_shared3 = heap_alloc(2);   // two pages = 8kB
+            p_shared3 = heap_alloc(2, 0);   // two pages = 8kB
             barrier(&barr);
             printf("p_shared[1023] = 0x%x (should be 0x01010101)\n", p_shared[1023]);
             printf("p_shared2[2048] = 0x%x (should be 0x22222222)\n", p_shared2[2048]);
@@ -131,7 +131,7 @@ void tests_mm(void)
         } else if (myid == 1) {
             /* call Task for CPU 1 */
             barrier(&barr);
-            p_shared4 = heap_alloc(2);   // two pages = 8kB
+            p_shared4 = heap_alloc(2, 0);   // two pages = 8kB
             udelay(1*1000*1000);
             printf("[1] p_shared = 0x%x\n", p_shared);
             printf("[1] p_shared2 = 0x%x\n", p_shared2);

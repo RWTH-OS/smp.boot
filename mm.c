@@ -242,10 +242,13 @@ ptr_t virt_to_phys(void * adr)
 #else
 #   define MAP_HUGE_4M     4
 #endif
+#define MAP_HUGE       (1+2+4)
+#define MAP_PWT             8   // page-level write-through
+#define MAP_PCD            16   // page-level cache disable
 
 static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
 {
-    if (flags != 0) {
+    if (flags & MAP_HUGE) {
         printf("ERROR (map_frame_to_adr): flags %d not supported, yet!\n", flags);
         smp_status(STATUS_ERROR);
         while (1) __asm__ volatile ("hlt");
@@ -315,7 +318,8 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
         pt[ipt].page.frame = frame;
         pt[ipt].page.rw = 1;
         pt[ipt].page.p = 1;
-        //pt[ipt].page.pwt = 1;
+        if (flags & MAP_PWT) pt[ipt].page.pwt = 1;
+        if (flags & MAP_PCD) pt[ipt].page.pcd = 1;
         /* invalidate TLB for page containing the address just mapped */
         __asm__ volatile ("invlpg %0" : : "m"(*((int*)((ptr_t)frame<<PAGE_BITS))));
     }
@@ -346,6 +350,8 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
         pt[ipt].page.rw = 1;
         pt[ipt].page.p = 1;
         //pt[ipt].page.pcd = 1;        /* TEMPORARY: page-level cache disable */
+        if (flags & MAP_PWT) pt[ipt].page.pwt = 1;
+        if (flags & MAP_PCD) pt[ipt].page.pcd = 1;
 
         /* invalidate TLB for page containing the address just mapped */
         //__asm__ volatile ("invlpg %0" : : "m"(*((int*)((ptr_t)frame<<PAGE_BITS))));
@@ -498,18 +504,22 @@ int mm_init()
 
 static page_t next_virt_page = 0x400;
 
-void *heap_alloc(unsigned nbr_pages)
+void *heap_alloc(unsigned nbr_pages, unsigned flags)
 {
     unsigned i;
     void *res;
     frame_t frame;
+    unsigned map_flags = 0;
+
+    if (flags & MM_WRITE_THROUGH) map_flags |= MAP_PWT;
+    if (flags & MM_CACHE_DISABLE) map_flags |= MAP_PCD;
 
     mutex_lock(&pt_mutex);
 
     res = page_to_adr(next_virt_page);
     for (i = 0; i < nbr_pages; i++) {
         frame = get_free_frame(FRAME_TYPE_4k);
-        map_frame_to_adr(frame, page_to_adr(next_virt_page), 0);
+        map_frame_to_adr(frame, page_to_adr(next_virt_page), map_flags);
         next_virt_page++;
         IFVV printf("next_virt_page=0x%x\n", next_virt_page);
     }
