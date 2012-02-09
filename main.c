@@ -22,7 +22,8 @@ hw_info_t hw_info;
  *  - dynamic memory management (at least, malloc() should be implemented)
  */
 barrier_t mainbarrier = BARRIER_INITIALIZER(MAX_CPU); /* max is later reduced to the actual number of CPUs */
-//barrier_t mainbarrier = {.cnt=0,.epoch=0,.max=16}; //(barrier_t){ .cnt=0, .epoch=0, .max=16 }; /* max is later reduced to the actual number of CPUs */
+//barrier_t mainbarrier = {.cnt=0,.epoch=0,.max=16}; 
+//(barrier_t){ .cnt=0, .epoch=0, .max=16 }; /* max is later reduced to the actual number of CPUs */
 
 extern volatile unsigned cpu_online;    // from apic.c
 void main();                            // further down in this file
@@ -51,7 +52,8 @@ void main_bsp(void)
 
 
     IFV puts("main(): video initialized\n");
-    IFVV printf("found %d %s CPUs and %d I/O APICs\n", (ptr_t)hw_info.cpu_cnt, vendor[hw_info.cpu_vendor], (ptr_t)hw_info.ioapic_cnt);
+    IFVV printf("found %d %s CPUs and %d I/O APICs\n", 
+            (ptr_t)hw_info.cpu_cnt, vendor[hw_info.cpu_vendor], (ptr_t)hw_info.ioapic_cnt);
     //udelay(DELAY);
 
     mm_init();
@@ -166,6 +168,13 @@ void main_ap(void)
 void main()
 {
     IFVV printf("CPU %d/%d entering in main()\n", my_cpu_info()->cpu_id, cpu_online);
+
+    if (my_cpu_info()->cpu_id == 0) {
+        printf("*****************************************\n");
+        printf("* CPU Vendor: %s \n", vendor_string[hw_info.cpu_vendor]);
+        printf("* Cache-Line Size: %u \n", (ptr_t)hw_info.cpuid_cachelinesize);
+        printf("*****************************************\n");
+    }
 
     /* call tests */
     //tests_doall();

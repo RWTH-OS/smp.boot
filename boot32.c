@@ -167,7 +167,8 @@ static int read_madt(ptr_t offset)
                     hw_info.cpu[hw_info.cpu_cnt].lapic_id = lapic->apic_id;
                     hw_info.cpu_cnt++;
                 }
-                IFV printf("CPU id=%u  enabled: %u local APIC id: %u\n", (ptr_t)lapic->acpi_processor_id, (ptr_t)lapic->flags.enabled, (ptr_t)lapic->apic_id);
+                IFV printf("CPU id=%u  enabled: %u local APIC id: %u\n", 
+                        (ptr_t)lapic->acpi_processor_id, (ptr_t)lapic->flags.enabled, (ptr_t)lapic->apic_id);
                 break;
             case MADT_TYPE_IOAPIC :
                 ioapic = (madt_ioapic_t*)(ptr_t)&madt->apic_structs[i];

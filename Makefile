@@ -68,6 +68,7 @@ help :
 	@echo '  s32             build kernel32.bin and boot it in SMP-QEmu (SMP=2)'
 	@echo '  s64             build kernel64.bin and boot it in SMP-QEmu (SMP=2)'
 	@echo '                  use "make SMP=4 s64" to configure the number of CPUs'
+	@echo '  xaxis           build both kernels and copy to xaxis (using scp)'
 	@echo '  clean           remove intermediate and built files'
 
 debug :

@@ -38,6 +38,7 @@
 
 extern volatile unsigned cpu_online;
 
+char *vendor_string[] = {"unknown", "Intel", "AMD"};
 
 void reboot()
 {

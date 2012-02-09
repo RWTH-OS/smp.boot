@@ -22,6 +22,10 @@
 #include "stddef.h"
 #include "config.h"
 
+typedef enum {vend_unknown, vend_intel, vend_amd} vendor_t;
+
+extern char *vendor_string[];       // in cpu.c
+
 typedef struct {
     uint32_t mb_adr;        /* first position: address of multiboot info structure */
 
@@ -37,7 +41,7 @@ typedef struct {
     uint32_t cpuid_family;
     uint32_t cpuid_cachelinesize;
     uint32_t cpuid_lapic_id;
-    enum {vend_intel, vend_amd} cpu_vendor;
+    vendor_t cpu_vendor;
 
     /* BDA and EBDA */
     uint32_t ebda_adr;
