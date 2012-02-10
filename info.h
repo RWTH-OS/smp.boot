@@ -42,6 +42,8 @@ typedef struct {
     uint32_t cpuid_cachelinesize;
     uint32_t cpuid_lapic_id;
     vendor_t cpu_vendor;
+    char cpuid_processor_name[48];
+    uint16_t cpuid_threads_per_package;
 
     /* BDA and EBDA */
     uint32_t ebda_adr;

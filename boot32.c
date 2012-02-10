@@ -47,15 +47,19 @@ static void cpu_features()
         char str[13];
         uint32_t u32[3];
     } vendor;
-    void cpuid(unsigned func)
+    inline void cpuid(uint32_t func)
     {
         __asm__ volatile ("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(func));
     }
+    inline void cpuid_ext(uint32_t func, uint32_t ext)
+    {
+        __asm__ volatile ("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(func), "c"(ext));
+    }
 
     /* it was checked before, that the CPUID instruction is available */
-    cpuid(0);
-    hw_info.cpuid_max = eax;
-    vendor.u32[0] = ebx;
+    cpuid(0);                   // same for Intel and AMD
+    hw_info.cpuid_max = eax;    // EAX          - maximum valid number vor CPUID(x)
+    vendor.u32[0] = ebx;        // EBX:EDX:ECX  - Vendor String
     vendor.u32[1] = edx;
     vendor.u32[2] = ecx;
     vendor.str[12] = 0;
@@ -63,27 +67,151 @@ static void cpu_features()
     if (strcmp(vendor.str, "GenuineIntel") == 0) hw_info.cpu_vendor=vend_intel;
     else if (strcmp(vendor.str, "AuthenticAMD") == 0) hw_info.cpu_vendor=vend_amd;
     else {
-        printf("Vendor currently not supported: '%s'. Halt.\n");
+        printf("Vendor currently not supported: '%s'.\n");
         //halt();
     }
 
     if (hw_info.cpuid_max >= 1) {
         cpuid(1);
-        hw_info.cpuid_family = (eax>>8)&0x1F;
-        if (hw_info.cpu_vendor == vend_intel && (edx & (1<<19)) ) {
-            hw_info.cpuid_cachelinesize = (ebx >> 8) * 8;
-            // TODO : how to get this info on AMD or Intel w/o this flag?
+        if (hw_info.cpu_vendor == vend_intel) {
+            hw_info.cpuid_family = ((eax >> 8) & 0x0F) + ((eax >> 20) & 0xFF);
+            /*
+             * EDX, ECX: Feature Flags
+             */
+            if ( edx & (1<<19) ) {
+                hw_info.cpuid_cachelinesize = ((ebx >> 8) & 0xFF) * 8;
+            }
+            hw_info.cpuid_lapic_id = (ebx >> 24) & 0xFF;    /* only on P4 and later */
+        } else if (hw_info.cpu_vendor == vend_amd) {
+            hw_info.cpuid_family = (eax >> 8) & 0x0F;
+            if (hw_info.cpuid_family == 0x0F) {
+                hw_info.cpuid_family += (eax >> 20) & 0xFF;
+            }
+            // EBX[15:8] : Cache Line Size in Quadwords (8 Bytes)
+            hw_info.cpuid_cachelinesize = ((ebx >> 8) & 0xFF) * 8;
+
         }
-        hw_info.cpuid_lapic_id = (ebx >> 24) & 0xFF;    /* only on P4 and later */
     }
     printf("cache line size: %u, local APIC id: %u\n", hw_info.cpuid_cachelinesize, hw_info.cpuid_lapic_id);
 
     cpuid(0x80000000);
     hw_info.cpuid_high_max = eax;
 
+    if (hw_info.cpuid_high_max >= 0x80000004) {
+        cpuid(0x80000002);
+        ((uint32_t *)hw_info.cpuid_processor_name)[0] = eax;
+        ((uint32_t *)hw_info.cpuid_processor_name)[1] = ebx;
+        ((uint32_t *)hw_info.cpuid_processor_name)[2] = ecx;
+        ((uint32_t *)hw_info.cpuid_processor_name)[3] = edx;
+        cpuid(0x80000003);
+        ((uint32_t *)hw_info.cpuid_processor_name)[4] = eax;
+        ((uint32_t *)hw_info.cpuid_processor_name)[5] = ebx;
+        ((uint32_t *)hw_info.cpuid_processor_name)[6] = ecx;
+        ((uint32_t *)hw_info.cpuid_processor_name)[7] = edx;
+        cpuid(0x80000004);
+        ((uint32_t *)hw_info.cpuid_processor_name)[8] = eax;
+        ((uint32_t *)hw_info.cpuid_processor_name)[9] = ebx;
+        ((uint32_t *)hw_info.cpuid_processor_name)[10] = ecx;
+        ((uint32_t *)hw_info.cpuid_processor_name)[11] = edx;
+    }
+
     /*
-     * TODO : read info about manufacturer (Intel/AMD), CPU model, cache?, ...
+     * get number of cores/logical threads per package
+     *  - AMD: Function 0x8000_0008
      */
+    if (hw_info.cpu_vendor == vend_intel) {
+        cpuid(1);
+        if ((edx & (1<<28)) == 0) {    // HTT
+            hw_info.cpuid_threads_per_package = 1;
+            printf("Intel w/o HTT: nbr of threads/package: %u\n", hw_info.cpuid_threads_per_package);
+        } else {
+            hw_info.cpuid_threads_per_package = 1;
+            if (hw_info.cpuid_max >= 4) {
+                cpuid2(4, 0);
+                hw_info.cpuid_threads_per_package = ((eax>>26) & 0x3F) +1;
+                printf("Intel w/ HTT: nbr of threads/package: %u\n", hw_info.cpuid_threads_per_package);
+            }
+        }
+
+    } else if (hw_info.cpu_vendor == vend_amd) {
+        cpuid(1);
+        if ((edx & (1<<28)) == 0) {    // HTT
+            hw_info.cpuid_threads_per_package = 1;
+            printf("AMD w/o HTT: nbr of threads/package: %u\n", hw_info.cpuid_threads_per_package);
+        } else {
+            hw_info.cpuid_threads_per_package = 1;
+            if (hw_info.cpuid_high_max >= 0x80000008) {
+                cpuid(0x80000001);
+                if (ecx & (1<<1)) {
+                    /* has CmpLegacy */
+                    cpuid(0x80000008);
+                    hw_info.cpuid_threads_per_package = (ecx & 0xFF) +1;
+                    printf("AMD w/ CmpLegacy: nbr of threads/package: %u\n", hw_info.cpuid_threads_per_package);
+                } else {
+                    printf("AMD w/o CmpLegacy: nbr of threads/package: %u\n", hw_info.cpuid_threads_per_package);
+                }
+            }
+        }
+    }
+
+
+    /*
+     * TODO : read info about cache
+     *  - Intel: Function 4 (advanced), alternatively Function 2
+     *  - AMD: Functions 0x8000_0005 and 0x8000_0006
+     */
+    if (hw_info.cpu_vendor == vend_intel) {
+        if (hw_info.cpuid_max >= 0x04) {
+            /* use Function 4 */
+            unsigned u = 0;
+            unsigned way, partition, line, set;
+            while (1) {
+                cpuid_ext(0x04, u);
+                if ((eax & 0x1F) == 0) break;
+                printf("%u ", u);
+                switch (eax & 0x1F) {
+                    case 1 :  printf("data       "); break;
+                    case 2 :  printf("instruction"); break;
+                    case 3 :  printf("unified    "); break;
+                    default : printf("unknown    "); 
+                }
+                printf(" L%u", (eax>>5)&0x7);
+                printf(" shared by %u threads", ((eax>>26)&0x3F)+1);
+                way = ((ebx>>22)&0x3FF)+1;
+                partition = ((ebx>>12)&0x3FF)+1;
+                line = ((ebx)&0xFFF)+1;
+                set = ecx+1;
+                printf(" %u-way, line:%u, size:%ukB", way, line, way*partition*line*set/1024);
+
+
+
+
+
+
+                printf("\n");
+                if (u>10) break;     // security break
+                u++;
+            }
+
+
+        } else if (hw_info.cpuid_max >= 0x02) {
+            /* use Function 2 */
+        } else {
+            printf("no cache info for Intel found\n");
+        }
+
+    } else if (hw_info.cpu_vendor == vend_amd) {
+        if (hw_info.cpuid_high_max >= 0x80000006) {
+            /* use Function 0x8000_0005 for L1$ */
+
+            /* use Function 0x8000_0006 for L2$ (and L3$, if available) */
+
+        } else {
+            printf("no cache info for AMD found\n");
+        }
+
+    }
+    halt();
 
 }
 

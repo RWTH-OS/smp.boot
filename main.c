@@ -172,6 +172,9 @@ void main()
     if (my_cpu_info()->cpu_id == 0) {
         printf("*****************************************\n");
         printf("* CPU Vendor: %s \n", vendor_string[hw_info.cpu_vendor]);
+        printf("* CPU Name: '%s' \n", hw_info.cpuid_processor_name);
+        printf("* max CPUID fn: 0x%x, 0x%x\n", hw_info.cpuid_max, hw_info.cpuid_high_max);
+        printf("* Nbr of threads/package: %u \n", hw_info.cpuid_threads_per_package);
         printf("* Cache-Line Size: %u \n", (ptr_t)hw_info.cpuid_cachelinesize);
         printf("*****************************************\n");
     }
