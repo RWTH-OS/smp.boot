@@ -117,6 +117,7 @@ static void cpu_features()
 
     /*
      * get number of cores/logical threads per package
+     *  - Intel: Function 1
      *  - AMD: Function 0x8000_0008
      */
     if (hw_info.cpu_vendor == vend_intel) {
@@ -127,7 +128,7 @@ static void cpu_features()
         } else {
             hw_info.cpuid_threads_per_package = 1;
             if (hw_info.cpuid_max >= 4) {
-                cpuid2(4, 0);
+                cpuid_ext(4, 0);
                 hw_info.cpuid_threads_per_package = ((eax>>26) & 0x3F) +1;
                 printf("Intel w/ HTT: nbr of threads/package: %u\n", hw_info.cpuid_threads_per_package);
             }
@@ -182,27 +183,46 @@ static void cpu_features()
                 line = ((ebx)&0xFFF)+1;
                 set = ecx+1;
                 printf(" %u-way, line:%u, size:%ukB", way, line, way*partition*line*set/1024);
-
-
-
-
-
-
                 printf("\n");
+                // TODO : how to store it in hw_info?!
                 if (u>10) break;     // security break
                 u++;
             }
 
 
-        } else if (hw_info.cpuid_max >= 0x02) {
-            /* use Function 2 */
+        //} else if (hw_info.cpuid_max >= 0x02) {
+        //    /* use Function 2 */
         } else {
             printf("no cache info for Intel found\n");
         }
 
     } else if (hw_info.cpu_vendor == vend_amd) {
+        inline unsigned  amd_l23_assoc(unsigned code) {
+            switch (code) {
+                case 0 : return 0;
+                case 1 : return 1;
+                case 2 : return 2;
+                case 4 : return 4;
+                case 6 : return 8;
+                case 8 : return 16;
+                case 10 : return 32;
+                case 11 : return 48;
+                case 12 : return 64;
+                case 13 : return 96;
+                case 14 : return 128;
+                case 15 : return 255;
+            }
+        }
         if (hw_info.cpuid_high_max >= 0x80000006) {
             /* use Function 0x8000_0005 for L1$ */
+            cpuid(0x80000005);
+            printf("L1 instr. %u-way %u kB (line size: %u)\n", (edx>>16)&0xFF, edx>>24, (edx&0xFF));
+            printf("L1 data   %u-way %u kB (line size: %u)\n", (ecx>>16)&0xFF, ecx>>24, (ecx&0xFF));
+            // TODO : eax, ebx contain TLB information
+            
+            cpuid(0x80000006);
+            printf("L2        %u-way %u kB (line size: %u)\n", amd_l23_assoc((ecx>>12)&0x0F), ecx>>16, (ecx&0xFF));
+            printf("L3        %u-way %u kB (line size: %u)\n", amd_l23_assoc((edx>>12)&0x0F), (edx>>18)*512, (edx&0xFF));
 
             /* use Function 0x8000_0006 for L2$ (and L3$, if available) */
 
