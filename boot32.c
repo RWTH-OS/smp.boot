@@ -165,27 +165,44 @@ static void cpu_features()
         if (hw_info.cpuid_max >= 0x04) {
             /* use Function 4 */
             unsigned u = 0;
-            unsigned way, partition, line, set;
+            unsigned way, partition, set;
             while (1) {
                 cpuid_ext(0x04, u);
                 if ((eax & 0x1F) == 0) break;
                 printf("%u ", u);
                 switch (eax & 0x1F) {
-                    case 1 :  printf("data       "); break;
-                    case 2 :  printf("instruction"); break;
-                    case 3 :  printf("unified    "); break;
-                    default : printf("unknown    "); 
+                    case 1 :  
+                        printf("data       "); 
+                        hw_info.cpuid_cache[u].type = 'D';
+                        break;
+                    case 2 :  
+                        printf("instruction"); 
+                        hw_info.cpuid_cache[u].type = 'I';
+                        break;
+                    case 3 :  
+                        printf("unified    "); 
+                        hw_info.cpuid_cache[u].type = 'U';
+                        break;
+                    default : 
+                        printf("unknown    "); 
                 }
-                printf(" L%u", (eax>>5)&0x7);
-                printf(" shared by %u threads", ((eax>>26)&0x3F)+1);
+                hw_info.cpuid_cache[u].level = (eax>>5)&0x7;
+                printf(" L%u", hw_info.cpuid_cache[u].level);
+
+                hw_info.cpuid_cache[u].shared_by = ((eax>>26)&0x3F)+1;
+                printf(" shared by %u threads", hw_info.cpuid_cache[u].shared_by);
+
                 way = ((ebx>>22)&0x3FF)+1;
                 partition = ((ebx>>12)&0x3FF)+1;
-                line = ((ebx)&0xFFF)+1;
+                hw_info.cpuid_cache[u].line_size = ((ebx)&0xFFF)+1;
                 set = ecx+1;
-                printf(" %u-way, line:%u, size:%ukB", way, line, way*partition*line*set/1024);
+                hw_info.cpuid_cache[u].size = way*partition*hw_info.cpuid_cache[u].line_size*set;
+
+                printf(" %u-way, line:%u, size:%ukB", way, hw_info.cpuid_cache[u].line_size, hw_info.cpuid_cache[u].size);
                 printf("\n");
-                // TODO : how to store it in hw_info?!
-                if (u>10) break;     // security break
+                
+               
+                if (u>=MAX_CACHE) break;     // security break
                 u++;
             }
 
@@ -212,26 +229,57 @@ static void cpu_features()
                 case 14 : return 128;
                 case 15 : return 255;
             }
+            return 0;
         }
         if (hw_info.cpuid_high_max >= 0x80000006) {
             /* use Function 0x8000_0005 for L1$ */
             cpuid(0x80000005);
-            printf("L1 instr. %u-way %u kB (line size: %u)\n", (edx>>16)&0xFF, edx>>24, (edx&0xFF));
-            printf("L1 data   %u-way %u kB (line size: %u)\n", (ecx>>16)&0xFF, ecx>>24, (ecx&0xFF));
+            hw_info.cpuid_cache[0].type = 'I';
+            hw_info.cpuid_cache[0].level = 1;
+            hw_info.cpuid_cache[0].size = (edx>>24) * 1024;
+            hw_info.cpuid_cache[0].line_size = (edx&0xFF);
+            printf("L1 instr. %u-way %u kB (line size: %u)\n", 
+                    (edx>>16)&0xFF, 
+                    hw_info.cpuid_cache[0].size/1024, 
+                    hw_info.cpuid_cache[0].line_size);
+            hw_info.cpuid_cache[1].type = 'D';
+            hw_info.cpuid_cache[1].level = 1;
+            hw_info.cpuid_cache[1].size = (ecx>>24) *1024;
+            hw_info.cpuid_cache[1].line_size = (ecx&0xFF);
+            printf("L1 data   %u-way %u kB (line size: %u)\n", 
+                    (ecx>>16)&0xFF, 
+                    hw_info.cpuid_cache[1].size/1024, 
+                    hw_info.cpuid_cache[1].line_size);
             // TODO : eax, ebx contain TLB information
             
             cpuid(0x80000006);
-            printf("L2        %u-way %u kB (line size: %u)\n", amd_l23_assoc((ecx>>12)&0x0F), ecx>>16, (ecx&0xFF));
-            printf("L3        %u-way %u kB (line size: %u)\n", amd_l23_assoc((edx>>12)&0x0F), (edx>>18)*512, (edx&0xFF));
+            hw_info.cpuid_cache[2].size = (ecx>>16) * 1024;
+            if (hw_info.cpuid_cache[2].size > 0) {
+                hw_info.cpuid_cache[2].type = 'U';
+                hw_info.cpuid_cache[2].level = 2;
+                hw_info.cpuid_cache[2].line_size = (ecx&0xFF);
+                printf("L2        %u-way %u kB (line size: %u)\n", 
+                        amd_l23_assoc((ecx>>12)&0x0F), 
+                        hw_info.cpuid_cache[2].size / 1024, 
+                        hw_info.cpuid_cache[2].line_size);
+            }
 
-            /* use Function 0x8000_0006 for L2$ (and L3$, if available) */
+            hw_info.cpuid_cache[3].size = (edx>>18)*512*1024;
+            if (hw_info.cpuid_cache[3].size > 0) {
+                hw_info.cpuid_cache[3].type = 'U';
+                hw_info.cpuid_cache[3].level = 3;
+                hw_info.cpuid_cache[3].line_size = (edx&0xFF);
+                printf("L3        %u-way %u kB (line size: %u)\n", 
+                        amd_l23_assoc((edx>>12)&0x0F), 
+                        hw_info.cpuid_cache[3].size/1024,
+                        hw_info.cpuid_cache[3].line_size);
+            }
 
         } else {
             printf("no cache info for AMD found\n");
         }
 
     }
-    halt();
 
 }
 

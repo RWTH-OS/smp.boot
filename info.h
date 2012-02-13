@@ -44,6 +44,14 @@ typedef struct {
     vendor_t cpu_vendor;
     char cpuid_processor_name[48];
     uint16_t cpuid_threads_per_package;
+    struct {
+        uint8_t level;
+        char type;      // Data, Instruction, Unified
+        uint8_t shared_by;
+        uint8_t line_size;
+        uint32_t size;
+        // associativity... (n-way)?
+    } cpuid_cache[MAX_CACHE];
 
     /* BDA and EBDA */
     uint32_t ebda_adr;

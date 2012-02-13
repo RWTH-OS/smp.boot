@@ -36,6 +36,11 @@
 #define MAX_PCIE  1
 
 /*
+ * maximum number of Cache levels in hw_info.cpuid_cache[]
+ */
+#define MAX_CACHE 4
+
+/*
  * page frame for SMP startup code (phys. adr. is SMP_FRAME << 12)
  */
 #define SMP_FRAME  0x88
