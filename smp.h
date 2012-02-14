@@ -27,6 +27,7 @@
  * per-cpu info structure
  */
 #define SMP_FLAG_HALT   (1u <<0)
+#define SMP_FLAG_HALTED (1u <<1)
 typedef struct {
     unsigned cpu_id;   
     volatile unsigned flags;

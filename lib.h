@@ -22,8 +22,12 @@
 // note: var and bit are evaluated only once!
 #define BIT_SET(var, bit)       ((var) |=  (1 << (bit)))
 #define BIT_CLEAR(var, bit)     ((var) &= ~(1 << (bit)))
+#define MASK_SET(var, mask)       ((var) |=  (mask))
+#define MASK_CLEAR(var, mask)     ((var) &= ~(mask))
 #define IS_BIT_SET(var, bit)    (((var) & (1 << bit)) != 0)
 #define IS_BIT_CLEAR(var, bit)  (((var) & (1 << bit)) == 0)
+#define IS_MASK_SET(var, mask)    (((var) & (mask)) != 0)
+#define IS_MASK_CLEAR(var, mask)  (((var) & (mask)) == 0)
 
 void *memcpy(void *dest, const void *src, int count);
 void *memset(void *dest, int val, int count);

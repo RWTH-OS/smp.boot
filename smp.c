@@ -47,20 +47,23 @@ void smp_halt(void)
 {
     unsigned if_backup;
     smp_status(STATUS_HALT);
-    my_cpu_info()->flags |= SMP_FLAG_HALT;
+    MASK_SET(my_cpu_info()->flags, SMP_FLAG_HALT|SMP_FLAG_HALTED);
     if_backup = sti();
-    while (my_cpu_info()->flags & SMP_FLAG_HALT) {
+    while (IS_MASK_SET(my_cpu_info()->flags, SMP_FLAG_HALT)) {
         __asm__ volatile ("hlt");
     }
+    MASK_CLEAR(my_cpu_info()->flags, SMP_FLAG_HALTED);
     smp_status(STATUS_RUNNING);
     if (!if_backup) cli();
 }
 
 void smp_wakeup(unsigned cpu_id)
 {
-    stack[cpu_id].info.flags &= ~SMP_FLAG_HALT;
+    MASK_CLEAR(stack[cpu_id].info.flags, SMP_FLAG_HALT);
     udelay(5);
-    send_ipi(cpu_id, 128);
-    udelay(5);
+    while (IS_MASK_SET(stack[cpu_id].info.flags, SMP_FLAG_HALTED)) {
+        send_ipi(cpu_id, 128);
+        udelay(5);
+    }
 }
 
