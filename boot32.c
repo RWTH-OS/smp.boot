@@ -74,21 +74,21 @@ static void cpu_features()
     if (hw_info.cpuid_max >= 1) {
         cpuid(1);
         if (hw_info.cpu_vendor == vend_intel) {
-            hw_info.cpuid_family = ((eax >> 8) & 0x0F) + ((eax >> 20) & 0xFF);
+            hw_info.cpuid_family = BITS_FROM_CNT(eax, 8, 4) + BITS_FROM_CNT(eax, 20, 8);
             /*
              * EDX, ECX: Feature Flags
              */
             if ( edx & (1<<19) ) {
-                hw_info.cpuid_cachelinesize = ((ebx >> 8) & 0xFF) * 8;
+                hw_info.cpuid_cachelinesize = BITS_FROM_CNT(ebx, 8, 8) * 8;
             }
-            hw_info.cpuid_lapic_id = (ebx >> 24) & 0xFF;    /* only on P4 and later */
+            hw_info.cpuid_lapic_id = BITS_FROM_CNT(ebx, 24, 8);    /* only on P4 and later */
         } else if (hw_info.cpu_vendor == vend_amd) {
-            hw_info.cpuid_family = (eax >> 8) & 0x0F;
+            hw_info.cpuid_family = BITS_FROM_CNT(eax, 8, 4);
             if (hw_info.cpuid_family == 0x0F) {
-                hw_info.cpuid_family += (eax >> 20) & 0xFF;
+                hw_info.cpuid_family += BITS_FROM_CNT(eax, 20, 8);
             }
             // EBX[15:8] : Cache Line Size in Quadwords (8 Bytes)
-            hw_info.cpuid_cachelinesize = ((ebx >> 8) & 0xFF) * 8;
+            hw_info.cpuid_cachelinesize = BITS_FROM_CNT(ebx, 8, 8) * 8;
 
         }
     }
@@ -122,31 +122,31 @@ static void cpu_features()
      */
     if (hw_info.cpu_vendor == vend_intel) {
         cpuid(1);
-        if ((edx & (1<<28)) == 0) {    // HTT
+        if (IS_BIT_CLEAR(edx, 28)) {    // HTT
             hw_info.cpuid_threads_per_package = 1;
             printf("Intel w/o HTT: nbr of threads/package: %u\n", hw_info.cpuid_threads_per_package);
         } else {
             hw_info.cpuid_threads_per_package = 1;
             if (hw_info.cpuid_max >= 4) {
                 cpuid_ext(4, 0);
-                hw_info.cpuid_threads_per_package = ((eax>>26) & 0x3F) +1;
+                hw_info.cpuid_threads_per_package = BITS_FROM_CNT(eax, 26, 6) +1;
                 printf("Intel w/ HTT: nbr of threads/package: %u\n", hw_info.cpuid_threads_per_package);
             }
         }
 
     } else if (hw_info.cpu_vendor == vend_amd) {
         cpuid(1);
-        if ((edx & (1<<28)) == 0) {    // HTT
+        if (IS_BIT_CLEAR(edx, 28)) {    // HTT
             hw_info.cpuid_threads_per_package = 1;
             printf("AMD w/o HTT: nbr of threads/package: %u\n", hw_info.cpuid_threads_per_package);
         } else {
             hw_info.cpuid_threads_per_package = 1;
             if (hw_info.cpuid_high_max >= 0x80000008) {
                 cpuid(0x80000001);
-                if (ecx & (1<<1)) {
+                if (IS_BIT_SET(ecx, 1)) {
                     /* has CmpLegacy */
                     cpuid(0x80000008);
-                    hw_info.cpuid_threads_per_package = (ecx & 0xFF) +1;
+                    hw_info.cpuid_threads_per_package = BITS_FROM_CNT(ecx, 0, 8) +1;
                     printf("AMD w/ CmpLegacy: nbr of threads/package: %u\n", hw_info.cpuid_threads_per_package);
                 } else {
                     printf("AMD w/o CmpLegacy: nbr of threads/package: %u\n", hw_info.cpuid_threads_per_package);
@@ -168,9 +168,9 @@ static void cpu_features()
             unsigned way, partition, set;
             while (1) {
                 cpuid_ext(0x04, u);
-                if ((eax & 0x1F) == 0) break;
+                if (BITS_FROM_CNT(eax, 0, 5) == 0) break;
                 printf("%u ", u);
-                switch (eax & 0x1F) {
+                switch (BITS_FROM_CNT(eax, 0, 5)) {
                     case 1 :  
                         printf("data       "); 
                         hw_info.cpuid_cache[u].type = 'D';
@@ -186,19 +186,21 @@ static void cpu_features()
                     default : 
                         printf("unknown    "); 
                 }
-                hw_info.cpuid_cache[u].level = (eax>>5)&0x7;
+                hw_info.cpuid_cache[u].level = BITS_FROM_CNT(eax, 5, 3);
                 printf(" L%u", hw_info.cpuid_cache[u].level);
 
-                hw_info.cpuid_cache[u].shared_by = ((eax>>26)&0x3F)+1;
+                hw_info.cpuid_cache[u].shared_by = BITS_FROM_CNT(eax, 26, 6)+1;
                 printf(" shared by %u threads", hw_info.cpuid_cache[u].shared_by);
 
-                way = ((ebx>>22)&0x3FF)+1;
-                partition = ((ebx>>12)&0x3FF)+1;
-                hw_info.cpuid_cache[u].line_size = ((ebx)&0xFFF)+1;
+                way = BITS_FROM_CNT(ebx, 22, 10)+1;
+                partition = BITS_FROM_CNT(ebx, 12, 10)+1;
+                hw_info.cpuid_cache[u].line_size = BITS_FROM_CNT(ebx, 0, 12)+1;
                 set = ecx+1;
                 hw_info.cpuid_cache[u].size = way*partition*hw_info.cpuid_cache[u].line_size*set;
 
-                printf(" %u-way, line:%u, size:%ukB", way, hw_info.cpuid_cache[u].line_size, hw_info.cpuid_cache[u].size);
+                printf(" %u-way, line:%u, size:%ukB", way, 
+                        hw_info.cpuid_cache[u].line_size, 
+                        hw_info.cpuid_cache[u].size);
                 printf("\n");
                 
                
@@ -236,41 +238,41 @@ static void cpu_features()
             cpuid(0x80000005);
             hw_info.cpuid_cache[0].type = 'I';
             hw_info.cpuid_cache[0].level = 1;
-            hw_info.cpuid_cache[0].size = (edx>>24) * 1024;
-            hw_info.cpuid_cache[0].line_size = (edx&0xFF);
+            hw_info.cpuid_cache[0].size = BITS_FROM_TO(edx, 24, 31) * 1024;
+            hw_info.cpuid_cache[0].line_size = BITS_FROM_CNT(edx, 0, 8);
             printf("L1 instr. %u-way %u kB (line size: %u)\n", 
-                    (edx>>16)&0xFF, 
+                    BITS_FROM_CNT(edx, 16, 8), 
                     hw_info.cpuid_cache[0].size/1024, 
                     hw_info.cpuid_cache[0].line_size);
             hw_info.cpuid_cache[1].type = 'D';
             hw_info.cpuid_cache[1].level = 1;
-            hw_info.cpuid_cache[1].size = (ecx>>24) *1024;
-            hw_info.cpuid_cache[1].line_size = (ecx&0xFF);
+            hw_info.cpuid_cache[1].size = BITS_FROM_TO(ecx, 24, 31) *1024;
+            hw_info.cpuid_cache[1].line_size = BITS_FROM_TO(ecx, 0, 7);
             printf("L1 data   %u-way %u kB (line size: %u)\n", 
-                    (ecx>>16)&0xFF, 
+                    BITS_FROM_CNT(ecx, 16, 8), 
                     hw_info.cpuid_cache[1].size/1024, 
                     hw_info.cpuid_cache[1].line_size);
             // TODO : eax, ebx contain TLB information
             
             cpuid(0x80000006);
-            hw_info.cpuid_cache[2].size = (ecx>>16) * 1024;
+            hw_info.cpuid_cache[2].size = BITS_FROM_TO(ecx, 16, 31) * 1024;
             if (hw_info.cpuid_cache[2].size > 0) {
                 hw_info.cpuid_cache[2].type = 'U';
                 hw_info.cpuid_cache[2].level = 2;
-                hw_info.cpuid_cache[2].line_size = (ecx&0xFF);
+                hw_info.cpuid_cache[2].line_size = BITS_FROM_TO(ecx, 0, 7);
                 printf("L2        %u-way %u kB (line size: %u)\n", 
-                        amd_l23_assoc((ecx>>12)&0x0F), 
+                        amd_l23_assoc(BITS_FROM_CNT(ecx, 12, 4)), 
                         hw_info.cpuid_cache[2].size / 1024, 
                         hw_info.cpuid_cache[2].line_size);
             }
 
-            hw_info.cpuid_cache[3].size = (edx>>18)*512*1024;
+            hw_info.cpuid_cache[3].size = BITS_FROM_TO(edx, 18, 31)*512*1024;
             if (hw_info.cpuid_cache[3].size > 0) {
                 hw_info.cpuid_cache[3].type = 'U';
                 hw_info.cpuid_cache[3].level = 3;
-                hw_info.cpuid_cache[3].line_size = (edx&0xFF);
+                hw_info.cpuid_cache[3].line_size = BITS_FROM_TO(edx, 0, 7);
                 printf("L3        %u-way %u kB (line size: %u)\n", 
-                        amd_l23_assoc((edx>>12)&0x0F), 
+                        amd_l23_assoc(BITS_FROM_CNT(edx, 12, 4)), 
                         hw_info.cpuid_cache[3].size/1024,
                         hw_info.cpuid_cache[3].line_size);
             }
