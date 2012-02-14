@@ -438,6 +438,11 @@ void bench_worker_cut(barrier_t *barr, void *p_buffer, void *p_contender)
             unsigned r;
             static flag_t flag = FLAG_INITIALIZER;
 
+            if (myid == 0) {
+                printf("warm-up       : ");
+                worker(p_buffer, 16*KB, 32, AT_UPDATE, 1);
+                printf("\n");
+            }
             for (r = 16*KB; r <= 16*MB; r *= 2) {
                 barrier(&barr2);
                 if (myid == 0) {
@@ -465,6 +470,11 @@ void bench_worker_cut(barrier_t *barr, void *p_buffer, void *p_contender)
             unsigned r;
             static flag_t flag = FLAG_INITIALIZER;
 
+            if (myid == 0) {
+                printf("warm-up       : ");
+                worker(p_buffer, 16*KB, 32, AT_UPDATE, 1);
+                printf("\n");
+            }
             for (r = 16*KB; r <= 16*MB; r *= 2) {
                 barrier(&barr2);
                 if (myid == 0) {

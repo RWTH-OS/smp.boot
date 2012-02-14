@@ -93,9 +93,15 @@
  */
 #if 1
 /* real workload for benchmarks (set #if 1) */
+
 #define BENCH_WORK_FLAGS          0
 //#define BENCH_WORK_FLAGS          (MM_WRITE_THROUGH)
+//#define BENCH_WORK_FLAGS          (MM_CACHE_DISABLE)
+
+//#define BENCH_LOAD_FLAGS          0
 #define BENCH_LOAD_FLAGS          (MM_WRITE_THROUGH)
+//#define BENCH_LOAD_FLAGS          (MM_CACHE_DISABLE)
+
 #define BENCH_HOURGLAS_SEC     10u
 #define BENCH_MIN_STRIDE_POW2   4  
 #define BENCH_MAX_STRIDE_POW2   9
