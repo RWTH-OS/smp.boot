@@ -6,7 +6,7 @@ HFILES=$(shell ls *.h)
 
 ASMFILES=$(shell ls *.asm)
 
-OPT=0
+OPT=2
 
 CFLAGS=-c -O$(OPT) -std=c99
 # -O          - basic optimization

@@ -432,6 +432,33 @@ void bench_worker_cut(barrier_t *barr, void *p_buffer, void *p_contender)
      * similar worker-benchmark, but different cuts through the parameter dimensions.
      */
     if (cpu_online > 1) {
+        if (myid==0) printf("1 worker on range 16k (L1$), load on range 16kB .. 16MB -------------------\n");
+
+        if (collective_only(0x0003)) {
+            unsigned r;
+            static flag_t flag = FLAG_INITIALIZER;
+
+            for (r = 16*KB; r <= 16*MB; r *= 2) {
+                barrier(&barr2);
+                if (myid == 0) {
+                    /* benchmark/worker */
+                    udelay(10*1000);
+
+                    printf("load %5u kB : ", r>>10);
+                    worker(p_buffer, 16*KB, 32, AT_UPDATE, BENCH_HOURGLAS_SEC);
+                    printf("\n");
+
+                    flag_signal(&flag);
+                } else {
+                    /* load */
+                    load_until_flag(p_contender, r, 32, &flag);
+                }
+            }
+
+            collective_end();
+        }
+
+        barrier(barr);
         if (myid==0) printf("1 worker on range 128kB (L2$), load on range 16kB .. 16MB -------------------\n");
 
         if (collective_only(0x0003)) {
