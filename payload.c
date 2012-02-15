@@ -80,13 +80,41 @@ void payload_benchmark()
      *   Benchmarks
      */
 
-    bench_hourglass(&barr);
-    bench_hourglass_worker(&barr, p_contender);
-    bench_hourglass_hyperthread(&barr);
+    //bench_hourglass(&barr);
+    //bench_hourglass_worker(&barr, p_contender);
+    //bench_hourglass_hyperthread(&barr);
 
     barrier(&barr);
 
     //bench_worker(&barr, p_buffer, p_contender);
+    
+    if (myid == 0) {
+        heap_reconfig(p_buffer, buffer_size, 0);
+        heap_reconfig(p_contender, contender_size, MM_CACHE_DISABLE);
+        barrier(&barr);
+        printf("========  Benchmark: WB / Load: CD ===================================\n");
+    } else {
+        barrier(&barr);
+        tlb_shootdown(p_buffer, buffer_size);
+        tlb_shootdown(p_contender, contender_size);
+    }
+    barrier(&barr);
+
+    bench_worker_cut(&barr, p_buffer, p_contender, 16*KB);
+    bench_worker_cut(&barr, p_buffer, p_contender, 128*KB);
+
+    if (myid == 0) {
+        heap_reconfig(p_buffer, buffer_size, 0);
+        heap_reconfig(p_contender, contender_size, MM_WRITE_THROUGH);
+        barrier(&barr);
+        printf("========  Benchmark: WB / Load: WT ===================================\n");
+    } else {
+        barrier(&barr);
+        tlb_shootdown(p_buffer, buffer_size);
+        tlb_shootdown(p_contender, contender_size);
+    }
+    barrier(&barr);
+
     bench_worker_cut(&barr, p_buffer, p_contender, 16*KB);
     bench_worker_cut(&barr, p_buffer, p_contender, 128*KB);
 

@@ -28,6 +28,8 @@ int mm_init();
 #define MM_CACHE_DISABLE    0x0020
 
 void *heap_alloc(unsigned nbr_pages, unsigned flags);
+void heap_reconfig(void *p, size_t size, unsigned flags);
+void tlb_shootdown(void *adr, size_t size);
 
 
 

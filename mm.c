@@ -321,7 +321,8 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
         if (flags & MAP_PWT) pt[ipt].page.pwt = 1;
         if (flags & MAP_PCD) pt[ipt].page.pcd = 1;
         /* invalidate TLB for page containing the address just mapped */
-        __asm__ volatile ("invlpg %0" : : "m"(*((int*)((ptr_t)frame<<PAGE_BITS))));
+        //__asm__ volatile ("invlpg %0" : : "m"(*((int*)((ptr_t)frame<<PAGE_BITS))));   // TODO : this should be wrong, see below...
+        __asm__ volatile ("invlpg %0" : : "m"(*(int*)adr));
     }
 #   else
     unsigned ipd1 = pd1_index(adr);
@@ -362,6 +363,113 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
 }
 
 
+static void reconf_adr(void *adr, unsigned flags)
+{
+    if (flags & ~(MAP_PWT|MAP_PCD)) {
+        printf("WARNING (reconf_adr): flags %d not supported, yet!\n", flags);
+        return;
+    }
+    IFV printf("reconf_adr(adr=0x%x, flags=0x%x)\n", adr, flags);
+
+#   if __x86_64__
+    unsigned ipd1 = pd1_index(adr);
+    IFVV printf("map: pd1=0x%x ipd1=%u\n", pd1, ipd1);
+
+    pd2_entry_t *pd2;
+    if (pd1[ipd1].dir.p == 0) {
+        /* not mapped. */
+        printf("WARNING (reconf_adr): pd2 not mapped!\n");
+        return;
+    } else {
+        pd2 = (pd2_entry_t*)map_temporary(pd1[ipd1].dir.frame);
+    }
+
+    unsigned ipd2 = pd2_index(adr);
+    IFVV printf("map: pd2=0x%x ipd2=%u\n", pd2, ipd2);
+
+    pd3_entry_t *pd3;
+    if (pd2[ipd2].dir.p == 0) {
+        /* not mapped. */
+        printf("WARNING (reconf_adr): pd3 not mapped!\n");
+        return;
+    } else {
+        pd3 = (pd3_entry_t*)map_temporary(pd2[ipd2].dir.frame);
+    }
+    
+    unsigned ipd3 = pd3_index(adr);
+    IFVV printf("map: pd3=0x%x ipd3=%u\n", pd3, ipd3);
+
+    pt_entry_t *pt;
+    if (pd3[ipd3].dir.p == 0) {
+        /* not mapped. */
+        printf("WARNING (reconf_adr): pt not mapped!\n");
+        return;
+    } else {
+        pt = (pt_entry_t*)map_temporary(pd3[ipd3].dir.frame);
+    }
+
+    unsigned ipt = pt_index(adr);
+    IFVV printf("map: dt=0x%x ipt=%u\n", pt, ipt);
+    if (pt[ipt].page.p == 0) {
+        /* not mapped. */
+        printf("WARNING (reconf_adr): page not mapped!\n");
+        return;
+    } else {
+        if (flags & MAP_PWT) {
+            pt[ipt].page.pwt = 1;
+        } else {
+            pt[ipt].page.pwt = 0;
+        }
+        if (flags & MAP_PCD) {
+            pt[ipt].page.pcd = 1;
+        } else {
+            pt[ipt].page.pcd = 0;
+        }
+        IFV printf("set page 0x%x : pwt=%u pcd=%u\n", adr, pt[ipt].page.pwt, pt[ipt].page.pcd);
+
+        __sync_synchronize();       // do I need a store barrier here?!
+        
+        /* invalidate TLB for page containing the address just reconfigured */
+        //__asm__ volatile ("invlpg %0" : : "m"(*((int*)((ptr_t)frame<<PAGE_BITS))));
+        __asm__ volatile ("invlpg %0" : : "m"(*(int*)adr));
+    }
+#   else
+    unsigned ipd1 = pd1_index(adr);
+
+    pt_entry_t *pt;
+    if (pd1[ipd1].dir.p == 0) {
+        /* not mapped. */
+        printf("WARNING (reconf_adr): pt not mapped!\n");
+        return;
+    } else {
+        pt = (pt_entry_t*)map_temporary(pd1[ipd1].dir.frame);
+    }
+
+    unsigned ipt = pt_index(adr);
+    IFVV printf("map_frame_to_adr: ipt = %u\n", ipt);
+    if (pt[ipt].page.p == 0) {
+        /* not mapped. */
+        printf("WARNING (reconf_adr): page not mapped!\n");
+        return;
+    } else {
+        if (flags & MAP_PWT) {
+            pt[ipt].page.pwt = 1;
+        } else {
+            pt[ipt].page.pwt = 0;
+        }
+        if (flags & MAP_PCD) {
+            pt[ipt].page.pcd = 1;
+        } else {
+            pt[ipt].page.pcd = 0;
+        }
+
+        /* invalidate TLB for page containing the address just mapped */
+        //__asm__ volatile ("invlpg %0" : : "m"(*((int*)((ptr_t)frame<<PAGE_BITS))));
+        __asm__ volatile ("invlpg %0" : : "m"(*(int*)adr));
+    }
+#   endif
+    IFVV printf("reconf_adr: done\n");
+}
 
 
 
@@ -504,6 +612,12 @@ int mm_init()
 
 static page_t next_virt_page = 0x400;
 
+
+
+
+
+
+
 void *heap_alloc(unsigned nbr_pages, unsigned flags)
 {
     unsigned i;
@@ -526,5 +640,39 @@ void *heap_alloc(unsigned nbr_pages, unsigned flags)
 
     mutex_unlock(&pt_mutex);
     return res;
+}
+
+void heap_reconfig(void *adr, size_t size, unsigned flags)
+{
+    unsigned map_flags = 0;
+    void *p;
+
+    IFV printf("heap_reconfig(adr=0x%x, size=%u, flags=0x%x)\n", adr, size, flags);
+
+    if (flags & MM_WRITE_THROUGH) map_flags |= MAP_PWT;
+    if (flags & MM_CACHE_DISABLE) map_flags |= MAP_PCD;
+    IFV printf("map_flags=%x\n", map_flags);
+
+    adr = (void*)((ptr_t)adr & ~PAGE_MASK);          // round down to PAGE
+    size = (size+(PAGE_MASK)) & ~PAGE_MASK;
+    IFV printf("adr=0x%x, size=%x\n", adr, size);
+
+    mutex_lock(&pt_mutex);
+    for (p = adr ; p < adr+size; p += PAGE_SIZE) {
+        reconf_adr(p, map_flags);
+    }
+    mutex_unlock(&pt_mutex);
+}
+
+void tlb_shootdown(void *adr, size_t size)
+{
+    void *p;
+    adr = (void*)((ptr_t)adr & ~PAGE_MASK);          // round down to PAGE
+    size = (size+(PAGE_MASK)) & ~PAGE_MASK;
+
+    for (p = adr ; p < adr+size; p += PAGE_SIZE) {
+        __asm__ volatile ("invlpg %0" : : "m"(*(int*)p));
+    }
+
 }
 

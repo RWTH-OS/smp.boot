@@ -158,6 +158,46 @@ void tests_mm(void)
     }
 
 }
+void tests_mm_reconf()
+{
+    unsigned myid = my_cpu_info()->cpu_id;
+    void *p_buffer = 0;
+    size_t size = 16*KB;        // 4 pages, fits into L1$
+
+    void membench() 
+    {
+        unsigned i, j;
+        uint64_t t1, t2;
+        volatile uint32_t *p = (volatile uint32_t*)p_buffer;
+        t1 = rdtsc();
+        for (i=0; i<4096; i++) {
+            for (j=0; j<size; j += 4) {
+                p[10]++;
+            }
+        }
+        t2 = rdtsc();
+        printf("membench: %u tics/access\n", (t2-t1)/4096/(size/4));
+    }
+
+    if (myid == 0) {
+        udelay(100000);
+        p_buffer = heap_alloc(size/PAGE_SIZE, MM_CACHE_DISABLE);
+        membench();
+        membench();
+        heap_reconfig(p_buffer, size, MM_WRITE_THROUGH);
+        membench();
+        membench();
+        heap_reconfig(p_buffer, size, 0);
+        membench();
+        membench();
+        heap_reconfig(p_buffer, size, MM_CACHE_DISABLE);
+        membench();
+        membench();
+
+    }
+
+
+}
 
 void tests_ipi(void)
 {
@@ -256,6 +296,7 @@ void tests_doall(void)
     //tests_flag();
 
     //tests_mm();
+    tests_mm_reconf();
 
     //tests_ipi();
 

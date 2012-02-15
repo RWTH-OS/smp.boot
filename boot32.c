@@ -41,7 +41,7 @@ static inline void halt()
  * see: http://osdev.berlios.de/cpuid.html
  */
 
-static uint16_t * pStatus = 0xB8004;
+static uint16_t * pStatus = (void*)0xB8004;
 
 static void cpu_features()
 {
