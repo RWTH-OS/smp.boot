@@ -328,6 +328,10 @@ void itoa (char *buf, int base, long d)
 mutex_t mutex_printf = MUTEX_INITIALIZER;
 #endif
 
+/*
+ * TODO : does not work on xaxis with 32 bit
+ *          (Qemu32 works...)
+ */
 void printf (const char *format, ...)
 {
   int c;

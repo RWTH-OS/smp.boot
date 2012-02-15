@@ -42,7 +42,10 @@ typedef struct {
     uint32_t cpuid_cachelinesize;
     uint32_t cpuid_lapic_id;
     vendor_t cpu_vendor;
-    char cpuid_processor_name[48];
+    union {
+        char c[48];
+        uint32_t u32[12];
+    } cpuid_processor_name;
     uint16_t cpuid_threads_per_package;
     struct {
         uint8_t level;
@@ -86,6 +89,7 @@ typedef struct {
     /* TSC */
     //uint64_t tsc_per_sec;
     uint32_t tsc_per_usec;      
+    uint32_t usec_per_mtsc;
                                 /* ATTN: when using uint64_t (as in tsc_per_sec),
                                  * this structure behaves differently in 32 bit and 64 bit.
                                  * And it is used from boot32.c in 32 bit mode and later in the 64 bit kernel also. 

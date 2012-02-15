@@ -103,7 +103,7 @@ void hourglass(unsigned sec)
 
     //p_min = (1000*min/avg)-1000;
     //p_max = (1000*max/avg)-1000;
-    printf("[%u] cnt : min/avg/max %8u : %u/%u/%u " /* "[%i.%i:%i.%i]" */ "\n", 
+    printf("[%u] cnt : min/avg/max %8u : %u/%u/%u " /* "[%i.%i:%i.%i]" */ , 
             my_cpu_info()->cpu_id,
             (ptr_t)cnt, (ptr_t)min, (ptr_t)avg, (ptr_t)max /* , p_min/10, abs(p_min)%10, p_max/10, abs(p_max)%10 */ );
 }
@@ -113,12 +113,17 @@ void load_until_flag(void *buffer, size_t size, size_t stride, flag_t *flag)
     typedef ptr_t mytype;
     size_t s;
     mytype *p = buffer;
+    uint64_t t1, t2, cnt=0;
 
+    t1 = rdtsc();
     while (!flag_trywait(flag)) {
         for (s=0; s<size/sizeof(mytype); s+=(stride/sizeof(mytype))) {
             p[s]++;              /* read/write */
+            cnt += sizeof(mytype);
         }
     }
+    t2 = rdtsc();
+    printf(" [%u MB/s]", (((cnt*hw_info.tsc_per_usec*1000)/(t2-t1))*1000u)>>20);
 
 }
 
@@ -242,6 +247,7 @@ void bench_hourglass(barrier_t *barr)
         udelay(1000000);
         printf("others halt         ");
         hourglass(BENCH_HOURGLAS_SEC);
+        printf("\n");
 
         collective_end();
     }
@@ -289,6 +295,7 @@ void bench_hourglass_worker(barrier_t *barr, void *p_contender)
                     flag_signal(&flag);
                 } else {
                     load_until_flag(p_contender, size, 32, &flag);
+                    printf("\n");
                 }
 
                 barrier(&barr2);
@@ -310,8 +317,10 @@ void bench_hourglass_hyperthread(barrier_t *barr)
         if (collective_only(0x0001 | (1 << (cpu_online/2)))) {
             if (myid == 0) {
                 hourglass(BENCH_HOURGLAS_SEC);
+                printf("\n");
             } else { 
                 hourglass(BENCH_HOURGLAS_SEC);
+                printf("\n");
             }
             collective_end();
         }
@@ -423,7 +432,7 @@ label_break:
 }
 
 
-void bench_worker_cut(barrier_t *barr, void *p_buffer, void *p_contender)
+void bench_worker_cut(barrier_t *barr, void *p_buffer, void *p_contender, size_t worker_size)
 {
     unsigned myid = my_cpu_info()->cpu_id;
     static barrier_t barr2 = BARRIER_INITIALIZER(2);        // barrier for two
@@ -432,7 +441,7 @@ void bench_worker_cut(barrier_t *barr, void *p_buffer, void *p_contender)
      * similar worker-benchmark, but different cuts through the parameter dimensions.
      */
     if (cpu_online > 1) {
-        if (myid==0) printf("1 worker on range 16k (L1$), load on range 16kB .. 16MB -------------------\n");
+        if (myid==0) printf("1 worker on range %uk (L1$), load on range 16kB .. 16MB -------------------\n", worker_size/1024);
 
         if (collective_only(0x0003)) {
             unsigned r;
@@ -440,60 +449,29 @@ void bench_worker_cut(barrier_t *barr, void *p_buffer, void *p_contender)
 
             if (myid == 0) {
                 printf("warm-up       : ");
-                worker(p_buffer, 16*KB, 32, AT_UPDATE, 1);
+                worker(p_buffer, worker_size, 32, AT_UPDATE, 1);
                 printf("\n");
             }
-            for (r = 16*KB; r <= 16*MB; r *= 2) {
+            for (r = 16*KB; r <= 16*MB; r = (r>=512*KB && r< 8*MB)?r+512*KB:r*2) {
                 barrier(&barr2);
                 if (myid == 0) {
                     /* benchmark/worker */
                     udelay(10*1000);
 
                     printf("load %5u kB : ", r>>10);
-                    worker(p_buffer, 16*KB, 32, AT_UPDATE, BENCH_HOURGLAS_SEC);
-                    printf("\n");
+                    worker(p_buffer, worker_size, 32, AT_UPDATE, BENCH_HOURGLAS_SEC);
 
                     flag_signal(&flag);
                 } else {
                     /* load */
                     load_until_flag(p_contender, r, 32, &flag);
+                    printf("\n");
                 }
             }
 
             collective_end();
         }
 
-        barrier(barr);
-        if (myid==0) printf("1 worker on range 128kB (L2$), load on range 16kB .. 16MB -------------------\n");
-
-        if (collective_only(0x0003)) {
-            unsigned r;
-            static flag_t flag = FLAG_INITIALIZER;
-
-            if (myid == 0) {
-                printf("warm-up       : ");
-                worker(p_buffer, 16*KB, 32, AT_UPDATE, 1);
-                printf("\n");
-            }
-            for (r = 16*KB; r <= 16*MB; r *= 2) {
-                barrier(&barr2);
-                if (myid == 0) {
-                    /* benchmark/worker */
-                    udelay(10*1000);
-
-                    printf("load %5u kB : ", r>>10);
-                    worker(p_buffer, 128*KB, 32, AT_UPDATE, BENCH_HOURGLAS_SEC);
-                    printf("\n");
-
-                    flag_signal(&flag);
-                } else {
-                    /* load */
-                    load_until_flag(p_contender, r, 32, &flag);
-                }
-            }
-
-            collective_end();
-        }
     }
     barrier(barr);
 }

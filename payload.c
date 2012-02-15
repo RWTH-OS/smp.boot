@@ -87,7 +87,8 @@ void payload_benchmark()
     barrier(&barr);
 
     //bench_worker(&barr, p_buffer, p_contender);
-    bench_worker_cut(&barr, p_buffer, p_contender);
+    bench_worker_cut(&barr, p_buffer, p_contender, 16*KB);
+    bench_worker_cut(&barr, p_buffer, p_contender, 128*KB);
 
     barrier(&barr);
 

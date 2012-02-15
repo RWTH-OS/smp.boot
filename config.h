@@ -66,7 +66,7 @@
 #define VERBOSE_SYNC        0
 #define VERBOSE_MM          0
 #define VERBOSE_ISR         0
-#define VERBOSE_PIT         0
+#define VERBOSE_PIT         1
 #define VERBOSE_SMM         0
 #define VERBOSE_PCI         0
 #define VERBOSE_KEYBOARD    0
@@ -91,7 +91,7 @@
 /*
  * settings for benchmarks
  */
-#if 1
+#if 0
 /* real workload for benchmarks (set #if 1) */
 
 #define BENCH_WORK_FLAGS          0

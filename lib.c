@@ -108,3 +108,30 @@ long labs(long j)
     else return -j;
 }
 
+#if ! __x86_64__
+/*
+ * divide u64/u64 (needed for rdtsc)
+ * In 32 bit mode, this can't be done directly and the compiler need this function.
+ * Here, we don't use the FPU or SSE, but shift the arguments into 32 bit,
+ * divide in 32 bit and restore the result to 64 bits (using number of places shifted before)
+ */
+uint64_t __udivdi3(uint64_t n, uint64_t d)
+{
+    uint32_t n32, d32, r32, c=0;
+    uint64_t r;
+    while (n > 0xFFFFFFFFull) {
+        n >>= 1;
+        c++;
+    }
+    n32 = (uint32_t)(n & 0xFFFFFFFFull);
+    while (d > 0xFFFFFFFFull && c >= 1) {
+        d >>= 1;
+        c--;
+    }
+    d32 = (uint32_t)(d & 0xFFFFFFFFull);
+    r32 = n32/d32;
+    r = (uint64_t)r32 << c;
+    return r;
+}
+
+#endif

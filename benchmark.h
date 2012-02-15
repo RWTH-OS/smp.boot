@@ -33,7 +33,7 @@ void bench_hourglass(barrier_t *barr);
 void bench_hourglass_worker(barrier_t *barr, void *p_contender);
 void bench_hourglass_hyperthread(barrier_t *barr);
 void bench_worker(barrier_t *barr, void *p_buffer, void *p_contender);
-void bench_worker_cut(barrier_t *barr, void *p_buffer, void *p_contender);
+void bench_worker_cut(barrier_t *barr, void *p_buffer, void *p_contender, size_t worker_size);
 void bench_mem(barrier_t *barr, void *p_buffer, void *p_contender);
 
 #endif  // BENCHMARK_H

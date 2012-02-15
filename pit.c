@@ -134,7 +134,7 @@ static void PIT_measure_tsc_per_sec(void) {
         IFVV printf("TSC is variant!\n");
     }
 
-    IFVV printf("TSC per usec: %u\n", (unsigned long)(hw_info.tsc_per_usec));
+    IFVV printf("TSC per usec (preset): %u\n", (unsigned long)(hw_info.tsc_per_usec));
 
     // TODO: use linear regression to increase accuracy
     for (c = 0; c < cycles; c++) {
@@ -145,12 +145,19 @@ static void PIT_measure_tsc_per_sec(void) {
 
     IFV printf("sum: %u\n", sum);
     hw_info.tsc_per_usec = (sum >> (pot+14));
-    IFV printf("TSC per usec: %u\n", (unsigned long)(hw_info.tsc_per_usec));
+    IFV printf("TSC per usec calibrated: %u\n", (unsigned long)(hw_info.tsc_per_usec));
     if (hw_info.tsc_per_usec < 1000) {
         hw_info.tsc_per_usec = 2666;
         printf("fall-back: TSC per usec: %u\n", (unsigned long)(hw_info.tsc_per_usec));
     }
     //hw_info.tsc_per_sec = hw_info.tsc_per_usec*1000000;
+    hw_info.usec_per_mtsc = 0;
+    sum = hw_info.tsc_per_usec;
+    while (sum < 1024*1024) {
+        sum += hw_info.tsc_per_usec;
+        hw_info.usec_per_mtsc++;
+    }
+    IFV printf("usec per MiSec calibrated: %u\n", (unsigned long)(hw_info.usec_per_mtsc));
     
 }
 

@@ -59,5 +59,8 @@ int atoi(const char *a);
 int abs(int j);
 long labs(long j);
 
+#if ! __x86_64__
+uint64_t __udivdi3(uint64_t n, uint64_t d);
+#endif
 
 #endif // LIB_H

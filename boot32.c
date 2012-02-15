@@ -40,6 +40,9 @@ static inline void halt()
  * read CPU features (mostly from CPUID)
  * see: http://osdev.berlios.de/cpuid.html
  */
+
+static uint16_t * pStatus = 0xB8004;
+
 static void cpu_features()
 {
     uint32_t eax, ebx, ecx, edx;
@@ -56,7 +59,10 @@ static void cpu_features()
         __asm__ volatile ("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(func), "c"(ext));
     }
 
+    *pStatus = 0x0F00 + 'a';
+
     /* it was checked before, that the CPUID instruction is available */
+    *pStatus = 0x0F00 + 'A';
     cpuid(0);                   // same for Intel and AMD
     hw_info.cpuid_max = eax;    // EAX          - maximum valid number vor CPUID(x)
     vendor.u32[0] = ebx;        // EBX:EDX:ECX  - Vendor String
@@ -64,12 +70,18 @@ static void cpu_features()
     vendor.u32[2] = ecx;
     vendor.str[12] = 0;
     IFVV printf("vendor: %s\n", vendor.str);
-    if (strcmp(vendor.str, "GenuineIntel") == 0) hw_info.cpu_vendor=vend_intel;
-    else if (strcmp(vendor.str, "AuthenticAMD") == 0) hw_info.cpu_vendor=vend_amd;
+
+    *pStatus = 0x0F00 + 'H';
+    if (strcmp(vendor.str, "GenuineIntel") == 0) 
+        hw_info.cpu_vendor=vend_intel;
+    else if (strcmp(vendor.str, "AuthenticAMD") == 0) 
+        hw_info.cpu_vendor=vend_amd;
     else {
-        printf("Vendor currently not supported: '%s'.\n");
+        hw_info.cpu_vendor=vend_unknown;
+        //printf("Vendor currently not supported: '%s'.\n", vendor.str);
         //halt();
     }
+    *pStatus = 0x0F00 + 'b';
 
     if (hw_info.cpuid_max >= 1) {
         cpuid(1);
@@ -94,26 +106,32 @@ static void cpu_features()
     }
     printf("cache line size: %u, local APIC id: %u\n", hw_info.cpuid_cachelinesize, hw_info.cpuid_lapic_id);
 
+    *pStatus = 0x0F00 + 'c';
+
     cpuid(0x80000000);
     hw_info.cpuid_high_max = eax;
 
+    *pStatus = 0x0F00 + 'd';
+
     if (hw_info.cpuid_high_max >= 0x80000004) {
         cpuid(0x80000002);
-        ((uint32_t *)hw_info.cpuid_processor_name)[0] = eax;
-        ((uint32_t *)hw_info.cpuid_processor_name)[1] = ebx;
-        ((uint32_t *)hw_info.cpuid_processor_name)[2] = ecx;
-        ((uint32_t *)hw_info.cpuid_processor_name)[3] = edx;
+        hw_info.cpuid_processor_name.u32[0] = eax;
+        hw_info.cpuid_processor_name.u32[1] = ebx;
+        hw_info.cpuid_processor_name.u32[2] = ecx;
+        hw_info.cpuid_processor_name.u32[3] = edx;
         cpuid(0x80000003);
-        ((uint32_t *)hw_info.cpuid_processor_name)[4] = eax;
-        ((uint32_t *)hw_info.cpuid_processor_name)[5] = ebx;
-        ((uint32_t *)hw_info.cpuid_processor_name)[6] = ecx;
-        ((uint32_t *)hw_info.cpuid_processor_name)[7] = edx;
+        hw_info.cpuid_processor_name.u32[4] = eax;
+        hw_info.cpuid_processor_name.u32[5] = ebx;
+        hw_info.cpuid_processor_name.u32[6] = ecx;
+        hw_info.cpuid_processor_name.u32[7] = edx;
         cpuid(0x80000004);
-        ((uint32_t *)hw_info.cpuid_processor_name)[8] = eax;
-        ((uint32_t *)hw_info.cpuid_processor_name)[9] = ebx;
-        ((uint32_t *)hw_info.cpuid_processor_name)[10] = ecx;
-        ((uint32_t *)hw_info.cpuid_processor_name)[11] = edx;
+        hw_info.cpuid_processor_name.u32[8] = eax;
+        hw_info.cpuid_processor_name.u32[9] = ebx;
+        hw_info.cpuid_processor_name.u32[10] = ecx;
+        hw_info.cpuid_processor_name.u32[11] = edx;
     }
+
+    *pStatus = 0x0F00 + 'e';
 
     /*
      * get number of cores/logical threads per package
@@ -155,6 +173,7 @@ static void cpu_features()
         }
     }
 
+    *pStatus = 0x0F00 + 'f';
 
     /*
      * TODO : read info about cache
@@ -282,6 +301,8 @@ static void cpu_features()
         }
 
     }
+
+    *pStatus = 0x0F00 + ' ';
 
 }
 
