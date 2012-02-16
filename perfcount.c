@@ -35,8 +35,8 @@
 void perfcount_init_cache(void) {
   uint32_t event_sel = IA32_EVENT_LLC_MISS | (1 << IA32_PERFEVTSEL_OS) | (1 << IA32_PERFEVTSEL_EN);
 
-  wrmsr(IA32_PMC_0, event_sel);     // TODO : shouldn't those two lines be exchanged: first stop, then reconfigure (then reset) ?!
   perfcount_stop();
+  wrmsr(IA32_PMC_0, event_sel);
   perfcount_reset();
 }
 
