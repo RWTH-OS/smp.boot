@@ -26,38 +26,38 @@
 
 #define IA32_PERFGLOBALCTRL_PMC0 0
 
-#define IA32_EVENT_LLC_MISS      0x2Eull
+#define IA32_EVENT_LLC_MISS_SEL  0x2Eull
+#define IA32_EVENT_LLC_MISS_MASK 0x41ull
 
+#define IA32_PERFEVTSEL_USR      16
 #define IA32_PERFEVTSEL_OS       17
 #define IA32_PERFEVTSEL_EN       22
 
 
 void perfcount_init_cache(void) {
-  uint32_t event_sel = IA32_EVENT_LLC_MISS | (1 << IA32_PERFEVTSEL_OS) | (1 << IA32_PERFEVTSEL_EN);
+  uint64_t event_sel = 0x24 | (0x2 << 8) | (1 << IA32_PERFEVTSEL_OS) | (1 << IA32_PERFEVTSEL_USR);
+  uint64_t global_ctrl = (1 << IA32_PERFGLOBALCTRL_PMC0);
 
-  perfcount_stop();
-  wrmsr(IA32_PMC_0, event_sel);
+  // Initialize PMC
+  wrmsr(IA32_PERFGLOBALCTRL, global_ctrl);
+
+  // Write but leave the counter in disabled state
+  wrmsr(IA32_PERFEVTSEL0, event_sel);
+  
+  // Reset PMC
   perfcount_reset();
 }
 
 void perfcount_start(void) {
-  uint64_t global_ctrl = rdmsr(IA32_PERFGLOBALCTRL);
-  global_ctrl |= (1 << IA32_PERFGLOBALCTRL_PMC0);
-  wrmsr(IA32_PERFGLOBALCTRL, global_ctrl);
+  uint64_t event_sel = rdmsr(IA32_PERFEVTSEL0);
+  event_sel |= (1 << IA32_PERFEVTSEL_EN);
+  wrmsr(IA32_PERFEVTSEL0, event_sel);
 }
 
 void perfcount_stop(void) {
-  uint64_t global_ctrl = rdmsr(IA32_PERFGLOBALCTRL);
-  global_ctrl &= ~(1 << IA32_PERFGLOBALCTRL_PMC0);
-  wrmsr(IA32_PERFGLOBALCTRL, global_ctrl);
+  uint64_t event_sel = rdmsr(IA32_PERFEVTSEL0);
+  event_sel &= ~(1 << IA32_PERFEVTSEL_EN);
+  wrmsr(IA32_PERFEVTSEL0, event_sel);
 }
 
-void perfcount_reset(void) {
-  wrmsr(IA32_PMC_0, 0);
-}
-
-uint64_t perfcount_read(void) {
-  return rdmsr(IA32_PMC_0);
-}
-
-
+vo
