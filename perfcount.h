@@ -19,11 +19,13 @@
 #ifndef PERFCOUNT_H
 #define PERFCOUNT_H
 
+#include "stddef.h"
+
 void perfcount_init_cache(void);
 void perfcount_start(void);
 void perfcount_stop(void);
 void perfcount_reset(void);
-unsigned long long perfcount_read(void);
+uint64_t perfcount_read(void);
 
 #endif
 

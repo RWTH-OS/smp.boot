@@ -23,6 +23,7 @@
 #include "smp.h"
 #include "sync.h"
 #include "benchmark.h"
+#include "perfcount.h"
 
 extern volatile unsigned cpu_online;
 
@@ -114,7 +115,10 @@ void load_until_flag(void *buffer, size_t size, size_t stride, flag_t *flag)
     size_t s;
     mytype *p = buffer;
     uint64_t t1, t2, cnt=0;
+    uint64_t pc_cache;
 
+    perfcount_init_cache();
+    perfcount_start();
     t1 = rdtsc();
     while (!flag_trywait(flag)) {
         for (s=0; s<size/sizeof(mytype); s+=(stride/sizeof(mytype))) {
@@ -123,7 +127,8 @@ void load_until_flag(void *buffer, size_t size, size_t stride, flag_t *flag)
         }
     }
     t2 = rdtsc();
-    printf(" [%#uB/s]", (((cnt*hw_info.tsc_per_usec*1000)/(t2-t1))*1000u)&~0xFFFFF);
+    perfcount_stop();
+    printf(" [%#uB/s %u]", (((cnt*hw_info.tsc_per_usec*1000)/(t2-t1))*1000u)&~0xFFFFF, perfcount_read());
     // round last 20 bit (set to zero) so that %#u can work
 
 }

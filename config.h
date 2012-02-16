@@ -91,7 +91,7 @@
 /*
  * settings for benchmarks
  */
-#if 1
+#if 0
 /* real workload for benchmarks (set #if 1) */
 
 #define BENCH_WORK_FLAGS          0
@@ -110,8 +110,8 @@
 #else
 /* short workload for quick testing (set #if 0) */
 #define BENCH_WORK_FLAGS          0
-#define BENCH_LOAD_FLAGS          (MM_CACHE_DISABLE)
-#define BENCH_HOURGLAS_SEC      1u 
+#define BENCH_LOAD_FLAGS          0
+#define BENCH_HOURGLAS_SEC      2u 
 #define BENCH_MIN_STRIDE_POW2   4  
 #define BENCH_MAX_STRIDE_POW2   5
 #define BENCH_MIN_RANGE_POW2    12

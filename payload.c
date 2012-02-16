@@ -87,6 +87,7 @@ void payload_benchmark()
     barrier(&barr);
 
     //bench_worker(&barr, p_buffer, p_contender);
+    bench_worker_cut(&barr, p_buffer, p_contender, 16*KB);
     
     if (myid == 0) {
         heap_reconfig(p_buffer, buffer_size, 0);
