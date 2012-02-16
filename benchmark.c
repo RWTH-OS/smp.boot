@@ -210,21 +210,10 @@ void worker(volatile unsigned long *p_buffer, size_t range, size_t stride, acces
             if ((ptr_t)p >= (ptr_t)p_buffer+range) p = p_buffer;
         }
     }
-#   if __x86_64__
+
     avg = (tsc-tsc_start)/cnt;
-#   else
-    /*
-     * no 64 bit division in 32 bit mode: shift right, divide in 32 bit, shift back left
-     */ 
-    unsigned shift = 0;
-    avg = tsc - tsc_start;
-    while (avg > 0xFFFFffff) {
-        avg >>= 1;
-        shift++;
-    }
-    avg = (unsigned long)avg/(unsigned long)cnt;
-    avg >>= shift;
-#   endif
+    // with lib.c providing __udivdi3(), 64 bit division can be done in 32 bit mode.
+
     /*printf("t%ur%us%u : min/avg/max : %u/%u/%u\n", 
             (unsigned long)type, (unsigned long)range, (unsigned long)stride, 
             (unsigned long)min, (unsigned long)avg, (unsigned long)max);*/
