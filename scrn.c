@@ -336,11 +336,12 @@ mutex_t mutex_printf = MUTEX_INITIALIZER;
  */
 void printf (const char *format, ...)
 {
+  __builtin_va_list ap;
   int c;
   char buf[20];
   unsigned long value;
   char bi_prefix[] = {' ', 'k', 'M', 'G', 'T'};
-  __builtin_va_list ap;
+
   __builtin_va_start(ap, format);
 
 # ifndef EARLY

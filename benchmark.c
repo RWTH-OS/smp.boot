@@ -117,7 +117,7 @@ void load_until_flag(void *buffer, size_t size, size_t stride, flag_t *flag)
     uint64_t t1, t2, cnt=0;
     uint64_t pc_cache;
 
-    perfcount_init_cache();
+    perfcount_reset();
     perfcount_start();
     t1 = rdtsc();
     while (!flag_trywait(flag)) {
@@ -436,7 +436,11 @@ void bench_worker_cut(barrier_t *barr, void *p_buffer, void *p_contender, size_t
      * similar worker-benchmark, but different cuts through the parameter dimensions.
      */
     if (cpu_online > 1) {
-        if (myid==0) printf("1 worker on range %#uB, load on range 16 kB .. 16 MB -------------------\n", worker_size);
+        if (myid==0)  {
+            printf("1 worker on range %#uB, load on range 16 kB .. 16 MB -------------------\n", worker_size);
+        } else {
+            perfcount_init_cache();
+        }
 
         if (collective_only(0x0003)) {
             unsigned r;
