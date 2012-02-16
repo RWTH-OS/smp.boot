@@ -252,6 +252,14 @@ void tests_ipi(void)
     barrier(&barr_all);
 }
 
+void tests_printf(void)
+{
+    printf("\n");
+    printf("u:'%u', x:'%x', k:'%#u', u:'%u', k:'%#u', u:'%u'\n", 123, 123, 123, 123, 123, 123);
+    printf("u:'%u', x:'%x', k:'%#u', #x:'%#x', k:'%#u', u:'%u'\n", 123, 123, 123, 123, 123, 123);
+    printf("u:'%u', x:'%x', k:'%#10u', #8x:'%#8x', k:'%#u', u:'%u'\n", 123, 123, 123, 123, 123, 123);
+    for (unsigned u=512; u<128*MB; u*=8) printf("%10u: %#uB\n", u, u);
+}
 void tests_keyboard(void)
 {
     unsigned u;
@@ -300,7 +308,10 @@ void tests_doall(void)
 
     //tests_ipi();
 
-    //if (myid == 0) tests_keyboard();
+    //if (myid == 0) {
+    // tests_printf();
+    // tests_keyboard();
+    //}
     
     /*unsigned u;
     for (u=0; u<30; u++) {

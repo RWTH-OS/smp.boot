@@ -90,6 +90,7 @@ void video_scrollback(void);
 #endif
 void itoa (char *buf, int base, long d);
 void printf (const char *format, ...);
+    //// __attribute__ (( format(printf, 1, 2) ));  <-- this is a bad idea, simply because we're not really compatible...
 
 
 #endif

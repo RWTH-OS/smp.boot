@@ -123,7 +123,8 @@ void load_until_flag(void *buffer, size_t size, size_t stride, flag_t *flag)
         }
     }
     t2 = rdtsc();
-    printf(" [%u MB/s]", (((cnt*hw_info.tsc_per_usec*1000)/(t2-t1))*1000u)>>20);
+    printf(" [%#uB/s]", (((cnt*hw_info.tsc_per_usec*1000)/(t2-t1))*1000u)&~0xFFFFF);
+    // round last 20 bit (set to zero) so that %#u can work
 
 }
 
@@ -286,7 +287,7 @@ void bench_hourglass_worker(barrier_t *barr, void *p_contender)
                         case 10: size=8*1024*1024; break;    /* fits into L3 Cache */
                         case 11: size=16*1024*1024; break;   /* larger than Cache */
                     }
-                    printf("[1] Range %5u kB: ", size/1024);
+                    printf("[1] Range %#uB: ", size);
                 }
                 barrier(&barr2);
 
@@ -396,7 +397,7 @@ void bench_worker(barrier_t *barr, void *p_buffer, void *p_contender)
                                 foreach (worker_stride, worker_strides) {
                                     //printf("---- bench: range: %x (stride %u) (rd, wr, upd, atomic) \n", 
                                     //              worker_range, worker_stride, worker_atype);
-                                    printf("r %5u kB: ", worker_range>>10);
+                                    printf("r %#uB: ", worker_range);
                                     foreach (worker_atype, worker_atypes) {
                                         /* 
                                          * start benchmark 
@@ -441,14 +442,14 @@ void bench_worker_cut(barrier_t *barr, void *p_buffer, void *p_contender, size_t
      * similar worker-benchmark, but different cuts through the parameter dimensions.
      */
     if (cpu_online > 1) {
-        if (myid==0) printf("1 worker on range %uk (L1$), load on range 16kB .. 16MB -------------------\n", worker_size/1024);
+        if (myid==0) printf("1 worker on range %#uB, load on range 16 kB .. 16 MB -------------------\n", worker_size);
 
         if (collective_only(0x0003)) {
             unsigned r;
             static flag_t flag = FLAG_INITIALIZER;
 
             if (myid == 0) {
-                printf("warm-up       : ");
+                printf("warm-up      : ");
                 worker(p_buffer, worker_size, 32, AT_UPDATE, 1);
                 printf("\n");
             }
@@ -458,7 +459,7 @@ void bench_worker_cut(barrier_t *barr, void *p_buffer, void *p_contender, size_t
                     /* benchmark/worker */
                     udelay(10*1000);
 
-                    printf("load %5u kB : ", r>>10);
+                    printf("load %#uB : ", r);
                     worker(p_buffer, worker_size, 32, AT_UPDATE, BENCH_HOURGLAS_SEC);
 
                     flag_signal(&flag);
@@ -550,7 +551,7 @@ void bench_mem(barrier_t *barr, void *p_buffer, void *p_contender)
                     case 2: size=4*1024*1024; break;    /* fits into L3 Cache (8 MB shared) */
                     case 3: size=16*1024*1024; break;   /* larger than Cache */
                 }
-                printf("Range/Stride (one CPU working on %u kB) --------------\n", size/1024);
+                printf("Range/Stride (one CPU working on %#uB) --------------\n", size);
                 barrier(&barr2);
 
                 load_until_flag(p_contender, size, 64, &flag);

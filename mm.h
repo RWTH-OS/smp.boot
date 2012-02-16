@@ -27,7 +27,7 @@ int mm_init();
 #define MM_WRITE_THROUGH    0x0010
 #define MM_CACHE_DISABLE    0x0020
 
-void *heap_alloc(unsigned nbr_pages, unsigned flags);
+void *heap_alloc(unsigned nbr_pages, unsigned flags) __attribute__ ((malloc));
 void heap_reconfig(void *p, size_t size, unsigned flags);
 void tlb_shootdown(void *adr, size_t size);
 

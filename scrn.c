@@ -286,6 +286,8 @@ void itoa (char *buf, int base, long d)
   unsigned long ud = *((unsigned long*)&d);
   int divisor = 10;
 
+  if (base == 'p') base = 'x';
+
   /* If %d is specified and D is minus, put `-' in the head. */
   if (base == 'd' && d < 0)
     {
@@ -337,6 +339,7 @@ void printf (const char *format, ...)
   int c;
   char buf[20];
   unsigned long value;
+  char bi_prefix[] = {' ', 'k', 'M', 'G', 'T'};
   __builtin_va_list ap;
   __builtin_va_start(ap, format);
 
@@ -352,8 +355,14 @@ void printf (const char *format, ...)
         {
           char *p;
           int len = 0;
+          unsigned hash = 0;
+          unsigned bi_pref_idx = 0;
 
           c = *format++;
+          if (c == '#') {
+              hash = 1;
+              c = *format++;
+          }
           while (c >= '0' && c <= '9') {
               len *= 10;
               len += (c-'0');
@@ -367,9 +376,30 @@ void printf (const char *format, ...)
               goto weiter;
             case 'u':
             case 'x':
+            case 'p':
               value = __builtin_va_arg(ap, unsigned long);
+              if (c == 'u' && hash) {
+                  while (value >= 1024 && (value%1024) == 0) {
+                      value >>= 10;
+                      bi_pref_idx++;
+                  }
+                  if (!len) len=6;
+              }
             weiter:
-              itoa (buf, c, value);
+              if ((c == 'x' || c == 'p') && hash) {
+                  buf[0] = '0';
+                  buf[1] = 'x';
+                  itoa (buf+2, c, value);
+              } else {
+                  itoa (buf, c, value);
+              }
+              if (c == 'u' && hash) {
+                  unsigned l = strlen(buf);
+                  buf[l++] = ' ';
+                  buf[l++] = bi_prefix[bi_pref_idx];
+                  buf[l++] = 0;
+                  bi_pref_idx = 0;
+              }
               p = buf;
               goto string;
               break;
@@ -408,4 +438,5 @@ void printf (const char *format, ...)
   if (cpu_online > 1) mutex_unlock(&mutex_printf);
 # endif
 }
+
 

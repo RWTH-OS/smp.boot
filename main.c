@@ -176,16 +176,19 @@ void main()
         printf("* max CPUID fn: 0x%x, 0x%x\n", hw_info.cpuid_max, hw_info.cpuid_high_max);
         printf("* Nbr of threads/package: %u \n", hw_info.cpuid_threads_per_package);
         printf("* Cache-Line Size: %u \n", (ptr_t)hw_info.cpuid_cachelinesize);
-        printf("* L1$: %u kB %c + %u kB %c\n", 
-                hw_info.cpuid_cache[0].size/1024, 
+        printf("* L1$: %#uB %c + %#uB %c\n", 
+                hw_info.cpuid_cache[0].size, 
                 hw_info.cpuid_cache[0].type, 
-                hw_info.cpuid_cache[1].size/1024,
+                hw_info.cpuid_cache[1].size,
                 hw_info.cpuid_cache[1].type); 
-        printf("* L2$: %u kB\n", hw_info.cpuid_cache[2].size/1024);
+        printf("* L2$: %#uB\n", hw_info.cpuid_cache[2].size);
         if (hw_info.cpuid_cache[3].size > 0) 
-            printf("* L3$: %u MB\n", hw_info.cpuid_cache[3].size/1024/1024);
+            printf("* L3$: %#uB\n", hw_info.cpuid_cache[3].size);
         printf("*****************************************\n");
+
+
     }
+
 
     /* call tests */
     //tests_doall();
