@@ -21,16 +21,17 @@
 
 #include "stddef.h"
 
-#define perfcount_init_cache() perfcount_init_l2_miss()
-#warning "perfcount compatibility hack active"
+#define PERFCOUNT_L1DATA    (uint64_t)0xFF000151ull
+#define PERFCOUNT_L2        (uint64_t)0xFF000224ull
+#define PERFCOUNT_L3        (uint64_t)0xFF000309ull
 
-void perfcount_init_l1d_miss(void);
-void perfcount_init_l2_miss(void);
-void perfcount_init_l3_miss(void);
-void perfcount_start(void);
-void perfcount_stop(void);
-void perfcount_reset(void);
-uint64_t perfcount_read(void);
+void perfcount_init(unsigned int counter, uint64_t config);
+uint64_t perfcount_raw(uint8_t event, uint8_t umask);
+
+void perfcount_start(unsigned int counter);
+void perfcount_stop(unsigned int counter);
+void perfcount_reset(unsigned int counter);
+uint64_t perfcount_read(unsigned int counter);
 
 #endif
 
