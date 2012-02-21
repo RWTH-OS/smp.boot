@@ -124,6 +124,7 @@ uint64_t perfcount_raw(uint8_t event, uint8_t umask) {
 void perfcount_start(unsigned int counter) {
   if (!__perfcount_start) {
     printf("perfcount: warning: PMC is not initialized or unsupported\n");
+    return;
   }
 
   __perfcount_start(counter);
@@ -132,6 +133,7 @@ void perfcount_start(unsigned int counter) {
 void perfcount_stop(unsigned int counter) {
   if (!__perfcount_stop) {
     printf("perfcount: warning: PMC is not initialized or unsupported\n");
+    return;
   }
 
   __perfcount_stop(counter);
@@ -140,6 +142,7 @@ void perfcount_stop(unsigned int counter) {
 void perfcount_reset(unsigned int counter) {
   if (!__perfcount_reset) {
     printf("perfcount: warning: PMC is not initialized or unsupported\n");
+    return;
   }
 
   __perfcount_reset(counter);
