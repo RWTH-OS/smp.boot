@@ -21,7 +21,11 @@
 
 #include "stddef.h"
 
-void perfcount_init_cache(void);
+#define perfcount_init_cache() perfcount_init_l2_miss()
+#warning "perfcount compatibility hack active"
+
+void perfcount_init_l1d_miss(void);
+void perfcount_init_l2_miss(void);
 void perfcount_start(void);
 void perfcount_stop(void);
 void perfcount_reset(void);
