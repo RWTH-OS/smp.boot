@@ -58,6 +58,20 @@ void perfcount_init_l2_miss(void) {
   perfcount_reset();
 }
 
+void perfcount_init_l3_miss(void) {
+  uint64_t event_sel = 0x09 | (0x3 << 8) | (1 << IA32_PERFEVTSEL_OS) | (1 << IA32_PERFEVTSEL_USR);
+  uint64_t global_ctrl = (1 << IA32_PERFGLOBALCTRL_PMC0);
+
+  // Initialize PMC
+  wrmsr(IA32_PERFGLOBALCTRL, global_ctrl);
+
+  // Write but leave the counter in disabled state
+  wrmsr(IA32_PERFEVTSEL0, event_sel);
+  
+  // Reset PMC
+  perfcount_reset();
+}
+
 void perfcount_start(void) {
   uint64_t event_sel = rdmsr(IA32_PERFEVTSEL0);
   event_sel |= (1 << IA32_PERFEVTSEL_EN);

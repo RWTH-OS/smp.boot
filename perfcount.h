@@ -26,6 +26,7 @@
 
 void perfcount_init_l1d_miss(void);
 void perfcount_init_l2_miss(void);
+void perfcount_init_l3_miss(void);
 void perfcount_start(void);
 void perfcount_stop(void);
 void perfcount_reset(void);
