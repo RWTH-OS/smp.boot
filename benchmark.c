@@ -115,7 +115,7 @@ void load_until_flag(void *buffer, size_t size, size_t stride, flag_t *flag)
     size_t s;
     mytype *p = buffer;
     uint64_t t1, t2, cnt=0;
-    uint64_t pc_cache;
+    //uint64_t pc_cache;
 
     perfcount_reset(0);
     perfcount_start(0);
@@ -141,7 +141,7 @@ typedef char access_type;
 
 //#pragma GCC diagnostic ignored "-Wno-pragmas"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-uint64_t range_stride(void *buffer, size_t range, size_t stride)
+uint64_t range_stride(void *buffer, size_t range, size_t stride, uint64_t *p_pc0)
 {
     size_t r, i;
     volatile access_type d;
@@ -158,13 +158,17 @@ uint64_t range_stride(void *buffer, size_t range, size_t stride)
     }
     
     tsc = rdtsc();
-    /* calculate count of repeats to be of constant time (decreasing with increasing number of accesses in range) */
-    for (i=0; i<256*1024*1024/(range/stride); i++) {
+    perfcount_reset(0);
+    perfcount_start(0);
+    /* calculate count of repeats to be of approx. constant time (decreasing with increasing number of accesses in range) */
+    for (i=0; i<BENCH_RANGESTRIDE_REP/(range/stride); i++) {
         for (r=0; r < range; r += stride) {
             d = data[r];
         }
     }
-    return (rdtsc()-tsc)/(256*1024*1024);
+    perfcount_stop(0);
+    if (p_pc0 != NULL) *p_pc0 = perfcount_read(0)/(BENCH_RANGESTRIDE_REP/(range/stride));
+    return (rdtsc()-tsc)/(BENCH_RANGESTRIDE_REP);
 }
 
 #if __x86_64__
@@ -178,9 +182,13 @@ void worker(volatile unsigned long *p_buffer, size_t range, size_t stride, acces
     uint64_t tsc, tsc_last, tsc_start, tsc_end, diff, min = 0xFFFFffffFFFFffff, max = 0, avg, cnt = 0;
     volatile unsigned long *p = p_buffer;
     volatile unsigned long dummy;
+    uint64_t pc_l2;
 
     tsc = tsc_start = rdtsc();
     tsc_end = tsc_start + sec * 1000000ull * hw_info.tsc_per_usec;
+
+    perfcount_reset(0);
+    perfcount_start(0);
 
     while (tsc < tsc_end) {
         tsc_last = tsc;
@@ -216,13 +224,17 @@ void worker(volatile unsigned long *p_buffer, size_t range, size_t stride, acces
         }
     }
 
+    perfcount_stop(0);
+
     avg = (tsc-tsc_start)/cnt;
     // with lib.c providing __udivdi3(), 64 bit division can be done in 32 bit mode.
 
     /*printf("t%ur%us%u : min/avg/max : %u/%u/%u\n", 
             (unsigned long)type, (unsigned long)range, (unsigned long)stride, 
             (unsigned long)min, (unsigned long)avg, (unsigned long)max);*/
-    printf("%u/%u/%u ", (unsigned long)min, (unsigned long)avg, (unsigned long)max);
+
+    pc_l2 = perfcount_read(0);
+    printf("%u/%u/%u [L2$:%u] ", (unsigned long)min, (unsigned long)avg, (unsigned long)max, pc_l2);
 }
 
 
@@ -447,6 +459,7 @@ void bench_worker_cut(barrier_t *barr, void *p_buffer, void *p_contender, size_t
             static flag_t flag = FLAG_INITIALIZER;
 
             if (myid == 0) {
+                perfcount_init(0, PERFCOUNT_L1DATA); 
                 printf("warm-up      : ");
                 worker(p_buffer, worker_size, 32, AT_UPDATE, 1);
                 printf("\n");
@@ -475,6 +488,57 @@ void bench_worker_cut(barrier_t *barr, void *p_buffer, void *p_contender, size_t
     barrier(barr);
 }
 
+void bench_rangestride(barrier_t *barr, void *p_buffer)
+{
+    unsigned myid = my_cpu_info()->cpu_id;
+
+    /*
+     * memory benchmark
+     */
+    if (myid == 0) {
+        size_t range, stride;
+        unsigned u;
+        uint64_t pc0;
+        //size_t max_range = (1 << BENCH_MAX_RANGE_POW2); // 2^25 = 32 MB
+
+
+        printf("Range/Stride (other CPUs in halt-state) ----------------\n");
+
+        static const size_t ranges[]  = {16*KB, 32*KB, 64*KB, 128*KB, 256*KB, 512*KB, 1*MB, 2*MB, 3*MB, 4*MB, 6*MB, 8*MB, 12*MB, 16*MB};
+        static const size_t strides[] = {32, 64, 128, 1*KB, 4*KB};
+
+        perfcount_init(0, PERFCOUNT_L1DATA); 
+
+        printf("       strides| ");
+        foreach (stride, strides) {
+            printf(" %#uB ", stride);
+        } 
+        printf("\n");
+        printf("--------------|-");
+        foreach (stride, strides) {
+            printf("---------");
+        } 
+        printf("\n");
+        foreach (range, ranges) {
+            printf("range: %#uB|", range);
+            foreach (stride, strides) {
+                unsigned long ret = range_stride(p_buffer, range, stride, &pc0);
+                printf(" %u %u", ret, pc0);
+            }
+            printf("\n");
+        }
+
+        for (u = 1; u<cpu_online; u++) {
+            smp_wakeup(u);
+        }
+    } else {
+        smp_halt();
+    }
+    barrier(barr);
+
+
+}
+
 void bench_mem(barrier_t *barr, void *p_buffer, void *p_contender)
 {
     unsigned myid = my_cpu_info()->cpu_id;
@@ -496,7 +560,7 @@ void bench_mem(barrier_t *barr, void *p_buffer, void *p_contender)
         for (i=BENCH_MIN_STRIDE_POW2; i<=BENCH_MAX_STRIDE_POW2; i++) {                      /* stride */
             printf("%3u      ", (1<<i));
             for (j=BENCH_MIN_RANGE_POW2; j<=BENCH_MAX_RANGE_POW2; j++) {                /* range */
-                unsigned long ret = range_stride(p_buffer, (1<<j), (1<<i));
+                unsigned long ret = range_stride(p_buffer, (1<<j), (1<<i), NULL);
                 printf(" %4u", ret);
             }
             printf("\n");
@@ -516,7 +580,7 @@ void bench_mem(barrier_t *barr, void *p_buffer, void *p_contender)
                 for (i=BENCH_MIN_STRIDE_POW2; i<=BENCH_MAX_STRIDE_POW2; i++) {                      /* stride */
                     printf("%3u      ", (1<<i));
                     for (j=BENCH_MIN_RANGE_POW2; j<=BENCH_MAX_RANGE_POW2; j++) {                /* range */
-                        unsigned long ret = range_stride(p_buffer, (1<<j), (1<<i));
+                        unsigned long ret = range_stride(p_buffer, (1<<j), (1<<i), NULL);
                         printf(" %4u", ret);
                     }
                     printf("\n");

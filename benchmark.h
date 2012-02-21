@@ -23,7 +23,7 @@
 
 void hourglass(unsigned sec);
 void load_until_flag(void *buffer, size_t size, size_t stride, flag_t *flag);
-uint64_t range_stride(void *buffer, size_t range, size_t stride);
+uint64_t range_stride(void *buffer, size_t range, size_t stride, uint64_t *p_pc0);
 
 typedef enum {AT_READ, AT_WRITE, AT_UPDATE, AT_ATOMIC} access_t;
 void worker(volatile unsigned long *p_buffer, size_t range, size_t stride, access_t type, unsigned sec);
@@ -34,6 +34,7 @@ void bench_hourglass_worker(barrier_t *barr, void *p_contender);
 void bench_hourglass_hyperthread(barrier_t *barr);
 void bench_worker(barrier_t *barr, void *p_buffer, void *p_contender);
 void bench_worker_cut(barrier_t *barr, void *p_buffer, void *p_contender, size_t worker_size);
+void bench_rangestride(barrier_t *barr, void *p_buffer);
 void bench_mem(barrier_t *barr, void *p_buffer, void *p_contender);
 
 #endif  // BENCHMARK_H

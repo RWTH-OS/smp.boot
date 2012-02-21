@@ -107,6 +107,7 @@
 #define BENCH_MAX_STRIDE_POW2   9
 #define BENCH_MIN_RANGE_POW2    12
 #define BENCH_MAX_RANGE_POW2    25
+#define BENCH_RANGESTRIDE_REP   (512*1024*1024)
 #else
 /* short workload for quick testing (set #if 0) */
 #define BENCH_WORK_FLAGS          0
@@ -116,6 +117,7 @@
 #define BENCH_MAX_STRIDE_POW2   5
 #define BENCH_MIN_RANGE_POW2    12
 #define BENCH_MAX_RANGE_POW2    13
+#define BENCH_RANGESTRIDE_REP   (256*1024*1024)
 #endif
 
 #endif 

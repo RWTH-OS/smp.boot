@@ -89,6 +89,7 @@ void payload_benchmark()
     //bench_worker(&barr, p_buffer, p_contender);
     bench_worker_cut(&barr, p_buffer, p_contender, 16*KB);
     
+    /*
     if (myid == 0) {
         heap_reconfig(p_buffer, buffer_size, 0);
         heap_reconfig(p_contender, contender_size, MM_CACHE_DISABLE);
@@ -100,10 +101,12 @@ void payload_benchmark()
         tlb_shootdown(p_contender, contender_size);
     }
     barrier(&barr);
+    */
 
-    bench_worker_cut(&barr, p_buffer, p_contender, 16*KB);
+    //bench_worker_cut(&barr, p_buffer, p_contender, 16*KB);
     //bench_worker_cut(&barr, p_buffer, p_contender, 128*KB);
 
+    /*
     if (myid == 0) {
         heap_reconfig(p_buffer, buffer_size, 0);
         heap_reconfig(p_contender, contender_size, MM_WRITE_THROUGH);
@@ -115,14 +118,15 @@ void payload_benchmark()
         tlb_shootdown(p_contender, contender_size);
     }
     barrier(&barr);
+    */
 
-    bench_worker_cut(&barr, p_buffer, p_contender, 16*KB);
+    //bench_worker_cut(&barr, p_buffer, p_contender, 16*KB);
     //bench_worker_cut(&barr, p_buffer, p_contender, 128*KB);
 
     barrier(&barr);
 
     //bench_mem(&barr, p_buffer, p_contender);
-
+    bench_rangestride(&barr, p_buffer);
 }
 
 void payload_demo()
