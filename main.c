@@ -171,6 +171,7 @@ void main_ap(void)
  */
 void main()
 {
+
     IFVV printf("CPU %d/%d entering in main()\n", my_cpu_info()->cpu_id, cpu_online);
 
     if (my_cpu_info()->cpu_id == 0) {
@@ -189,16 +190,86 @@ void main()
         if (hw_info.cpuid_cache[3].size > 0) 
             printf("* L3$: %#uB\n", hw_info.cpuid_cache[3].size);
         printf("*****************************************\n");
-
-
     }
 
+#if OFFER_MENU
+    static barrier_t barr = BARRIER_INITIALIZER(MAX_CPU+1);
+    enum {mode_default, mode_menu} mode = mode_default;
+    unsigned menu_select = 0;
 
-    /* call tests */
-    //tests_doall();
+    while (1) {
 
-    /* call a payload */
-    payload_benchmark();
+        if (my_cpu_info()->cpu_id == 0) {
+            int i;
+            if (mode == mode_default) {
+                printf("For a menu, press any key within 5 Sek.\b\b\b\b\b");
+                for (i=5; i>0; i--) {
+                    udelay(1000000);
+                    printf("\b%i", i);
+                    if (keyboard_get_scancode() != 0) {
+                        mode = mode_menu;
+                        break;
+                    }
+                }
+                printf("\n");
+            }
+
+            if (mode == mode_menu) {
+                uint8_t key;
+                menu_select = 0;
+                printf("0 : tests & benchmark\n");
+                printf("1 : all tests\n");
+                printf("2 : all benchmarks\n");
+                printf("999 : exit, scrollback & reboot\n");
+                while (1) {
+                    printf("\rselect: %u       ", menu_select);
+                    key = wait_for_key();
+                    if (key >= '0' && key <= '9') {
+                        menu_select *= 10;
+                        menu_select += key - '0';
+                    } else if (key == '\n') {
+                        break;
+                    } else if (key == '\b') {
+                        menu_select /= 10;
+                    }
+                }
+                printf("\n");
+
+            }
+
+
+            barr.max = cpu_online;
+            barrier(&barr);
+        } else {
+            barrier(&barr);
+        }
+
+        switch (menu_select) {
+            case 0 : 
+#endif
+                /* call tests */
+                tests_doall();
+
+                /* call a payload */
+                payload_benchmark();
+#if OFFER_MENU
+                break;
+            case 1 :
+                tests_doall();
+                break;
+            case 2 :
+                payload_benchmark();
+                break;
+        }
+
+
+
+
+        if (mode == mode_default || menu_select == 999) break;
+    }
+
+#endif 
+
 
     /* all CPUs leaving the payload: go to sleep */
     stop();

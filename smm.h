@@ -19,8 +19,10 @@
 #ifndef SMM_H
 #define SMM_H
 
+#define SMM_DEFAULT 0xDEADBEEF
+
 void smm_init(void);
-void smm_deactivate(void);
-void smm_restore(void);
+uint32_t smm_deactivate(void);
+uint32_t smm_restore(uint32_t value);
 
 #endif // SMM_H

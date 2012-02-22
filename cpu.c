@@ -109,7 +109,7 @@ void stop()
         while (1) __asm__ volatile ("hlt");
     } else {
 #       if SCROLLBACK_BUF_SIZE
-            smm_restore();
+            smm_restore(SMM_DEFAULT);
             video_scrollback();
 #       endif
         reboot();

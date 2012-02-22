@@ -21,6 +21,7 @@
 #include "config.h"
 #include "cpu.h"
 #include "pci.h"
+#include "smm.h"
 
 #define IFV   if (VERBOSE > 0 || VERBOSE_SMM > 0)
 #define IFVV  if (VERBOSE > 1 || VERBOSE_SMM > 1)
@@ -69,9 +70,10 @@ void smm_init(void)
     if (if_backup) sti();
 }
 
-void smm_deactivate(void)
+uint32_t smm_deactivate(void)
 {
     uint32_t adr;
+    uint32_t ret = SMM_DEFAULT;
     uint32_t smi_en;
     unsigned if_backup;
 
@@ -79,6 +81,9 @@ void smm_deactivate(void)
 
     if (pmbase != 0) {
         adr = pmbase+0x30;                          /* SMI_EN I/O register is at pmbase+0x30 */
+
+        /* read current value to return it on end */
+        ret = inportl(adr);
 
         /* set to 0 (only writable bits will be changed...) */
         smi_en = 0; //&= ~1;
@@ -97,19 +102,25 @@ void smm_deactivate(void)
     }
 
     if (if_backup) sti();
+    return ret;
 }
 
-void smm_restore(void)
+uint32_t smm_restore(uint32_t value)
 {
     unsigned if_backup;
+    uint32_t ret = SMM_DEFAULT;
 
     if_backup = cli();
 
     if (pmbase != 0) {
-        outportl(pmbase+0x30, bak_smi_en);
+        /* read current value to return it on end */
+        ret = inportl(pmbase+0x30);
+        /* restore */
+        outportl(pmbase+0x30, (value==SMM_DEFAULT)?bak_smi_en:value);
     }
 
     if (if_backup) sti();
+    return ret;
 }
 
 

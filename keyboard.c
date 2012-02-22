@@ -118,6 +118,7 @@ uint8_t scancode_to_keycode(uint32_t scancode)
         case 0x09 : return IS_BIT_CLEAR(kb_modifier, KBM_SHIFT) ? '8' : '('; break;
         case 0x0a : return IS_BIT_CLEAR(kb_modifier, KBM_SHIFT) ? '9' : ')'; break;
         case 0x0b : return IS_BIT_CLEAR(kb_modifier, KBM_SHIFT) ? '0' : '='; break;
+        case 0x0e : return '\b'; break;
 
         case 0x10 : return IS_BIT_CLEAR(kb_modifier, KBM_SHIFT) ? 'q' : 'Q'; break;
         case 0x11 : return IS_BIT_CLEAR(kb_modifier, KBM_SHIFT) ? 'w' : 'W'; break;
