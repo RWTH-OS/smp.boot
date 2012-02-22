@@ -9,6 +9,7 @@
 #include "debug.h"
 #include "cpu.h"
 #include "pci.h"
+#include "smm.h"
 
 #define IFV   if (VERBOSE > 0 || VERBOSE_MAIN > 0)
 #define IFVV  if (VERBOSE > 1 || VERBOSE_MAIN > 1)
@@ -79,6 +80,9 @@ void main_bsp(void)
 
     pci_init();
     IFV puts("pci initialized\n");
+
+    smm_init();
+    IFV puts("SMM initialized\n");
 
     keyboard_init(kbm_poll);
     IFV puts("keyboard initialized\n");

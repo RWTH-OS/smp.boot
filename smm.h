@@ -19,6 +19,7 @@
 #ifndef SMM_H
 #define SMM_H
 
+void smm_init(void);
 void smm_deactivate(void);
 void smm_restore(void);
 
