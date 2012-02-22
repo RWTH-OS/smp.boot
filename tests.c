@@ -254,6 +254,23 @@ void tests_ipi(void)
 
 void tests_printf(void)
 {
+    unsigned b, f;
+    printf("     ");
+    for (b = 0; b<8; b++) {
+        printf(" %#x", b);
+    }
+    printf("\n");
+    for (f = 0; f<16; f++) {
+        settextcolor(COLOR_FG_WHITE, COLOR_BG_BLACK);
+        printf("%#x ", f);
+        for (b = 0; b<8; b++) {
+            settextcolor(f, b);
+            printf("abcd ", b);
+        }
+        printf("\n");
+    }
+    settextcolor(COLOR_FG_WHITE, COLOR_BG_BLACK);
+
     printf("\n");
     printf("u:'%u', x:'%x', k:'%#u', u:'%u', k:'%#u', u:'%u'\n", 123, 123, 123, 123, 123, 123);
     printf("u:'%u', x:'%x', k:'%#u', #x:'%#x', k:'%#u', u:'%u'\n", 123, 123, 123, 123, 123, 123);

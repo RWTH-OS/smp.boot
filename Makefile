@@ -111,7 +111,7 @@ jump64.o : jump64.asm start_smp.inc config.inc
 	@echo NASM $< '->' $@
 	@nasm -f elf64 -o $@ $<
 
-scrn.o : scrn.c
+screen.o : screen.c
 	@echo CC32 $< '->' $@
 	@$(CC32) $(C32FLAGS) -DEARLY -o $@ $<
 
@@ -159,9 +159,9 @@ kernel64.o : start64.o kernel64.section
 # finally link 32 bit start code with implanted .KERNEL64 (opaque blob)
 # to a relocated ELF32-multiboot kernel image
 kernel64 : kernel64.bin
-kernel64.bin : link_start64.ld kernel64.symbols kernel64.o boot32.o scrn.o lib.o32
+kernel64.bin : link_start64.ld kernel64.symbols kernel64.o boot32.o screen.o lib.o32
 	@echo LD $^ '->' $@
-	@ld -melf_i386 -T link_start64.ld -T kernel64.symbols   kernel64.o boot32.o scrn.o lib.o32 -o kernel64.bin 
+	@ld -melf_i386 -T link_start64.ld -T kernel64.symbols   kernel64.o boot32.o screen.o lib.o32 -o kernel64.bin 
 
 depend : .depend
 .depend : $(CFILES) boot32.c 

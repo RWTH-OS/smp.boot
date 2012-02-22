@@ -77,20 +77,6 @@ void isr_install();
 /* apic.c */
 #include "apic.h"
 
-/* scrn.c */
-void cls();
-void putch(char c);
-void status_putch(int x, int c);
-void puts(char *str);
-void settextcolor(unsigned char forecolor, unsigned char backcolor);
-void init_video();
-#if SCROLLBACK_BUF_SIZE
-void init_video_scrollback(void);
-void video_scrollback(void);
-#endif
-void itoa (char *buf, int base, long d);
-void printf (const char *format, ...);
-    //// __attribute__ (( format(printf, 1, 2) ));  <-- this is a bad idea, simply because we're not really compatible...
-
+#include "screen.h"
 
 #endif

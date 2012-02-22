@@ -27,7 +27,7 @@ jump64.asm     - set-up of GDT+Interrupts for 64-bit kernel
 start_smp.inc  - bootstap code for Application processors (included in start32.asm and jump64.asm)
 
 lib.c          - service functions for 32-bit start code and both kernels
-scrn.c         - screen output for 32-bit start code and both kernels
+screen.c         - screen output for 32-bit start code and both kernels
 
 main.c         - start routine of actual kernel in protected mode
 *.c            - other helper functions and subsystems

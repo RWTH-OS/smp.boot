@@ -19,7 +19,7 @@
 
 
 
-/* scrn.c */
+/* screen.c */
 void cls();
 void putch(char c);
 void status_putch(int x, int c);

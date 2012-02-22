@@ -10,6 +10,7 @@
 #include "cpu.h"
 #include "pci.h"
 #include "smm.h"
+#include "menu.h"
 
 #define IFV   if (VERBOSE > 0 || VERBOSE_MAIN > 0)
 #define IFVV  if (VERBOSE > 1 || VERBOSE_MAIN > 1)
@@ -190,12 +191,31 @@ void main()
         if (hw_info.cpuid_cache[3].size > 0) 
             printf("* L3$: %#uB\n", hw_info.cpuid_cache[3].size);
         printf("*****************************************\n");
+
     }
 
 #if OFFER_MENU
     static barrier_t barr = BARRIER_INITIALIZER(MAX_CPU+1);
     enum {mode_default, mode_menu} mode = mode_default;
     unsigned menu_select = 0;
+
+    menu_entry_t mainmenu[] = {
+        {1, "default"}, 
+        {2, "tests >"}, 
+        {3, "benchmarks >"}, 
+        {999, "exit"}, 
+        {0,0},
+    };
+    switch (menu(mainmenu)) {
+        case 1 :
+            break;
+        case 2 :
+            break;
+        case 3 :
+            break;
+        case 999 :
+            break;
+    }
 
     while (1) {
 

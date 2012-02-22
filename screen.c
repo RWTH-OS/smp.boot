@@ -29,7 +29,7 @@ extern volatile unsigned cpu_online;
 #endif
 
 /* Scrolls the screen */
-void scroll(void)
+static void scroll(void)
 {
     uint16_t blank, temp;
 
@@ -54,7 +54,7 @@ void scroll(void)
 
 /* Updates the hardware cursor: the little blinking line
 *  on the screen under the last character pressed! */
-void move_csr(void)
+static void move_csr(void)
 {
     unsigned temp;
 
@@ -111,6 +111,16 @@ void cls()
     move_csr();
 }
 
+void locate(int abs_x, int rel_y)
+{
+    csr_x = abs_x;
+    csr_y += rel_y;
+#   if !defined(EARLY) && SCROLLBACK_BUF_SIZE
+    buf_x = csr_x;
+    buf_y += rel_y;
+#   endif
+}
+
 /* Puts a single character on the screen */
 void putch(char c)
 {
@@ -118,7 +128,7 @@ void putch(char c)
     unsigned att = attrib << 8;
 
     /* Handle a backspace, by moving the cursor back one space */
-    if(c == 0x08)
+    if(c == 0x08)       //   '\b'
     {
         if(csr_x != 0) csr_x--;
 #       if !defined(EARLY) && SCROLLBACK_BUF_SIZE
@@ -127,7 +137,7 @@ void putch(char c)
     }
     /* Handles a tab by incrementing the cursor's x, but only
     *  to a point that will make it divisible by 8 */
-    else if(c == 0x09)
+    else if(c == 0x09)  //   '\t'
     {
         csr_x = (csr_x + 8) & ~(8 - 1);
 #       if !defined(EARLY) && SCROLLBACK_BUF_SIZE
@@ -182,6 +192,10 @@ void putch(char c)
     {
         csr_x = 0;
         csr_y++;
+#       if !defined(EARLY) && SCROLLBACK_BUF_SIZE
+        buf_x = csr_x;
+        buf_y++;
+#       endif
     }
 
     /* Scroll the screen if needed, and finally move the cursor */
@@ -213,7 +227,7 @@ void puts(char *text)
 /* Sets the forecolor and backcolor that we will use */
 void settextcolor(unsigned char forecolor, unsigned char backcolor)
 {
-    /* Top 4 bytes are the background, bottom 4 bytes
+    /* Top 4 bits are the background, bottom 4 bits
     *  are the foreground color */
     attrib = (backcolor << 4) | (forecolor & 0x0F);
 }
