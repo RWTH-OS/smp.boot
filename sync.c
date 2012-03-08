@@ -23,6 +23,30 @@
 #define IFV   if (VERBOSE > 0 || VERBOSE_SYNC > 0)
 #define IFVV  if (VERBOSE > 1 || VERBOSE_SYNC > 1)
 
+
+#if 0
+/*
+ * these implementations of builtin sync functions are only to test 
+ * older versions of GCC (that do not contain them).
+ *
+ * THESE FUNCTIONS ARE NOT TESTED!!!
+ */
+uint32_t __sync_add_and_fetch_4(volatile uint32_t *pointer, uint32_t value)
+{
+    __asm__ volatile ("lock add %0, %1" : "=m"(*pointer) : "r"(value), "m"(*pointer));
+    return *pointer + value;
+}
+
+uint32_t __sync_bool_compare_and_swap_4(volatile uint32_t *pointer, uint32_t oldval, uint32_t newval)
+{
+    if (*pointer == oldval) {
+        *pointer = newval;
+        return 1;
+    }
+    return 0;
+}
+#endif
+
 /*
  * printf() uses a mutex => mutex_*() should not use printf() !!!
  */

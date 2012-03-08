@@ -26,5 +26,6 @@ SECTIONS{
 
     .KERNEL64 : {
         *(.text)
+        *(.KERNEL64)
     }
 }
