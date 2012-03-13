@@ -80,6 +80,7 @@ void mutex_unlock(mutex_t *m)
 }
 
 
+barrier_t global_barrier = BARRIER_INITIALIZER(MAX_CPU+1);
 
 void barrier_init(barrier_t *b, int max)
 {

@@ -241,14 +241,12 @@ void worker(volatile unsigned long *p_buffer, size_t range, size_t stride, acces
 
 
 
-void bench_hourglass(barrier_t *barr)
+void bench_hourglass()
 {
-    unsigned myid = my_cpu_info()->cpu_id;
-    //barrier(barr);
 
-    if (myid == 0) printf("1 CPU hourglass (%u sec) ----------------------------------------------\n", BENCH_HOURGLAS_SEC);
+    if (CPU_ID == 0) printf("1 CPU hourglass (%u sec) ----------------------------------------------\n", BENCH_HOURGLAS_SEC);
 
-    barrier(barr);
+    barrier(&global_barrier);
     if (collective_only(0x0001)) {
 
         udelay(1000000);
@@ -261,15 +259,14 @@ void bench_hourglass(barrier_t *barr)
 }
 
 
-void bench_hourglass_worker(barrier_t *barr, void *p_contender)
+void bench_hourglass_worker(void *p_contender)
 {
-    unsigned myid = my_cpu_info()->cpu_id;
     static barrier_t barr2 = BARRIER_INITIALIZER(2);        // barrier for two
     static flag_t flag = FLAG_INITIALIZER;
 
     if (cpu_online > 1) {
-        if (myid == 0) printf("2 CPUs hourglass (%u sec) ---------------------------------------------\n", BENCH_HOURGLAS_SEC);
-        barrier(barr);
+        if (CPU_ID == 0) printf("2 CPUs hourglass (%u sec) ---------------------------------------------\n", BENCH_HOURGLAS_SEC);
+        barrier(&global_barrier);
 
         if (collective_only(0x0003)) {   /* IDs 0 and 1 */
 
@@ -278,7 +275,7 @@ void bench_hourglass_worker(barrier_t *barr, void *p_contender)
             barrier(&barr2);
             for (u=0; u<12; u++) {
                 size_t size = 1;
-                if (myid == 1) {
+                if (CPU_ID == 1) {
                     switch (u) {        /* Cache Ranges valid for xaxis, Core i7 */
                         case  0: size=16*1024; break;        /* fits into L1 Cache */
                         case  1: size=128*1024; break;       /* fits into L2 Cache */
@@ -297,7 +294,7 @@ void bench_hourglass_worker(barrier_t *barr, void *p_contender)
                 }
                 barrier(&barr2);
 
-                if (myid == 0) {
+                if (CPU_ID == 0) {
                     hourglass(BENCH_HOURGLAS_SEC);
                     flag_signal(&flag);
                 } else {
@@ -313,16 +310,15 @@ void bench_hourglass_worker(barrier_t *barr, void *p_contender)
     }
 }
 
-void bench_hourglass_hyperthread(barrier_t *barr)
+void bench_hourglass_hyperthread()
 {
-    unsigned myid = my_cpu_info()->cpu_id;
 
     if (cpu_online > 4) {     /* assuming, that the upper half of cores are hyperthreads */
-        if (myid == 0) printf("2 CPUs hourglass (hyper-threads) (%u sec) -----------------------------\n", BENCH_HOURGLAS_SEC);
-        barrier(barr);
+        if (CPU_ID == 0) printf("2 CPUs hourglass (hyper-threads) (%u sec) -----------------------------\n", BENCH_HOURGLAS_SEC);
+        barrier(&global_barrier);
 
         if (collective_only(0x0001 | (1 << (cpu_online/2)))) {
-            if (myid == 0) {
+            if (CPU_ID == 0) {
                 hourglass(BENCH_HOURGLAS_SEC);
                 printf("\n");
             } else { 
@@ -334,7 +330,7 @@ void bench_hourglass_hyperthread(barrier_t *barr)
     }
 }
 
-void bench_worker(barrier_t *barr, void *p_buffer, void *p_contender)
+void bench_worker(void *p_buffer, void *p_contender)
 {
     unsigned myid = my_cpu_info()->cpu_id;
 
@@ -384,9 +380,9 @@ void bench_worker(barrier_t *barr, void *p_buffer, void *p_contender)
         foreach (load_nbr, load_nbrs) {
             if (load_nbr >= cpu_online) { break; }
 
-            barrier(barr);
-            if (myid == 0) barr_dyn.max = load_nbr+1;
-            barrier(barr);
+            barrier(&global_barrier);
+            if (CPU_ID == 0) barr_dyn.max = load_nbr+1;
+            barrier(&global_barrier);
 
             if (myid > load_nbr) smp_halt();
             else {
@@ -432,14 +428,14 @@ label_break:
             }
         }
 
-        barrier(barr);
+        barrier(&global_barrier);
     }
 
 
 }
 
 
-void bench_worker_cut(barrier_t *barr, void *p_buffer, void *p_contender, size_t worker_size)
+void bench_worker_cut(void *p_buffer, void *p_contender, size_t worker_size)
 {
     unsigned myid = my_cpu_info()->cpu_id;
     static barrier_t barr2 = BARRIER_INITIALIZER(2);        // barrier for two
@@ -485,17 +481,16 @@ void bench_worker_cut(barrier_t *barr, void *p_buffer, void *p_contender, size_t
         }
 
     }
-    barrier(barr);
+    barrier(&global_barrier);
 }
 
-void bench_rangestride(barrier_t *barr, void *p_buffer)
+void bench_rangestride(void *p_buffer)
 {
-    unsigned myid = my_cpu_info()->cpu_id;
 
     /*
      * memory benchmark
      */
-    if (myid == 0) {
+    if (CPU_ID == 0) {
         size_t range, stride;
         unsigned u;
         uint64_t pc0;
@@ -534,21 +529,20 @@ void bench_rangestride(barrier_t *barr, void *p_buffer)
     } else {
         smp_halt();
     }
-    barrier(barr);
+    barrier(&global_barrier);
 
 
 }
 
-void bench_mem(barrier_t *barr, void *p_buffer, void *p_contender)
+void bench_mem(void *p_buffer, void *p_contender)
 {
-    unsigned myid = my_cpu_info()->cpu_id;
     static barrier_t barr2 = BARRIER_INITIALIZER(2);        // barrier for two
     static flag_t flag = FLAG_INITIALIZER;
 
     /*
      * memory benchmark
      */
-    if (myid == 0) {
+    if (CPU_ID == 0) {
         size_t i, j;
         unsigned u;
         //size_t max_range = (1 << BENCH_MAX_RANGE_POW2); // 2^25 = 32 MB
@@ -598,7 +592,7 @@ void bench_mem(barrier_t *barr, void *p_buffer, void *p_contender)
     } else {
         smp_halt();
 
-        if (myid == 1) {
+        if (CPU_ID == 1) {
             /*
              * do some work on different memory ranges to spill caches
              */
@@ -624,7 +618,7 @@ void bench_mem(barrier_t *barr, void *p_buffer, void *p_contender)
 
         }
     }
-    barrier(barr);
+    barrier(&global_barrier);
 
 
 }

@@ -22,6 +22,7 @@
 #include "mm.h"
 #include "benchmark.h"
 #include "smm.h"
+#include "menu.h"
 
 extern volatile unsigned cpu_online;
 
@@ -30,127 +31,192 @@ extern volatile unsigned cpu_online;
  * A Barrier is executed immediately before, so they should come in shortly.
  */
 
-static mutex_t mut = MUTEX_INITIALIZER;
-static barrier_t barr = BARRIER_INITIALIZER(MAX_CPU+1); // this barrier will be set to cpu_online
-//static barrier_t barr2 = BARRIER_INITIALIZER(2);        // barrier for two
-//static flag_t flag = FLAG_INITIALIZER;
+
+static size_t buffer_size = 16 * MB;
+static void *p_buffer = NULL;
+static size_t contender_size = 16 * MB;
+static void *p_contender = NULL;
+
+static void init_buffers()
+{
+    if (CPU_ID == 0) {
+
+        if (p_buffer == NULL) {
+            p_buffer = heap_alloc(buffer_size / PAGE_SIZE, BENCH_WORK_FLAGS);       // one page = 4kB
+            /* no need for pre-faulting, because pages are present after heap_alloc()
+             * (we don't have demand paging)
+             * but initialize them */
+            memset(p_buffer, 0, buffer_size);
+        }
+
+
+        if (p_contender == NULL) {
+            p_contender = heap_alloc(contender_size / PAGE_SIZE, BENCH_LOAD_FLAGS);       // one page = 4kB
+            //virt_to_phys(p_contender);
+            //p_contender[0] = 42;
+            //printf("[1] p_contender = 0x%x .. 0x%x\n", (ptr_t)p_contender, (ptr_t)p_contender+16*1024*1024);
+            memset(p_contender, 0, contender_size);
+        }
+    }
+
+}
 
 void payload_benchmark()
 {
-    unsigned myid = my_cpu_info()->cpu_id;
 
     /*
      * count and collect all processors (collective barrier)
      */
-    mutex_lock(&mut);
-    if (barr.max == MAX_CPU+1) {
-        /* first one sets barr.max to the actual count of CPUs */
-        barr.max = cpu_online;
-        smm_deactivate();       // ...and (try to) deactivate SMM
-    }
-    mutex_unlock(&mut);
+    if (CPU_ID == 0) smm_deactivate();       // ...and (try to) deactivate SMM
 
-    size_t buffer_size = 16 * MB;
-    static void *p_buffer = NULL;
 
     /*
      * Memory allocation
      */
-    if (myid == 0) {
-        p_buffer = heap_alloc(buffer_size / PAGE_SIZE, BENCH_WORK_FLAGS);       // one page = 4kB
-        /* no need for pre-faulting, because pages are present after head_alloc()
-         * (we don't have demand paging)
-         * but initialize them */
-        memset(p_buffer, 0, buffer_size);
-    }
+    init_buffers();
 
-    size_t contender_size = 16 * MB;
-    static void *p_contender = NULL;
-
-    if (myid == 0) {
-        p_contender = heap_alloc(contender_size / PAGE_SIZE, BENCH_LOAD_FLAGS);       // one page = 4kB
-        //virt_to_phys(p_contender);
-        //p_contender[0] = 42;
-        //printf("[1] p_contender = 0x%x .. 0x%x\n", (ptr_t)p_contender, (ptr_t)p_contender+16*1024*1024);
-        memset(p_contender, 0, contender_size);
-    }
-
+    barrier(&global_barrier);
 
     /*
      *   Benchmarks
      */
 
-    //bench_hourglass(&barr);
-    //bench_hourglass_worker(&barr, p_contender);
-    //bench_hourglass_hyperthread(&barr);
+    bench_hourglass();
+    bench_hourglass_worker(p_contender);
+    bench_hourglass_hyperthread();
 
-    barrier(&barr);
+    barrier(&global_barrier);
 
-    //bench_worker(&barr, p_buffer, p_contender);
-    bench_worker_cut(&barr, p_buffer, p_contender, 16*KB);
+    bench_worker(p_buffer, p_contender);
+    bench_worker_cut(p_buffer, p_contender, 16*KB);
     
-    /*
-    if (myid == 0) {
+    
+    if (CPU_ID == 0) {
         heap_reconfig(p_buffer, buffer_size, 0);
         heap_reconfig(p_contender, contender_size, MM_CACHE_DISABLE);
-        barrier(&barr);
+        barrier(&global_barrier);
         printf("========  Benchmark: WB / Load: CD ===================================\n");
     } else {
-        barrier(&barr);
+        barrier(&global_barrier);
         tlb_shootdown(p_buffer, buffer_size);
         tlb_shootdown(p_contender, contender_size);
     }
-    barrier(&barr);
-    */
+    barrier(&global_barrier);
+    
 
-    //bench_worker_cut(&barr, p_buffer, p_contender, 16*KB);
-    //bench_worker_cut(&barr, p_buffer, p_contender, 128*KB);
+    bench_worker_cut(p_buffer, p_contender, 16*KB);
+    bench_worker_cut(p_buffer, p_contender, 128*KB);
 
-    /*
-    if (myid == 0) {
+    
+    if (CPU_ID == 0) {
         heap_reconfig(p_buffer, buffer_size, 0);
         heap_reconfig(p_contender, contender_size, MM_WRITE_THROUGH);
-        barrier(&barr);
+        barrier(&global_barrier);
         printf("========  Benchmark: WB / Load: WT ===================================\n");
     } else {
-        barrier(&barr);
+        barrier(&global_barrier);
         tlb_shootdown(p_buffer, buffer_size);
         tlb_shootdown(p_contender, contender_size);
     }
-    barrier(&barr);
-    */
+    barrier(&global_barrier);
+    
 
-    //bench_worker_cut(&barr, p_buffer, p_contender, 16*KB);
-    //bench_worker_cut(&barr, p_buffer, p_contender, 128*KB);
+    bench_worker_cut(p_buffer, p_contender, 16*KB);
+    bench_worker_cut(p_buffer, p_contender, 128*KB);
 
-    barrier(&barr);
+    barrier(&global_barrier);
 
-    //bench_mem(&barr, p_buffer, p_contender);
-    bench_rangestride(&barr, p_buffer);
+    bench_mem(p_buffer, p_contender);
+    bench_rangestride(p_buffer);
+}
+
+void payload_benchmark_menu()
+{
+    int t, r;
+    unsigned flag;
+
+    menu_entry_t testmenu[] = {
+        {1, "reconfig p_buffer"},
+        {2, "reconfig p_contender"},
+        {3, "hourglass"},
+        {4, "bench_worker"},
+        {5, "bench_worker_cut(16 kB)"},
+        {6, "bench_mem"},
+        {7, "bench_rangestride"},
+        {999, "return"},
+        {0,0}
+    };
+    menu_entry_t reconfmenu[] = {
+        {1, "cache disable"},
+        {2, "write back"},
+        {3, "write through"},
+        {999, "abort"},
+        {0,0}
+    };
+
+    /*
+     * Memory allocation
+     */
+    init_buffers();
+    barrier(&global_barrier);
+
+    do {
+        t = menu("Benchmarks", testmenu);
+        switch (t) {
+            case 1 :
+                r = menu("p_buffer", reconfmenu);
+                switch (r) {
+                    case 1 : flag = MM_CACHE_DISABLE; break;
+                    case 2 : flag = MM_WRITE_THROUGH; break;
+                    case 3 : flag = 0; break;
+                }
+                heap_reconfig(p_buffer, buffer_size, flag);
+                break;
+            case 2 :
+                r = menu("p_contender", reconfmenu);
+                switch (r) {
+                    case 1 : flag = MM_CACHE_DISABLE; break;
+                    case 2 : flag = MM_WRITE_THROUGH; break;
+                    case 3 : flag = 0; break;
+                }
+                heap_reconfig(p_contender, contender_size, flag);
+                break;
+            case 3 :
+                bench_hourglass();
+                break;
+            case 4 :
+                bench_worker(p_buffer, p_contender);
+                break;
+            case 5 :
+                bench_worker_cut(p_buffer, p_contender, 16*KB);
+                break;
+            case 6 : 
+                bench_mem(p_buffer, p_contender);
+                break;
+            case 7 : 
+                bench_rangestride(p_buffer);
+                break;
+        }
+    } while (t != 999);
+
 }
 
 void payload_demo()
 {
-    unsigned myid = my_cpu_info()->cpu_id;
-    mutex_lock(&mut);
-    if (barr.max == MAX_CPU+1) {
-        /* first one sets barr.max to the actual count of CPUs */
-        barr.max = cpu_online;
-    }
-    mutex_unlock(&mut);
+    barrier(&global_barrier);
 
     /* needs at least two CPUs */
     if (cpu_online >= 2) {
-        if (myid == 0) {
+        if (CPU_ID == 0) {
             /* call Task for CPU 0 */
-            barrier(&barr);
+            barrier(&global_barrier);
 
             printf("CPU 0: udelay 5 Sek.\n");
             udelay(5*1000*1000);
             printf("CPU 0: exit now\n");
-        } else if (myid == 1) {
+        } else if (CPU_ID == 1) {
             /* call Task for CPU 1 */
-            barrier(&barr);
+            barrier(&global_barrier);
 
             printf("CPU 1: udelay 10 Sek.\n");
             udelay(10*1000*1000);

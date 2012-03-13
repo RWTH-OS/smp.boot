@@ -21,6 +21,7 @@
 
 
 void tests_doall(void);
+void tests_menu(void);
 
 
 #endif  // TESTS_H

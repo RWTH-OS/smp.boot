@@ -36,6 +36,7 @@ typedef struct {
 } barrier_t;
 //#define BARRIER_INITIALIZER(m)  (barrier_t){ .cnt=0, .epoch=0, .max=m };
 #define BARRIER_INITIALIZER(m)  { .cnt=0, .epoch=0, .max=m };
+extern barrier_t global_barrier;
 void barrier_init(barrier_t *b, int max);
 void barrier(barrier_t *b);
 

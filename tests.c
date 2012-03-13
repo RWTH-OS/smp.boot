@@ -22,13 +22,13 @@
 #include "mm.h"
 #include "cpu.h"
 #include "keyboard.h"
+#include "menu.h"
 
 #define IFV   if (VERBOSE > 0 || VERBOSE_TESTS > 0)
 #define IFVV  if (VERBOSE > 1 || VERBOSE_TESTS > 1)
 
 extern volatile unsigned cpu_online;
 
-static barrier_t barr_all = BARRIER_INITIALIZER(MAX_CPU+1);
 
 void tests_barrier(void)
 {
@@ -48,15 +48,15 @@ void tests_barrier(void)
         barrier(&barr2);
     }
 
-    barrier(&barr_all);
+    barrier(&global_barrier);
     for (u=0; u<20; u++) {
 
         if ((u % (myid+1)) == 0) udelay(1000*(u+1));
 
-        barrier(&barr_all);
+        barrier(&global_barrier);
     }
     IFV printf("[%u] leaving test_barrier()\n", myid);
-    barrier(&barr_all);
+    barrier(&global_barrier);
 }
 
 void tests_flag(void)
@@ -64,7 +64,7 @@ void tests_flag(void)
     unsigned myid = my_cpu_info()->cpu_id;
     static flag_t flag = FLAG_INITIALIZER;
     
-    barrier(&barr_all);
+    barrier(&global_barrier);
 
     if (myid == 0) {
         udelay(1000000);
@@ -249,92 +249,121 @@ void tests_ipi(void)
         printf("tests_ipi: can only be executed with more than one CPU\n");
     }
     if (!if_backup) cli();  // restore previous state of interrupt flag
-    barrier(&barr_all);
+    barrier(&global_barrier);
 }
 
 void tests_printf(void)
 {
-    unsigned b, f;
-    printf("     ");
-    for (b = 0; b<8; b++) {
-        printf(" %#x", b);
-    }
-    printf("\n");
-    for (f = 0; f<16; f++) {
-        settextcolor(COLOR_FG_WHITE, COLOR_BG_BLACK);
-        printf("%#x ", f);
+    if (CPU_ID == 0) {
+        unsigned b, f;
+        printf("     ");
         for (b = 0; b<8; b++) {
-            settextcolor(f, b);
-            printf("abcd ", b);
+            printf(" %#x", b);
         }
         printf("\n");
-    }
-    settextcolor(COLOR_FG_WHITE, COLOR_BG_BLACK);
+        for (f = 0; f<16; f++) {
+            settextcolor(COLOR_FG_WHITE, COLOR_BG_BLACK);
+            printf("%#x ", f);
+            for (b = 0; b<8; b++) {
+                settextcolor(f, b);
+                printf("abcd ", b);
+            }
+            printf("\n");
+        }
+        settextcolor(COLOR_FG_WHITE, COLOR_BG_BLACK);
 
-    printf("\n");
-    printf("u:'%u', x:'%x', k:'%#u', u:'%u', k:'%#u', u:'%u'\n", 123, 123, 123, 123, 123, 123);
-    printf("u:'%u', x:'%x', k:'%#u', #x:'%#x', k:'%#u', u:'%u'\n", 123, 123, 123, 123, 123, 123);
-    printf("u:'%u', x:'%x', k:'%#10u', #8x:'%#8x', k:'%#u', u:'%u'\n", 123, 123, 123, 123, 123, 123);
-    for (unsigned u=512; u<128*MB; u*=8) printf("%10u: %#uB\n", u, u);
+        printf("\n");
+        printf("u:'%u', x:'%x', k:'%#u', u:'%u', k:'%#u', u:'%u'\n", 123, 123, 123, 123, 123, 123);
+        printf("u:'%u', x:'%x', k:'%#u', #x:'%#x', k:'%#u', u:'%u'\n", 123, 123, 123, 123, 123, 123);
+        printf("u:'%u', x:'%x', k:'%#10u', #8x:'%#8x', k:'%#u', u:'%u'\n", 123, 123, 123, 123, 123, 123);
+        for (unsigned u=512; u<128*MB; u*=8) printf("%10u: %#uB\n", u, u);
+    }
+    barrier(&global_barrier);
 }
 void tests_keyboard(void)
 {
-    unsigned u;
-    unsigned scancode, keycode;
-    printf("polling ~30 secs for keyboard scan codes (press some keys...)\n");
-    for (u=0; u<64; u++) {
-        scancode = keyboard_get_scancode();
-        printf("%x ", scancode);
-        udelay(500*1000);
+    if (CPU_ID == 0) {
+        unsigned u;
+        unsigned scancode, keycode;
+        printf("polling ~30 secs for keyboard scan codes (press some keys...)\n");
+        for (u=0; u<64; u++) {
+            scancode = keyboard_get_scancode();
+            printf("%x ", scancode);
+            udelay(500*1000);
+        }
+        printf("\n");
+
+        printf("polling ~30 secs for keyboard input (press some keys...)\n");
+        for (u=0; u<64; u++) {
+            scancode = keyboard_get_scancode();
+            keycode = scancode_to_keycode(scancode);
+            if (keycode) putch(keycode); 
+            printf(".");
+            udelay(500*1000);
+        }
+        printf("\n");
+
+        //printf("press any key...");
+        //keycode = wait_for_key();
+        //putch((uint8_t)keycode);
+        //printf("\n");
     }
-    printf("\n");
-
-    printf("polling ~30 secs for keyboard input (press some keys...)\n");
-    for (u=0; u<64; u++) {
-        scancode = keyboard_get_scancode();
-        keycode = scancode_to_keycode(scancode);
-        if (keycode) putch(keycode); 
-        printf(".");
-        udelay(500*1000);
-    }
-    printf("\n");
-
-    printf("press any key...");
-    keycode = wait_for_key();
-    putch((uint8_t)keycode);
-    printf("\n");
-
+    barrier(&global_barrier);
 }
 
 void tests_doall(void)
 {
     unsigned myid = my_cpu_info()->cpu_id;
-    if (myid == 0) {
-        barr_all.max = cpu_online;
-        /* wait until all others are in the following barrier */
-        while (barr_all.cnt < (barr_all.max-1)) { };
-    }
-    barrier(&barr_all);
+    barrier(&global_barrier);
 
     IFV printf("[%u] calling test_barrier()\n", myid);
-    //tests_barrier();
-    //tests_flag();
+    tests_barrier();
+    tests_flag();
 
-    //tests_mm();
+    tests_mm();
     tests_mm_reconf();
 
-    //tests_ipi();
+    tests_ipi();
 
-    //if (myid == 0) {
-    // tests_printf();
-    // tests_keyboard();
-    //}
+    tests_printf();
+    tests_keyboard();
     
-    /*unsigned u;
-    for (u=0; u<30; u++) {
-        printf("[%u] line %u\n", myid, u);
-    }*/
-
     printf("[%u] exit tests_doall()\n", myid);
+}
+
+void tests_menu(void)
+{
+    int t;
+    do {
+        menu_entry_t testmenu[] = {
+            {0xFFFF, "<all>"},
+            {1 << 0, "Barrier, Flag"},
+            {1 << 1, "Memory-Management"},
+            {1 << 2, "Interprocessor Interrupts (IPI)"},
+            {1 << 3, "printf"},
+            {1 << 4, "keyboard"},
+            {0x10000, "return"},
+            {0,0}
+        };
+        t = menu("Tests", testmenu);
+        if (t & (1 << 0)) {
+            tests_barrier();
+            tests_flag();
+        }
+        if (t & (1 << 1)) {
+            tests_mm();
+            tests_mm_reconf();
+        }
+        if (t & (1 << 2)) {
+            tests_ipi();
+        }
+        if (t & (1 << 3)) {
+            tests_printf();
+        }
+        if (t & (1 << 4)) {
+            tests_keyboard();
+        }
+    } while (t != 0x10000);
+
 }
 

@@ -31,6 +31,7 @@ typedef enum {kbm_poll, kbm_interrupt} kb_mode_t;
 #define KEY_END       208
 
 uint32_t keyboard_get_scancode();
+void keyboard_clear_buf();
 uint8_t scancode_to_keycode(uint32_t scancode);
 uint8_t wait_for_key();
 int keyboard_mode(kb_mode_t mode);

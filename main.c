@@ -23,9 +23,6 @@ hw_info_t hw_info;
  *  - is the cache activated?
  *  - dynamic memory management (at least, malloc() should be implemented)
  */
-barrier_t mainbarrier = BARRIER_INITIALIZER(MAX_CPU); /* max is later reduced to the actual number of CPUs */
-//barrier_t mainbarrier = {.cnt=0,.epoch=0,.max=16}; 
-//(barrier_t){ .cnt=0, .epoch=0, .max=16 }; /* max is later reduced to the actual number of CPUs */
 
 extern volatile unsigned cpu_online;    // from apic.c
 void main();                            // further down in this file
@@ -127,10 +124,10 @@ void main_bsp(void)
     
 
     cpu_online++;       // the BSP is there, too
-    mainbarrier.max = cpu_online;
+    global_barrier.max = cpu_online;
     /* wait until all others are in the following barrier */
-    while (mainbarrier.cnt < (mainbarrier.max-1)) {};
-    barrier(&mainbarrier);
+    while (global_barrier.cnt < (global_barrier.max-1)) {};
+    barrier(&global_barrier);
 
     main();
 }
@@ -158,7 +155,7 @@ void main_ap(void)
     //udelay(3000000*my_id);
     //printf("new[%d]: cpu_info = %x cpu_id = %x\n", cpu_online, my_cpu_info(), my_cpu_info()->cpu_id);
 
-    barrier(&mainbarrier);
+    barrier(&global_barrier);
     main();
 }
 
@@ -195,129 +192,64 @@ void main()
     }
 
 #if OFFER_MENU
-    static barrier_t barr = BARRIER_INITIALIZER(MAX_CPU+1);
-    enum {mode_default, mode_menu} mode = mode_default;
-    unsigned menu_select = 0;
 
-    menu_entry_t mainmenu[] = {
-        {1, "default"}, 
-        {2, "tests >"}, 
-        {3, "benchmarks >"}, 
-        {999, "exit"}, 
-        {0,0},
-    };
-    int m1;
-    do {
-        int t;
-        m1 = menu("Main menu", mainmenu);
-        switch (m1) {
-            case 1 :
-                break;
-            case 2 :
-                do {
-                    menu_entry_t testmenu[] = {
-                        {0xFFFF, "<all>"},
-                        {0x0001, "Test 1"},
-                        {0x0002, "Test 2"},
-                        {0x0004, "Test 3"},
-                        {0x0008, "Test 4"},
-                        {0x10000, "return"},
-                        {0,0}
-                    };
-                    t = menu("Tests", testmenu);
-                    if (t & 0x0001) {
-                        printf("run Test 1...\n");
-                    }
-                    if (t & 0x0002) {
-                        printf("run Test 2...\n");
-                    }
-                    if (t & 0x0004) {
-                        printf("run Test 3...\n");
-                    }
-                    if (t & 0x0008) {
-                        printf("run Test 4...\n");
-                    }
-                } while (t != 0x10000);
-                break;
-            case 3 :
-                break;
-            case 999 :
-                break;
-        }
-    } while (m1 != 999);
+    barrier(&global_barrier);
+    static volatile enum {mode_default, mode_menu} mode = mode_default;
 
-    while (0) {
-
-        if (my_cpu_info()->cpu_id == 0) {
-            int i;
-            if (mode == mode_default) {
-                printf("For a menu, press any key within 5 Sek.\b\b\b\b\b");
-                for (i=5; i>0; i--) {
-                    udelay(1000000);
-                    printf("\b%i", i);
-                    if (keyboard_get_scancode() != 0) {
-                        mode = mode_menu;
-                        break;
-                    }
-                }
-                printf("\n");
+    if (CPU_ID == 0) {
+        int i;
+        keyboard_clear_buf();
+        printf("To interrupt default mode and get a menu, press any key within 5 Sek.\b\b\b\b\b\b");
+        for (i=5; i>-1; i--) {
+            udelay(1000000);
+            printf("%i\b", i);
+            if (keyboard_get_scancode() != 0) {
+                mode = mode_menu;
+                break;
             }
-
-            if (mode == mode_menu) {
-                uint8_t key;
-                menu_select = 0;
-                printf("0 : tests & benchmark\n");
-                printf("1 : all tests\n");
-                printf("2 : all benchmarks\n");
-                printf("999 : exit, scrollback & reboot\n");
-                while (1) {
-                    printf("\rselect: %u       ", menu_select);
-                    key = wait_for_key();
-                    if (key >= '0' && key <= '9') {
-                        menu_select *= 10;
-                        menu_select += key - '0';
-                    } else if (key == '\n') {
-                        break;
-                    } else if (key == '\b') {
-                        menu_select /= 10;
-                    }
-                }
-                printf("\n");
-
-            }
-
-
-            barr.max = cpu_online;
-            barrier(&barr);
-        } else {
-            barrier(&barr);
         }
-
-        switch (menu_select) {
-            case 0 : 
-#endif
-                /* call tests */
-                tests_doall();
-
-                /* call a payload */
-                payload_benchmark();
-#if OFFER_MENU
-                break;
-            case 1 :
-                tests_doall();
-                break;
-            case 2 :
-                payload_benchmark();
-                break;
-        }
-
-
-
-
-        if (mode == mode_default || menu_select == 999) break;
+        printf("\n");
     }
 
-#endif 
+    barrier(&global_barrier);
+
+    if (mode == mode_menu) {
+        menu_entry_t mainmenu[] = {
+            {1, "default"}, 
+            {2, "tests >"}, 
+            {3, "benchmarks >"}, 
+            {999, "exit"}, 
+            {0,0},
+        };
+        int m1;
+        do {
+            m1 = menu("Main menu", mainmenu);
+            switch (m1) {
+                case 1 :
+                    tests_doall();
+                    payload_benchmark();
+                    break;
+                case 2 :
+                    tests_menu();
+                    break;
+                case 3 :
+                    payload_benchmark_menu();
+                    break;
+                case 999 :
+                    break;
+            }
+        } while (m1 != 999);
+
+    } else
+#endif
+    {
+        /* call tests */
+        tests_doall();
+
+        /* call a payload */
+        payload_benchmark();
+    }
+
 
 
     /* all CPUs leaving the payload: go to sleep */

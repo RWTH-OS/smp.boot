@@ -57,6 +57,7 @@ static inline volatile cpu_info_t * my_cpu_info()
 #   endif
     return (cpu_info_t volatile * )p;
 }
+#define CPU_ID (my_cpu_info()->cpu_id)
 
 #define STATUS_WAKEUP   '^'
 #define STATUS_RUNNING  '.'

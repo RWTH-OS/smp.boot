@@ -20,6 +20,7 @@
 #define PAYLOAD_H
 
 void payload_benchmark();
+void payload_benchmark_menu();
 
 #endif // PAYLOAD_H
 

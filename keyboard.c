@@ -87,6 +87,14 @@ uint32_t keyboard_get_scancode()
     return scancode;
 }
 
+void keyboard_clear_buf()
+{
+    // empty keyboard buffer
+    while (inportb(KBC_STATUS) & 1) {
+        inportb(KBC_EA);
+    }   
+}
+
 #define KBM_SHIFT   0
 #define KBM_CTRL    1
 #define KBM_ALT     2
@@ -190,9 +198,7 @@ int keyboard_init(kb_mode_t mode)
     keyboard_mode(mode);
     
     // empty keyboard buffer
-    while (inportb(KBC_STATUS) & 1) {
-        inportb(KBC_EA);
-    }   
+    keyboard_clear_buf();
  
     // activate keyboard
     send_command(0xF4);
