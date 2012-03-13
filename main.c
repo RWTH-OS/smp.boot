@@ -206,18 +206,47 @@ void main()
         {999, "exit"}, 
         {0,0},
     };
-    switch (menu(mainmenu)) {
-        case 1 :
-            break;
-        case 2 :
-            break;
-        case 3 :
-            break;
-        case 999 :
-            break;
-    }
+    int m1;
+    do {
+        int t;
+        m1 = menu("Main menu", mainmenu);
+        switch (m1) {
+            case 1 :
+                break;
+            case 2 :
+                do {
+                    menu_entry_t testmenu[] = {
+                        {0xFFFF, "<all>"},
+                        {0x0001, "Test 1"},
+                        {0x0002, "Test 2"},
+                        {0x0004, "Test 3"},
+                        {0x0008, "Test 4"},
+                        {0x10000, "return"},
+                        {0,0}
+                    };
+                    t = menu("Tests", testmenu);
+                    if (t & 0x0001) {
+                        printf("run Test 1...\n");
+                    }
+                    if (t & 0x0002) {
+                        printf("run Test 2...\n");
+                    }
+                    if (t & 0x0004) {
+                        printf("run Test 3...\n");
+                    }
+                    if (t & 0x0008) {
+                        printf("run Test 4...\n");
+                    }
+                } while (t != 0x10000);
+                break;
+            case 3 :
+                break;
+            case 999 :
+                break;
+        }
+    } while (m1 != 999);
 
-    while (1) {
+    while (0) {
 
         if (my_cpu_info()->cpu_id == 0) {
             int i;

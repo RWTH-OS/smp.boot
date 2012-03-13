@@ -21,26 +21,33 @@
 #include "menu.h"
 
 
-int menu(menu_entry_t entries[])
+int menu(char * caption, menu_entry_t entries[])
 {
     unsigned u;
     unsigned selection = 0;
     unsigned cont = 1;
+    unsigned char backup_attrib = gettextattrib();
+
+    settextcolor(COLOR_FG_YELLOW, COLOR_BG_BLUE);
+    printf("--%s--\n", caption);
+
     while (cont) {
         for (u = 0; ; u++) {
             if (entries[u].string == 0) break;
             if (selection == u) {
-                settextcolor(COLOR_FG_BLACK, COLOR_BG_WHITE);
+                settextcolor(COLOR_FG_BLUE, COLOR_BG_WHITE);
             } else {
-                settextcolor(COLOR_FG_WHITE, COLOR_BG_BLACK);
+                settextcolor(COLOR_FG_WHITE, COLOR_BG_BLUE);
             }
-            printf("[%31s]\n", entries[u].string);
+            printf("[%31s]", entries[u].string);
+            if (selection == u) printf(" **"); else printf("   ");
+            printf("\n");
         }
         switch (wait_for_key()) {
-            case KEY_UP : 
-               if (selection <= u) selection++;
+            case KEY_DOWN : 
+               if (selection < u-1) selection++;
                break;
-            case KEY_DOWN :
+            case KEY_UP :
                if (selection > 0) selection--;
                break;
             case '\n' :
@@ -50,6 +57,7 @@ int menu(menu_entry_t entries[])
         if (! cont) break;
         locate(0, -u);
     }
+    settextattrib(backup_attrib);
     return entries[selection].value;
 }
 

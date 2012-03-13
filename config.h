@@ -73,7 +73,7 @@
 #define VERBOSE_DRIVER      0
 #define VERBOSE_TESTS       0
 #define VERBOSE_MAIN        0
-#define OFFER_MENU          0
+#define OFFER_MENU          1
 
 /*
  * scrollback buffer

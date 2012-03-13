@@ -13,7 +13,7 @@
 /* These define our textpointer, our background and foreground
 *  colors (attributes), and x and y cursor coordinates */
 static uint16_t *textmemptr;
-static uint8_t attrib = 0x0F;
+static uint8_t attrib = ATTRIB(COLOR_FG_WHITE, COLOR_BG_BLACK); //0x0F;
 static uint8_t attrib_status = 0x1F;
 static uint8_t csr_x = 0, csr_y = 0;
 static uint8_t screen_h = 25;              /* screen height (currently constant, but may be set according to multiboot info) */
@@ -35,7 +35,7 @@ static void scroll(void)
 
     /* A blank is defined as a space... we need to give it
     *  backcolor too */
-    blank = 0x20 | (attrib << 8);
+    blank = 0x20 | (ATTRIB(COLOR_FG_WHITE, COLOR_BG_BLACK) << 8); // (attrib << 8);
 
     /* Row screen_h ( = 25) is the end, this means we need to scroll up */
     if(csr_y >= screen_h)
@@ -229,7 +229,16 @@ void settextcolor(unsigned char forecolor, unsigned char backcolor)
 {
     /* Top 4 bits are the background, bottom 4 bits
     *  are the foreground color */
-    attrib = (backcolor << 4) | (forecolor & 0x0F);
+    //attrib = (backcolor << 4) | (forecolor & 0x0F);
+    attrib = ATTRIB(forecolor, backcolor);
+}
+unsigned char gettextattrib()
+{
+    return attrib;
+}
+void settextattrib(unsigned char a)
+{
+    attrib = a;
 }
 
 /* Sets our text-mode VGA pointer, then clears the screen for us */

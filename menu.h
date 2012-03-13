@@ -24,7 +24,7 @@ typedef struct {
     char *string;
 } menu_entry_t;
 
-int menu(menu_entry_t entries[]);
+int menu(char * caption, menu_entry_t entries[]);
 
 
 #endif // MENU_H

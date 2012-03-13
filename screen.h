@@ -47,12 +47,16 @@
 
 #define COLOR_BLINK           0x08
 
+#define ATTRIB(fg, bg) (((fg) & 0x0F) | ((bg) << 4))
+
 void cls();
 void locate(int abs_x, int rel_y);
 void putch(char c);
 void status_putch(int x, int c);
 void puts(char *str);
 void settextcolor(unsigned char forecolor, unsigned char backcolor);
+unsigned char gettextattrib();
+void settextattrib(unsigned char a);
 void init_video();
 #if SCROLLBACK_BUF_SIZE
 void init_video_scrollback(void);
