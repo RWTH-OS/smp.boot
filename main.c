@@ -223,7 +223,7 @@ void main()
         };
         int m1;
         do {
-            m1 = menu("Main menu", mainmenu);
+            m1 = menu("Main menu", mainmenu, 1);
             switch (m1) {
                 case 1 :
                     tests_doall();

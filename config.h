@@ -103,7 +103,7 @@
 #define BENCH_LOAD_FLAGS          (MM_WRITE_THROUGH)
 //#define BENCH_LOAD_FLAGS          (MM_CACHE_DISABLE)
 
-#define BENCH_HOURGLAS_SEC     10u
+#define BENCH_HOURGLASS_SEC     10u
 #define BENCH_MIN_STRIDE_POW2   4  
 #define BENCH_MAX_STRIDE_POW2   9
 #define BENCH_MIN_RANGE_POW2    12
@@ -113,7 +113,7 @@
 /* short workload for quick testing (set #if 0) */
 #define BENCH_WORK_FLAGS          0
 #define BENCH_LOAD_FLAGS          0
-#define BENCH_HOURGLAS_SEC      2u 
+#define BENCH_HOURGLASS_SEC      2u 
 #define BENCH_MIN_STRIDE_POW2   4  
 #define BENCH_MAX_STRIDE_POW2   5
 #define BENCH_MIN_RANGE_POW2    12

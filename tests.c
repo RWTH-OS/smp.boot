@@ -333,7 +333,7 @@ void tests_doall(void)
 
 void tests_menu(void)
 {
-    int t;
+    int t = 0xFFFF;
     do {
         menu_entry_t testmenu[] = {
             {0xFFFF, "<all>"},
@@ -345,7 +345,7 @@ void tests_menu(void)
             {0x10000, "return"},
             {0,0}
         };
-        t = menu("Tests", testmenu);
+        t = menu("Tests", testmenu, t);
         if (t & (1 << 0)) {
             tests_barrier();
             tests_flag();

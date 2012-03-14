@@ -19,7 +19,13 @@
 #ifndef BENCHMARK_H
 #define BENCHMARK_H
 
-
+typedef enum {cm_cache_disable, cm_write_back, cm_write_through} cachemode_t;
+typedef struct bench_opt_s {
+    cachemode_t cm_buffer;
+    cachemode_t cm_contender;
+    unsigned timebase;
+} bench_opt_t;
+extern bench_opt_t bench_opt;
 
 void hourglass(unsigned sec);
 void load_until_flag(void *buffer, size_t size, size_t stride, flag_t *flag);

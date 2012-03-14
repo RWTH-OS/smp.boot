@@ -132,24 +132,34 @@ void payload_benchmark()
 
 void payload_benchmark_menu()
 {
-    int t, r;
-    unsigned flag;
+    int t = 0, r;
+    unsigned flag = 0;
 
     menu_entry_t testmenu[] = {
         {1, "reconfig p_buffer"},
         {2, "reconfig p_contender"},
-        {3, "hourglass"},
-        {4, "bench_worker"},
-        {5, "bench_worker_cut(16 kB)"},
-        {6, "bench_mem"},
-        {7, "bench_rangestride"},
+        {3, "reconfig timebase"},
+        {4, "hourglass"},
+        {5, "bench_worker"},
+        {6, "bench_worker_cut(16 kB)"},
+        {7, "bench_mem"},
+        {8, "bench_rangestride"},
         {999, "return"},
         {0,0}
     };
     menu_entry_t reconfmenu[] = {
-        {1, "cache disable"},
-        {2, "write back"},
-        {3, "write through"},
+        {cm_cache_disable, "cache disable"},
+        {cm_write_back, "write back"},
+        {cm_write_through, "write through"},
+        {999, "abort"},
+        {0,0}
+    };
+    menu_entry_t timebasemenu[] = {
+        {1,  " 1 Sec."},
+        {2,  " 2 Sec."},
+        {5,  " 5 Sec."},
+        {10, "10 Sec."},
+        {30, "30 Sec."},
         {999, "abort"},
         {0,0}
     };
@@ -161,39 +171,61 @@ void payload_benchmark_menu()
     barrier(&global_barrier);
 
     do {
-        t = menu("Benchmarks", testmenu);
+        t = menu("Benchmarks", testmenu, t);
         switch (t) {
             case 1 :
-                r = menu("p_buffer", reconfmenu);
+                r = menu("p_buffer", reconfmenu, bench_opt.cm_buffer);
                 switch (r) {
-                    case 1 : flag = MM_CACHE_DISABLE; break;
-                    case 2 : flag = MM_WRITE_THROUGH; break;
-                    case 3 : flag = 0; break;
+                    case 1 : 
+                        flag = MM_CACHE_DISABLE; 
+                        bench_opt.cm_buffer = r;
+                        break;
+                    case 2 : 
+                        flag = MM_WRITE_THROUGH; 
+                        bench_opt.cm_buffer = r;
+                        break;
+                    case 3 : 
+                        flag = 0; 
+                        bench_opt.cm_buffer = r;
+                        break;
                 }
-                heap_reconfig(p_buffer, buffer_size, flag);
+                if (r != 999) heap_reconfig(p_buffer, buffer_size, flag);
                 break;
             case 2 :
-                r = menu("p_contender", reconfmenu);
+                r = menu("p_contender", reconfmenu, bench_opt.cm_contender);
                 switch (r) {
-                    case 1 : flag = MM_CACHE_DISABLE; break;
-                    case 2 : flag = MM_WRITE_THROUGH; break;
-                    case 3 : flag = 0; break;
+                    case 1 : 
+                        flag = MM_CACHE_DISABLE; 
+                        bench_opt.cm_contender = r;
+                        break;
+                    case 2 : 
+                        flag = MM_WRITE_THROUGH; 
+                        bench_opt.cm_contender = r;
+                        break;
+                    case 3 : 
+                        flag = 0; 
+                        bench_opt.cm_contender = r;
+                        break;
                 }
-                heap_reconfig(p_contender, contender_size, flag);
+                if (r != 999) heap_reconfig(p_contender, contender_size, flag);
                 break;
             case 3 :
-                bench_hourglass();
+                r = menu("timebase", timebasemenu, bench_opt.timebase);
+                if (r != 999) bench_opt.timebase = r;
                 break;
             case 4 :
-                bench_worker(p_buffer, p_contender);
+                bench_hourglass();
                 break;
             case 5 :
+                bench_worker(p_buffer, p_contender);
+                break;
+            case 6 :
                 bench_worker_cut(p_buffer, p_contender, 16*KB);
                 break;
-            case 6 : 
+            case 7 : 
                 bench_mem(p_buffer, p_contender);
                 break;
-            case 7 : 
+            case 8 : 
                 bench_rangestride(p_buffer);
                 break;
         }

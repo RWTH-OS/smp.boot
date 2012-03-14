@@ -27,13 +27,14 @@
 
 extern volatile unsigned cpu_online;
 
+bench_opt_t bench_opt = {.timebase = BENCH_HOURGLASS_SEC};
+
 void hourglass(unsigned sec)
 {
     uint64_t tsc, tsc_last, tsc_end, diff;
     unsigned long long min = 0xFFFFFFFF, avg = 0, cnt = 0, max = 0;
     //int i = -1, j;
     //long p_min, p_max;
-
 
     /*
      * hourglass (warm-up)
@@ -244,14 +245,14 @@ void worker(volatile unsigned long *p_buffer, size_t range, size_t stride, acces
 void bench_hourglass()
 {
 
-    if (CPU_ID == 0) printf("1 CPU hourglass (%u sec) ----------------------------------------------\n", BENCH_HOURGLAS_SEC);
+    if (CPU_ID == 0) printf("1 CPU hourglass (%u sec) ----------------------------------------------\n", bench_opt.timebase);
 
     barrier(&global_barrier);
     if (collective_only(0x0001)) {
 
         udelay(1000000);
         printf("others halt         ");
-        hourglass(BENCH_HOURGLAS_SEC);
+        hourglass(bench_opt.timebase);
         printf("\n");
 
         collective_end();
@@ -265,7 +266,7 @@ void bench_hourglass_worker(void *p_contender)
     static flag_t flag = FLAG_INITIALIZER;
 
     if (cpu_online > 1) {
-        if (CPU_ID == 0) printf("2 CPUs hourglass (%u sec) ---------------------------------------------\n", BENCH_HOURGLAS_SEC);
+        if (CPU_ID == 0) printf("2 CPUs hourglass (%u sec) ---------------------------------------------\n", bench_opt.timebase);
         barrier(&global_barrier);
 
         if (collective_only(0x0003)) {   /* IDs 0 and 1 */
@@ -295,7 +296,7 @@ void bench_hourglass_worker(void *p_contender)
                 barrier(&barr2);
 
                 if (CPU_ID == 0) {
-                    hourglass(BENCH_HOURGLAS_SEC);
+                    hourglass(bench_opt.timebase);
                     flag_signal(&flag);
                 } else {
                     load_until_flag(p_contender, size, 32, &flag);
@@ -314,15 +315,15 @@ void bench_hourglass_hyperthread()
 {
 
     if (cpu_online > 4) {     /* assuming, that the upper half of cores are hyperthreads */
-        if (CPU_ID == 0) printf("2 CPUs hourglass (hyper-threads) (%u sec) -----------------------------\n", BENCH_HOURGLAS_SEC);
+        if (CPU_ID == 0) printf("2 CPUs hourglass (hyper-threads) (%u sec) -----------------------------\n", bench_opt.timebase);
         barrier(&global_barrier);
 
         if (collective_only(0x0001 | (1 << (cpu_online/2)))) {
             if (CPU_ID == 0) {
-                hourglass(BENCH_HOURGLAS_SEC);
+                hourglass(bench_opt.timebase);
                 printf("\n");
             } else { 
-                hourglass(BENCH_HOURGLAS_SEC);
+                hourglass(bench_opt.timebase);
                 printf("\n");
             }
             collective_end();
@@ -341,7 +342,7 @@ void bench_worker(void *p_buffer, void *p_contender)
         access_t worker_atype;
         static barrier_t barr_dyn = BARRIER_INITIALIZER(MAX_CPU);
 
-        if (myid == 0) printf("Worker benchmark (%u sec) -----------------------------\n", BENCH_HOURGLAS_SEC);
+        if (myid == 0) printf("Worker benchmark (%u sec) -----------------------------\n", bench_opt.timebase);
 
         /*
          * need some buffers with different cache strategies:
@@ -404,7 +405,7 @@ void bench_worker(void *p_buffer, void *p_contender)
                                         /* 
                                          * start benchmark 
                                          */
-                                        worker(p_buffer, worker_range, worker_stride, worker_atype, BENCH_HOURGLAS_SEC);
+                                        worker(p_buffer, worker_range, worker_stride, worker_atype, bench_opt.timebase);
                                     }
                                     printf("\n");
                                 }
@@ -467,7 +468,7 @@ void bench_worker_cut(void *p_buffer, void *p_contender, size_t worker_size)
                     udelay(10*1000);
 
                     printf("load %#uB : ", r);
-                    worker(p_buffer, worker_size, 32, AT_UPDATE, BENCH_HOURGLAS_SEC);
+                    worker(p_buffer, worker_size, 32, AT_UPDATE, bench_opt.timebase);
 
                     flag_signal(&flag);
                 } else {

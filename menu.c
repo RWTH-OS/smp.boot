@@ -23,12 +23,12 @@
 #include "sync.h"
 
 
-int menu(char * caption, menu_entry_t entries[])
+int menu(char * caption, menu_entry_t entries[], int def)
 {
     unsigned myid = my_cpu_info()->cpu_id;
     unsigned u;
     unsigned selection = 0;
-    unsigned cont = 1;
+    unsigned cont = 2;
     unsigned char backup_attrib = gettextattrib();
     static volatile int result = 0;
 
@@ -41,6 +41,7 @@ int menu(char * caption, menu_entry_t entries[])
         while (cont) {
             for (u = 0; ; u++) {
                 if (entries[u].string == 0) break;
+                if (cont == 2 && entries[u].value == def) selection = u;
                 if (selection == u) {
                     settextcolor(COLOR_FG_BLUE, COLOR_BG_WHITE);
                 } else {
@@ -50,6 +51,7 @@ int menu(char * caption, menu_entry_t entries[])
                 if (selection == u) printf(" **"); else printf("   ");
                 printf("\n");
             }
+            cont = 1;
             switch (wait_for_key()) {
                 case KEY_DOWN : 
                     if (selection < u-1) selection++;
