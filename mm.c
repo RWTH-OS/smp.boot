@@ -321,7 +321,7 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
         if (flags & MAP_PWT) pt[ipt].page.pwt = 1;
         if (flags & MAP_PCD) pt[ipt].page.pcd = 1;
         /* invalidate TLB for page containing the address just mapped */
-        //__asm__ volatile ("invlpg %0" : : "m"(*((int*)((ptr_t)frame<<PAGE_BITS))));   // TODO : this should be wrong, see below...
+        //__asm__ volatile ("invlpg %0" : : "m"(*((int*)((ptr_t)frame<<PAGE_BITS))));   // this should be wrong, see below...
         __asm__ volatile ("invlpg %0" : : "m"(*(int*)adr));
     }
 #   else

@@ -6,7 +6,7 @@ HFILES=$(shell ls *.h)
 
 ASMFILES=$(shell ls *.asm)
 
-OPT=2
+OPT=0
 
 VERBOSE=@
 #VERBOSE=
@@ -30,6 +30,7 @@ CFLAGS+=-fstrength-reduce -fomit-frame-pointer -finline-functions -nostdinc -fno
 #  						  because that will not be filled with zeros (the kernel is not loaded by ld.so)
 CFLAGS+=-I .
 # -I . 					- add include directory '.'
+
 
 # default nbr of CPUs for QEMU smp
 SMP=2

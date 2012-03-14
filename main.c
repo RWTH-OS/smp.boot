@@ -18,11 +18,6 @@
 hw_info_t hw_info; 
 
 
-/*
- * TODO's
- *  - is the cache activated?
- *  - dynamic memory management (at least, malloc() should be implemented)
- */
 
 extern volatile unsigned cpu_online;    // from apic.c
 void main();                            // further down in this file

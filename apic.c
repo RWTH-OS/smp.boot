@@ -42,23 +42,35 @@ void set_localAPIC(uint32_t offset, uint32_t mask, uint32_t value)
 
 uint32_t read_ioAPIC(unsigned id, uint32_t offset)
 {
-    // TODO : store IF, CLI
+    unsigned if_backup;
+    uint32_t result;
+
     volatile uint32_t* ioAPIC_Adr = (uint32_t*)(ioAPIC_base + (id*4096));
     volatile uint32_t* ioAPIC_Data = (uint32_t*)(ioAPIC_base + (id*4096) + 0x10);
+
+    // CLI (store previous value)
+    if_backup = cli();
+
     *ioAPIC_Adr = offset;
-    /*  TODO: wait?! */
-    return *ioAPIC_Data;
-    // TODO : restore IF to previous value
+    result = *ioAPIC_Data;
+
+    // restore IF to previous value
+    if (if_backup) sti();
+    return result;
 }
 void write_ioAPIC(unsigned id, uint32_t offset, uint32_t value)
 {
-    // TODO : store IF, CLI
+    unsigned if_backup;
+
     volatile uint32_t* ioAPIC_Adr = (uint32_t*)(ioAPIC_base + (id*4096));
     volatile uint32_t* ioAPIC_Data = (uint32_t*)(ioAPIC_base + (id*4096) + 0x10);
+
+    if_backup = cli();
+
     *ioAPIC_Adr = offset;
-    /*  TODO: wait?! */
     *ioAPIC_Data = value;
-    // TODO : restore IF to previous value
+
+    if (if_backup) sti();
 }
 #define ICR_LVL_ASSERT          (1u <<14)
 #define ICR_DLV_STATUS          (1u <<12)
@@ -71,7 +83,8 @@ void send_ipi(uint8_t to, uint8_t vector)
     if_backup = cli();
     // TODO: wait until APIC has processed a previous IPI (see: MetalSVM, arch/x86/kernel/apic.c:ipi_tlb_flush() )
 
-    IFVV printf("send_ipi()  to: %u  lapic_id: %u  vector: %u\n", (unsigned long)to, (unsigned long)hw_info.cpu[to].lapic_id, (unsigned long)vector);
+    IFVV printf("send_ipi()  to: %u  lapic_id: %u  vector: %u\n", 
+            (unsigned long)to, (unsigned long)hw_info.cpu[to].lapic_id, (unsigned long)vector);
     value = read_localAPIC(LAPIC_ICR_HIGH);
     value &= 0x00FFFFFF;
     value |= ((uint32_t)hw_info.cpu[to].lapic_id << 24);
@@ -220,10 +233,7 @@ void apic_init()
     IFV printf("all %u APs called, %u up\n", hw_info.cpu_cnt-1, cpu_online);
 
 
-    /* TODO: activate I/O APIC */
-
-
-    /* TODO: calibrate TSC (rdtsc) and CLK (time-base of local APIC timer) */
+    /* next steps: activate I/O APIC (so far, we don't need the IO-APIC) */
 
 
 

@@ -176,7 +176,7 @@ static void cpu_features()
     *pStatus = 0x0F00 + 'f';
 
     /*
-     * TODO : read info about cache
+     * read info about cache
      *  - Intel: Function 4 (advanced), alternatively Function 2
      *  - AMD: Functions 0x8000_0005 and 0x8000_0006
      */
@@ -271,7 +271,7 @@ static void cpu_features()
                     BITS_FROM_CNT(ecx, 16, 8), 
                     hw_info.cpuid_cache[1].size/1024, 
                     hw_info.cpuid_cache[1].line_size);
-            // TODO : eax, ebx contain TLB information
+            // eax, ebx contain TLB information
             
             cpuid(0x80000006);
             hw_info.cpuid_cache[2].size = BITS_FROM_TO(ecx, 16, 31) * 1024;

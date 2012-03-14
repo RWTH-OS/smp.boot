@@ -27,11 +27,15 @@
 
 extern volatile unsigned cpu_online;
 
-bench_opt_t bench_opt = {.timebase = BENCH_HOURGLASS_SEC};
+bench_opt_t bench_opt = {
+    .cm_buffer = cm_write_back,
+    .cm_contender = cm_write_back,
+    .timebase = BENCH_HOURGLASS_SEC
+};
 
 void hourglass(unsigned sec)
 {
-    uint64_t tsc, tsc_last, tsc_end, diff;
+    uint64_t tsc, tsc_last, tsc_start, tsc_end, diff;
     unsigned long long min = 0xFFFFFFFF, avg = 0, cnt = 0, max = 0;
     //int i = -1, j;
     //long p_min, p_max;
@@ -57,7 +61,7 @@ void hourglass(unsigned sec)
      * hourglass (now counting)
      */
     min = 0xFFFFFFFF, avg = 0; cnt = 0; max = 0;
-    tsc = rdtsc();
+    tsc_start = tsc = rdtsc();
     tsc_end = tsc + sec * 1000000ull * hw_info.tsc_per_usec;
     while (tsc < tsc_end) {
         tsc_last = tsc;
@@ -66,7 +70,6 @@ void hourglass(unsigned sec)
         diff = tsc-tsc_last;
         if (diff < min) min = diff;
         if (diff > max) max = diff;
-        avg += diff;        /* TODO: avg need not to be added up; it's just (tsc_end-tsc_start) ! */
         cnt++;
 
 #       if 0  //RECORD_GAPS
@@ -77,6 +80,7 @@ void hourglass(unsigned sec)
 #       endif  // RECORD_GAPS
     }
 
+    avg = tsc - tsc_start;
 
 #   if ! __x86_64__
     /*

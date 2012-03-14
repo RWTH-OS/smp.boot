@@ -356,6 +356,11 @@ mutex_t mutex_printf = MUTEX_INITIALIZER;
 /*
  * TODO : does not work on xaxis with 32 bit
  *          (Qemu32 works...)
+ *
+ *          WHY ?!?
+ *
+ *          could be the __builtin_va_list that does not work --without-builtins...
+ *
  */
 void printf (const char *format, ...)
 {
