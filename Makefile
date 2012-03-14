@@ -185,7 +185,7 @@ kernel64.bin : link_start64.ld kernel64.symbols kernel64.o boot32.o screen.o lib
 	$(VERBOSE)$(LD) -melf_i386 -T link_start64.ld -T kernel64.symbols   kernel64.o boot32.o screen.o lib.o32 -o kernel64.bin 
 
 depend : .depend
-.depend : $(CFILES) boot32.c 
+.depend : version.h $(CFILES) boot32.c 
 	@echo DEPEND $^
 	$(VERBOSE)$(CC) -MM $^ | sed "s+\(.*\):\(.*\)+\1 \132 \164 :\2+" > $@
 
