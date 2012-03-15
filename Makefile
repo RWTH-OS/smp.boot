@@ -6,7 +6,7 @@ HFILES=$(shell ls *.h)
 
 ASMFILES=$(shell ls *.asm)
 
-OPT=0
+OPT=1
 
 VERBOSE=@
 #VERBOSE=
@@ -21,7 +21,7 @@ CFLAGS+=-Wall -Wextra -Wno-main -Wno-unused-function -Wno-pragmas
 # -Wno-pragmas - don't warn about unknown parameters to #pragmas (GCC 4.5 does not know -Wunused-but-set-variable )
 CFLAGS+=-fstrength-reduce -fomit-frame-pointer -finline-functions -nostdinc -fno-builtin -fno-zero-initialized-in-bss 
 # -fstrengh-reduce
-# -fomit-frame-pointer
+# -fomit-frame-pointer  - don't use frame pointer if not needed (e.g. leaf functions). Makes debugging impossible. Enabled by -O >= 1
 # -finline-functions
 # -fnostdinc            - don't include standards libs
 # -no-builtin           - don't use builtin functions for libc (memcpy etc.), we have our own implementations.
@@ -30,7 +30,6 @@ CFLAGS+=-fstrength-reduce -fomit-frame-pointer -finline-functions -nostdinc -fno
 #  						  because that will not be filled with zeros (the kernel is not loaded by ld.so)
 CFLAGS+=-I .
 # -I . 					- add include directory '.'
-
 
 # default nbr of CPUs for QEMU smp
 SMP=2
@@ -155,7 +154,7 @@ $(O64FILES) : %.o64 : %.c
 kernel32 : kernel32.bin
 kernel32.bin : link32.ld start32.o boot32.o $(O32FILES) 
 	@echo LD $^ '->' $@
-	$(VERBOSE)$(LD) -T link32.ld -m i386linux -o $@ start32.o boot32.o $(O32FILES)
+	$(VERBOSE)$(LD) -T link32.ld -m i386linux --print-map -Map=kernel32.map -o $@ start32.o boot32.o $(O32FILES)
 
 # link 64 bit kernel that will be embedded into kernel64.bin
 kernel64.elf64 : link64.ld jump64.o $(O64FILES) 

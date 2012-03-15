@@ -605,7 +605,7 @@ void bench_mem(void *p_buffer, void *p_contender)
 
             barrier(&barr2);
             for (u=0; u<4; u++) {
-                size_t size;
+                size_t size = 16*KB;
                 switch (u) {        /* Cache Ranges valid for xaxis, Core i7 */
                     case 0: size=16*1024; break;        /* fits into L1 Cache (32 kB per core) */
                     case 1: size=128*1024; break;       /* fits into L2 Cache (256 kB per core) */
