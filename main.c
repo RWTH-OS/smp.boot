@@ -37,6 +37,75 @@ void main_bsp(void)
 {
     char *vendor[] = {"Intel", "AMD", "unknown"};
 
+    *((uint32_t*)0xB8000) = 0x1F381F39;     /* "98" */
+
+    {
+        char *chp = "gwCharpointer\n";
+        char str[] = "gwString\n";
+        char buf[20] = {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '};
+
+        itoa(buf, 'x', vendor[0]);      *((uint32_t*)0xB8008) = 0x1F301F30;
+        putch(buf[0]);                  *((uint32_t*)0xB8008) = 0x1F311F30;
+        putch(buf[1]);                  *((uint32_t*)0xB8008) = 0x1F321F30;
+        putch(buf[2]);                  *((uint32_t*)0xB8008) = 0x1F331F30;
+        putch(buf[3]);                  *((uint32_t*)0xB8008) = 0x1F341F30;
+        putch(buf[4]);                  *((uint32_t*)0xB8008) = 0x1F351F30;
+        putch(buf[5]);                  *((uint32_t*)0xB8008) = 0x1F361F30;
+        putch(buf[6]);                  *((uint32_t*)0xB8008) = 0x1F371F30;
+        putch(buf[7]);                  *((uint32_t*)0xB8008) = 0x1F381F30;
+        putch('=');                     *((uint32_t*)0xB8008) = 0x1F391F30;
+        putch(*(vendor[0]));            *((uint32_t*)0xB8008) = 0x1F411F30;
+        putch(*(vendor[0]+1));          *((uint32_t*)0xB8008) = 0x1F421F30;
+        putch(*(vendor[0]+2));          *((uint32_t*)0xB8008) = 0x1F431F30;
+        putch(*(vendor[0]+3));          *((uint32_t*)0xB8008) = 0x1F441F30;
+        putch(*(vendor[0]+4));          *((uint32_t*)0xB8008) = 0x1F451F30;
+        putch('\n');                    *((uint32_t*)0xB8008) = 0x1F461F30;
+
+        itoa(buf, 'x', str);            *((uint32_t*)0xB8008) = 0x1F301F31;
+        putch(buf[0]);                  *((uint32_t*)0xB8008) = 0x1F311F31;
+        putch(buf[1]);                  *((uint32_t*)0xB8008) = 0x1F321F31;
+        putch(buf[2]);                  *((uint32_t*)0xB8008) = 0x1F331F31;
+        putch(buf[3]);                  *((uint32_t*)0xB8008) = 0x1F341F31;
+        putch(buf[4]);                  *((uint32_t*)0xB8008) = 0x1F351F31;
+        putch(buf[5]);                  *((uint32_t*)0xB8008) = 0x1F361F31;
+        putch(buf[6]);                  *((uint32_t*)0xB8008) = 0x1F371F31;
+        putch(buf[7]);                  *((uint32_t*)0xB8008) = 0x1F381F31;
+        putch('=');                     *((uint32_t*)0xB8008) = 0x1F391F31;
+        putch(*(str));                  *((uint32_t*)0xB8008) = 0x1F411F31;
+        putch(*(str+1));                *((uint32_t*)0xB8008) = 0x1F421F31;
+        putch(*(str+2));                *((uint32_t*)0xB8008) = 0x1F431F31;
+        putch(*(str+3));                *((uint32_t*)0xB8008) = 0x1F441F31;
+        putch(*(str+4));                *((uint32_t*)0xB8008) = 0x1F451F31;
+        putch('\n');                    *((uint32_t*)0xB8008) = 0x1F461F31;
+
+        itoa(buf, 'x', chp);            *((uint32_t*)0xB8008) = 0x1F301F32;
+        putch(buf[0]);                  *((uint32_t*)0xB8008) = 0x1F311F32;
+        putch(buf[1]);                  *((uint32_t*)0xB8008) = 0x1F321F32;
+        putch(buf[2]);                  *((uint32_t*)0xB8008) = 0x1F331F32;
+        putch(buf[3]);                  *((uint32_t*)0xB8008) = 0x1F341F32;
+        putch(buf[4]);                  *((uint32_t*)0xB8008) = 0x1F351F32;
+        putch(buf[5]);                  *((uint32_t*)0xB8008) = 0x1F361F32;
+        putch(buf[6]);                  *((uint32_t*)0xB8008) = 0x1F371F32;
+        putch(buf[7]);                  *((uint32_t*)0xB8008) = 0x1F381F32;
+        putch('=');                     *((uint32_t*)0xB8008) = 0x1F391F32;
+        putch(*(chp));                  *((uint32_t*)0xB8008) = 0x1F411F32;
+        putch(*(chp+1));                *((uint32_t*)0xB8008) = 0x1F421F32;
+        putch(*(chp+2));                *((uint32_t*)0xB8008) = 0x1F431F32;
+        putch(*(chp+3));                *((uint32_t*)0xB8008) = 0x1F441F32;
+        putch(*(chp+4));                *((uint32_t*)0xB8008) = 0x1F451F32;
+        putch('\n');                    *((uint32_t*)0xB8008) = 0x1F461F32;
+
+        //printf(str);                    *((uint32_t*)0xB8008) = 0x1F301F33;
+        //printf(chp);                    *((uint32_t*)0xB8008) = 0x1F311F33;
+        //printf(vendor[0]);              *((uint32_t*)0xB8008) = 0x1F321F33;
+        *((uint32_t*)0xB8000) = 0x1F391F39;     /* "99" top left corner to say: "I've arrived in main()." */
+        while (1) {
+            __asm__ volatile ("hlt");
+        }
+    }
+
+
+
     *((uint32_t*)0xB8000) = 0x1F391F39;     /* "99" top left corner to say: "I've arrived in main()." */
     //status_putch(6, '/');
 

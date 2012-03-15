@@ -27,7 +27,8 @@ void puts(char *str);
 void settextcolor(unsigned char forecolor, unsigned char backcolor);
 void init_video();
 void itoa (char *buf, int base, long d);
-void printf (const char *format, ...);
+//void printf (const char *format, ...);
+#define printf(...) {}
 
 static inline void halt()
 {
