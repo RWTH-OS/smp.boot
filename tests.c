@@ -112,46 +112,53 @@ void tests_mm(void)
             printf("[0] p_shared = 0x%x\n", p_shared);
             printf("[0] p_shared2 = 0x%x\n", p_shared2);
             udelay(1*1000*1000);
-            barrier(&barr);
+            barrier(&barr);         // --- 1 --- 1 --- 1 --- 1 --- 1 --- 1 --- 1 --- 1 --- 1 --- 1 --- 1 --- 1 --- 
             p_shared3 = heap_alloc(2, 0);   // two pages = 8kB
-            barrier(&barr);
-            printf("p_shared[1023] = 0x%x (should be 0x01010101)\n", p_shared[1023]);
-            printf("p_shared2[2048] = 0x%x (should be 0x22222222)\n", p_shared2[2048]);
+            barrier(&barr);         // --- 2 --- 2 --- 2 --- 2 --- 2 --- 2 --- 2 --- 2 --- 2 --- 2 --- 2 --- 2 --- 
+            printf("[0] p_shared[1023] = 0x%x (should be 0x01010101)\n", p_shared[1023]);
+            printf("[0] p_shared2[2048] = 0x%x (should be 0x22222222)\n", p_shared2[2048]);
 
-            barrier(&barr);
+            barrier(&barr);         // --- 3 --- 3 --- 3 --- 3 --- 3 --- 3 --- 3 --- 3 --- 3 --- 3 --- 3 --- 3 --- 
+            //virt_to_phys((void*)p_shared);
             p_shared[0] = 0xdeadbeef;
             p_shared2[0] = 0xdeadbeef;
             p_shared3[0] = 0xdeadbeef;
-            barrier(&barr);
+            barrier(&barr);         // --- 4 --- 4 --- 4 --- 4 --- 4 --- 4 --- 4 --- 4 --- 4 --- 4 --- 4 --- 4 --- 
+            virt_to_phys((void*)p_shared4);
+            //__asm__ volatile ("invlpg %0" : : "m"(*(int*)p_shared4));
+            //tlb_shootdown((void*)p_shared4, 2*4*KB);
             p_shared4[1] = 0xdeadc0de;
 
-            printf("CPU 0: udelay 5 Sek.\n");
+            printf("[0]: udelay 5 Sek.\n");
             udelay(5*1000*1000);
-            printf("CPU 0: exit now\n");
+            printf("[0]: exit now\n");
+            barrier(&barr);         // --- 5 --- 5 --- 5 --- 5 --- 5 --- 5 --- 5 --- 5 --- 5 --- 5 --- 5 --- 5 --- 
         } else if (myid == 1) {
             /* call Task for CPU 1 */
-            barrier(&barr);
+            barrier(&barr);         // --- 1 --- 1 --- 1 --- 1 --- 1 --- 1 --- 1 --- 1 --- 1 --- 1 --- 1 --- 1 --- 
             p_shared4 = heap_alloc(2, 0);   // two pages = 8kB
             udelay(1*1000*1000);
             printf("[1] p_shared = 0x%x\n", p_shared);
             printf("[1] p_shared2 = 0x%x\n", p_shared2);
             printf("[1] p_shared3 = 0x%x\n", p_shared3);
             printf("[1] p_shared4 = 0x%x\n", p_shared4);
+            virt_to_phys((void*)p_shared4);
             udelay(1*1000*1000);
             memset((void*)p_shared, 1, 4096);
             memset((void*)p_shared2, 0x22, 4*4096);
-            barrier(&barr);
+            barrier(&barr);         // --- 2 --- 2 --- 2 --- 2 --- 2 --- 2 --- 2 --- 2 --- 2 --- 2 --- 2 --- 2 --- 
             
-            barrier(&barr);
+            barrier(&barr);         // --- 3 --- 3 --- 3 --- 3 --- 3 --- 3 --- 3 --- 3 --- 3 --- 3 --- 3 --- 3 --- 
             p_shared4[0] = 0xdeadbeef;
-            barrier(&barr);
+            barrier(&barr);         // --- 4 --- 4 --- 4 --- 4 --- 4 --- 4 --- 4 --- 4 --- 4 --- 4 --- 4 --- 4 --- 
             p_shared[1] = 0xdeadc0de;
             p_shared2[1] = 0xdeadc0de;
             p_shared3[1] = 0xdeadc0de;
 
-            printf("CPU 1: udelay 10 Sek.\n");
+            printf("[1]: udelay 10 Sek.\n");
             udelay(10*1000*1000);
-            printf("CPU 1: exit now\n");
+            printf("[1]: exit now\n");
+            barrier(&barr);         // --- 5 --- 5 --- 5 --- 5 --- 5 --- 5 --- 5 --- 5 --- 5 --- 5 --- 5 --- 5 --- 
         } 
     } else {
         printf("only one CPU active, this task needs at least two.\n");
@@ -239,14 +246,14 @@ void tests_ipi(void)
             }
 
             smp_status('H');
-            __asm__ volatile ("hlt");   // should be waken up by IPI, but apparantly, IS NOT.
+            __asm__ volatile ("hlt");   // should be waken up by IPI (TODO: works in 64 bit mode, but not in 32 bit...)
             smp_status(STATUS_RUNNING);
             
             smp_halt();
         }
 
     } else {
-        printf("tests_ipi: can only be executed with more than one CPU\n");
+        printf("[%u] tests_ipi: can only be executed with more than one CPU\n", myid);
     }
     if (!if_backup) cli();  // restore previous state of interrupt flag
     barrier(&global_barrier);

@@ -142,6 +142,7 @@ void main_ap(void)
      */
     mutex_lock(&(my_cpu_info()->wakelock)); 
 
+    mm_init_ap();
     apic_init_ap(cpu_online);     // activate localAPIC on Application Processors
     idt_install_ap();
 
@@ -192,18 +193,22 @@ void main()
     static volatile enum {mode_default, mode_menu} mode = mode_default;
 
     if (CPU_ID == 0) {
-        int i;
-        keyboard_clear_buf();
-        printf("To interrupt default mode and get a menu, press any key within 5 Sek.\b\b\b\b\b\b");
-        for (i=5; i>-1; i--) {
-            udelay(1000000);
-            printf("%i\b", i);
-            if (keyboard_get_scancode() != 0) {
-                mode = mode_menu;
-                break;
+#       if OFFER_MENU >= 2
+            mode = mode_menu;
+#       else
+            int i;
+            keyboard_clear_buf();
+            printf("To interrupt default mode and get a menu, press any key within 5 Sek.\b\b\b\b\b\b");
+            for (i=5; i>-1; i--) {
+                udelay(1000000);
+                printf("%i\b", i);
+                if (keyboard_get_scancode() != 0) {
+                    mode = mode_menu;
+                    break;
+                }
             }
-        }
-        printf("\n");
+            printf("\n");
+#       endif
     }
 
     barrier(&global_barrier);

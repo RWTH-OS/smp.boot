@@ -23,9 +23,12 @@ typedef     unsigned long    frame_t;    // the number of a physical page frame
 typedef     unsigned long    page_t;     // the number of a virtual page
 
 int mm_init();
+int mm_init_ap();
 
 #define MM_WRITE_THROUGH    0x0010
 #define MM_CACHE_DISABLE    0x0020
+
+ptr_t virt_to_phys(void * adr);
 
 void *heap_alloc(unsigned nbr_pages, unsigned flags) __attribute__ ((malloc));
 void heap_reconfig(void *p, size_t size, unsigned flags);

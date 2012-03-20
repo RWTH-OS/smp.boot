@@ -77,7 +77,7 @@ setup:                  ; now 32-bit specific set up
 
     ; prepare page tables
     ; first, set entries to 0
-    mov edi, 0x1000             ; page tables are put here. (TODO: Why?!)
+    mov edi, 0x1000             ; page tables are put here.
     mov cr3, edi                ; set cr3 to the PML4T
     xor eax, eax
     mov ecx, 7*1024             ; x * 1k  ( x: number of pages for page tables needed)

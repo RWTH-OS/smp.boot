@@ -47,7 +47,7 @@ extern void isr128();
  * That symbol is not a Pointer, but we're only interested in its integer value.
  * As C can only import symbols pointing to something, a pseudo integer is
  * declared and a Macro "GDT_Code_Sel" extracts the value (address) and
- * casts it to unsinged short (via unsigned long to avoid warnings).
+ * casts it to unsigned short (via unsigned long to avoid warnings).
  */
 extern int GDT_Code;
 #define GDT_Code_Sel ((unsigned short)(((unsigned long)&GDT_Code)&0xFFFF))

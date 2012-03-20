@@ -26,6 +26,12 @@
 #define IFV   if (VERBOSE > 0 || VERBOSE_MM > 0)
 #define IFVV  if (VERBOSE > 1 || VERBOSE_MM > 1)
 
+#if __x86_64__
+    /* initialized there in start64.asm */
+#   define MM64_MAP_TEMPORARY  0x5000
+#else
+#   define MM32_MAP_TEMPORARY  0x2000
+#endif
 
 /*
  * helper functions to extract offset and table indices from a (virtual) address
@@ -140,8 +146,9 @@ frame_t get_free_frame(unsigned type)
 
 /*  --------------------------------------------------------------------------- */
 
-/* global pointer to pd1 (1st level page directory; pml4) */
-pd1_entry_t *pd1;
+/* pointer to pd1 (1st level page directory; pml4) */
+/* (this var was previously global, but why? Currently, this works as static) */
+static pd1_entry_t *pd1;
 
 /*  --------------------------------------------------------------------------- */
 
@@ -150,90 +157,28 @@ static void *map_temporary(frame_t frame)
     const page_t tmp_page = 0x1FF;                              /* this page is mapped initially in 32 AND 64 bit mode */
     void * const tmp_map = (void*)(tmp_page << PAGE_BITS);      /* just below 2 MB */
 #   if __x86_64__
-        static pt_entry_t * const  pt = (pt_entry_t*)0x5000;    /* initialized there in start64.__asm__ */
+        static pt_entry_t * const  pt = (pt_entry_t*)MM64_MAP_TEMPORARY;    /* initialized there in start64.asm */
 #   else
-        static pt_entry_t * const  pt = (pt_entry_t*)0x2000;    /* initialized in LABEL:385 [LABEL:155] */
+        static pt_entry_t * const  pt = (pt_entry_t*)MM32_MAP_TEMPORARY;    /* initialized in LABEL:385 [LABEL:155] */
 #   endif
 
-    IFVV printf("map_temporary: frame 0x%x to adr 0x%x\n", frame, tmp_map);
-    pt[tmp_page].page.frame = frame;
-    pt[tmp_page].page.rw = 1;
-    pt[tmp_page].page.p = 1;
-    /* invalidate TLB for page containing the address tmp_map */
-    __asm__ volatile ("invlpg %0" : : "m"(*(int*)tmp_map));
+    if (pt[tmp_page].page.frame != frame) {
+        IFVV printf("map_temporary: frame 0x%x to adr 0x%x\n", frame, tmp_map);
+        __asm__ volatile ("wbinvd");
+        __asm__ volatile ("mfence");
+        pt[tmp_page].page.frame = frame;
+        pt[tmp_page].page.rw = 1;
+        pt[tmp_page].page.p = 1;
+        pt[tmp_page].page.pwt = 1;  // Cache-Mode: Write-Through (immediately write to RAM)
+        /* invalidate TLB for page containing the address tmp_map */
+        __asm__ volatile ("mfence");
+        __asm__ volatile ("invlpg %0" : : "m"(*(int*)tmp_map));
+    }
     return tmp_map;
 }
 
 
 
-/*
- * helper functions to convert virtual <-> physical address
- */
-ptr_t virt_to_phys(void * adr)
-{
-#   if __x86_64__
-    if (pd1[pd1_index(adr)].dir.p) {
-        pd2_entry_t *pd2 = (pd2_entry_t*)((ptr_t)pd1[pd1_index(adr)].dir.frame << PAGE_BITS);
-        if (pd2[pd2_index(adr)].dir.p) {
-            if (pd2[pd2_index(adr)].dir.ps == 1) {
-                /* 1 GB huge page */
-                return (((ptr_t)pd2[pd2_index(adr)].page.frame1G << (PAGE_BITS+2*INDEX_BITS)) + offset1G(adr));
-            } else {
-                /* read pd3 */
-                pd3_entry_t *pd3 = (pd3_entry_t*)((ptr_t)pd2[pd2_index(adr)].dir.frame << PAGE_BITS);
-                if (pd3[pd3_index(adr)].dir.p) {
-                    if (pd3[pd3_index(adr)].dir.ps == 1) {
-                        /* 2 MB huge page */
-                        return (((ptr_t)pd3[pd3_index(adr)].page.frame2M << (PAGE_BITS+INDEX_BITS)) + offset2M(adr));
-                    } else {
-                        /* read pt */
-                        pt_entry_t *pt = (pt_entry_t*)((ptr_t)pd3[pd3_index(adr)].dir.frame << PAGE_BITS);
-                        if (pt[pt_index(adr)].page.p) {
-                            return (((ptr_t)pt[pt_index(adr)].page.frame << PAGE_BITS) + offset(adr));
-                        } else {
-                            return 0;
-                        }
-                    }
-                } else {
-                    return 0;
-                }
-            }
-        } else {
-            return 0;
-        }
-    } else {
-        return 0;
-    }
-#   else
-    if (pd1[pd1_index(adr)].dir.p) {
-        printf("pd1[0x%x] present, rw=%u, pt @ 0x%x\n", pd1_index(adr), 
-                ((ptr_t)pd1[pd1_index(adr)].dir.rw), 
-                ((ptr_t)pd1[pd1_index(adr)].dir.frame << PAGE_BITS));
-        if (pd1[pd1_index(adr)].dir.ps == 1) {
-            /* 4 MB huge page */
-            return (((ptr_t)pd1[pd1_index(adr)].page.frame4M << (PAGE_BITS+INDEX_BITS)) + offset4M(adr));
-        } else {
-            pt_entry_t *pt; // = (pt_entry_t*)((ptr_t)pd1[pd1_index(adr)].dir.frame << PAGE_BITS);
-            pt = (pt_entry_t*)map_temporary(pd1[pd1_index(adr)].dir.frame);
-            if (pt[pt_index(adr)].page.p) {
-                printf("pt[0x%x] present, rw=%u, page @ 0x%x\n", pt_index(adr), 
-                        ((ptr_t)pt[pt_index(adr)].page.rw), 
-                        ((ptr_t)pt[pt_index(adr)].page.frame << PAGE_BITS));
-                return (((ptr_t)pt[pt_index(adr)].page.frame << PAGE_BITS) + offset(adr));
-            } else {
-                return 0;
-            }
-        }
-    } else {
-        return 0;
-    }
-#   endif
-    return 0;
-}
-
-/*
- * phys_to_virt only possible by a tree-search through the page directories...
- */
 
 
 #if __x86_64__
@@ -324,12 +269,15 @@ static void map_frame_to_adr(frame_t frame, void *adr, unsigned flags)
         //__asm__ volatile ("invlpg %0" : : "m"(*((int*)((ptr_t)frame<<PAGE_BITS))));   // this should be wrong, see below...
         __asm__ volatile ("invlpg %0" : : "m"(*(int*)adr));
     }
-#   else
+
+
+#   else        // --- 32 bit version --- 32 bit version --- 32 bit version --- 32 bit version --- 32 bit version ---
+
     unsigned ipd1 = pd1_index(adr);
 
     pt_entry_t *pt;
     if (pd1[ipd1].dir.p == 0) {
-        /* we need a new pd1 */
+        /* we need a new pt */
         frame_t new_frame = get_free_frame(FRAME_TYPE_PT);
         IFVV printf("map_frame_to_adr: new pt: 0x%x\n", new_frame);
         pd1[ipd1].dir.frame = new_frame;
@@ -497,7 +445,7 @@ int mm_init()
     pd1 = (pd1_entry_t*)0x1000;
     memset(pd1, 0, PAGE_SIZE);
 
-    pt_entry_t* pt = (pt_entry_t*)0x2000;       /* this frame/adr must be set in map_temporary(),LABEL:155 [LABEL:385] */
+    pt_entry_t* pt = (pt_entry_t*)MM32_MAP_TEMPORARY;       /* this frame/adr must be set in map_temporary(),LABEL:155 [LABEL:385] */
     memset(pt, 0, PAGE_SIZE);
     pd1[0].dir.frame = ((ptr_t)pt >> PAGE_BITS);
     pd1[0].dir.rw = 1;
@@ -610,6 +558,20 @@ int mm_init()
     return 0;
 }
 
+int mm_init_ap()
+{
+#if __x86_64__
+    /* nothing to be done here */
+#else
+    /* initialize cr3 */
+    __asm__ volatile ("mov %%eax, %%cr3" : : "a"(pd1));     /* set cr3 to page-directory */
+    __asm__ volatile ("mov %%cr0, %%eax "
+            "\n\t or $0x80000000, %%eax "
+            "\n\t mov %%eax, %%cr0" ::: "eax");          /*  activate paging with cr0[31] */
+#endif
+    return 0;
+}
+
 static page_t next_virt_page = 0x400;
 
 
@@ -674,5 +636,97 @@ void tlb_shootdown(void *adr, size_t size)
         __asm__ volatile ("invlpg %0" : : "m"(*(int*)p));
     }
 
+}
+
+ptr_t virt_to_phys(void * adr)
+{
+    ptr_t result = 0;
+
+    mutex_lock(&pt_mutex);
+
+#   if __x86_64__
+    if (pd1[pd1_index(adr)].dir.p) {
+        pd2_entry_t *pd2 = (pd2_entry_t*)map_temporary(pd1[pd1_index(adr)].dir.frame);
+
+            /////pt = (pt_entry_t*)map_temporary(pd1[pd1_index(adr)].dir.frame);
+
+        if (pd2[pd2_index(adr)].dir.p) {
+            if (pd2[pd2_index(adr)].dir.ps == 1) {
+                /* 1 GB huge page */
+                result = (((ptr_t)pd2[pd2_index(adr)].page.frame1G << (PAGE_BITS+2*INDEX_BITS)) + offset1G(adr));
+                goto finish;
+            } else {
+                /* read pd3 */
+                pd3_entry_t *pd3 = (pd3_entry_t*)map_temporary(pd2[pd2_index(adr)].dir.frame);
+                if (pd3[pd3_index(adr)].dir.p) {
+                    if (pd3[pd3_index(adr)].dir.ps == 1) {
+                        /* 2 MB huge page */
+                        result = (((ptr_t)pd3[pd3_index(adr)].page.frame2M << (PAGE_BITS+INDEX_BITS)) + offset2M(adr));
+                        goto finish;
+                    } else {
+                        /* read pt */
+                        pt_entry_t *pt = (pt_entry_t*)map_temporary(pd3[pd3_index(adr)].dir.frame);
+                        if (pt[pt_index(adr)].page.p) {
+                            result = (((ptr_t)pt[pt_index(adr)].page.frame << PAGE_BITS) + offset(adr));
+                            goto finish;
+                        } else {
+                            result = 0; 
+                            goto finish;
+                        }
+                    }
+                } else {
+                    result = 0;
+                    goto finish;
+                }
+            }
+        } else {
+            result = 0;
+            goto finish;
+        }
+    } else {
+        result = 0;
+        goto finish;
+    }
+
+        
+#   else    // --- 32 bit version --- 32 bit version --- 32 bit version --- 32 bit version --- 32 bit version --- 32 bit version --- 
+
+    IFVV printf("adr=0x%08x  pd1_index: 0x%02x\n", adr, pd1_index(adr));
+    if (pd1[pd1_index(adr)].dir.p) {
+        if (pd1[pd1_index(adr)].dir.ps == 1) {
+            /* 4 MB huge page */
+            IFV printf("pd1[0x%x] present, huge-page, rw=%u, @ 0x%x\n", 
+                    pd1_index(adr), 
+                    ((ptr_t)pd1[pd1_index(adr)].page.rw), 
+                    ((ptr_t)pd1[pd1_index(adr)].page.frame4M << (PAGE_BITS+INDEX_BITS)));
+            result = (((ptr_t)pd1[pd1_index(adr)].page.frame4M << (PAGE_BITS+INDEX_BITS)) + offset4M(adr));
+            goto finish;
+        } else {
+            pt_entry_t *pt; // = (pt_entry_t*)((ptr_t)pd1[pd1_index(adr)].dir.frame << PAGE_BITS);
+            IFV printf("pd1[0x%x] present, rw=%u, pt @ 0x%x\n", pd1_index(adr), 
+                    ((ptr_t)pd1[pd1_index(adr)].dir.rw), 
+                    ((ptr_t)pd1[pd1_index(adr)].dir.frame << PAGE_BITS));
+            pt = (pt_entry_t*)map_temporary(pd1[pd1_index(adr)].dir.frame);
+            if (pt[pt_index(adr)].page.p) {
+                IFV printf("pt[0x%x] present, rw=%u, page @ 0x%x\n", pt_index(adr), 
+                        ((ptr_t)pt[pt_index(adr)].page.rw), 
+                        ((ptr_t)pt[pt_index(adr)].page.frame << PAGE_BITS));
+                result = (((ptr_t)pt[pt_index(adr)].page.frame << PAGE_BITS) + offset(adr));
+                goto finish;
+            } else {
+                IFV printf("pt[0x%x] NOT present\n", pt_index(adr));
+                result = 0;
+                goto finish;
+            }
+        }
+    } else {
+        result = 0;
+        goto finish;
+    }
+#   endif
+
+finish:
+    mutex_unlock(&pt_mutex);
+    return result;
 }
 

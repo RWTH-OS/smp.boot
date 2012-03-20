@@ -6,7 +6,7 @@ HFILES=$(shell ls *.h)
 
 ASMFILES=$(shell ls *.asm)
 
-OPT=1
+OPT=2
 
 VERBOSE=@
 #VERBOSE=

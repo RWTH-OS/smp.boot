@@ -73,7 +73,14 @@
 #define VERBOSE_DRIVER      0
 #define VERBOSE_TESTS       0
 #define VERBOSE_MAIN        0
-#define OFFER_MENU          1
+/*
+ * OFFER_MENU - menu selection of kernel activities
+ *     0 - no menu; automatic/keyboard-less mode
+ *     1 - hit a key within 5 seconds to get to menu mode
+ *     2 - enforce menu (no fallback without keyboard)
+ */
+#define OFFER_MENU          2
+
 
 /*
  * scrollback buffer
