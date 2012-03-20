@@ -212,6 +212,7 @@ void tests_ipi(void)
     unsigned if_backup;
 
     if_backup = sti();
+    barrier(&global_barrier);
     if (cpu_online > 1) {
 
         if (myid == 0) {
@@ -219,41 +220,51 @@ void tests_ipi(void)
 
             //__asm__ volatile ("int $31");
             
-            IFVV printf("issue INT 128...\n");
+            IFV printf("[0] issue INT 128...\n");
             __asm__ volatile ("int $128");
-            udelay(2000000);
+            udelay(1000000);
             
-            IFVV printf("send IPI vector 128 to self\n");
+            IFV printf("[0] send IPI vector 128 to self\n");
             send_ipi(0, 0x80);
+            udelay(5000000);
 
+            IFV printf("[0] send IPI vector %u to all CPUs\n", 0x80);
             for (u = 1; u < cpu_online; u++) {
                 udelay(1000000);
-                IFVV printf("send IPI vector %u to CPU %u \n", 0x80, u);
+                IFVV printf("  IPI to %u\n", u);
                 send_ipi(u, 0x80);
             }
 
+            barrier(&global_barrier);
+
+            udelay(5000000);
+            IFV printf("[0] call cmp_wakeup() for all CPUs\n");
             for (u = 1; u < cpu_online; u++) {
                 udelay(1000000);
-                IFVV printf("send IPI vector %u to CPU %u \n", 0x80, u);
+                IFVV printf("  cmp_wakeup(%u)\n", u);
                 smp_wakeup(u);
             }
         } else {
 
             if (myid == 1) {
                 udelay(1000000);
-                IFVV printf("issue INT 128 on CPU 1\n");
+                IFV printf("[1] issue INT 128 on CPU 1\n");
                 __asm__ volatile ("int $128");
             }
+
 
             smp_status('H');
             __asm__ volatile ("hlt");   // should be waken up by IPI (TODO: works in 64 bit mode, but not in 32 bit...)
             smp_status(STATUS_RUNNING);
+
+            udelay(1000000);
+            barrier(&global_barrier);
             
             smp_halt();
         }
 
     } else {
-        printf("[%u] tests_ipi: can only be executed with more than one CPU\n", myid);
+        printf("[%u] tests_ipi: can only be executed with more than one CPU (cpu_online=%u)\n", myid, cpu_online);
     }
     if (!if_backup) cli();  // restore previous state of interrupt flag
     barrier(&global_barrier);

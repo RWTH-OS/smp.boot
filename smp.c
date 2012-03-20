@@ -59,11 +59,17 @@ void smp_halt(void)
 
 void smp_wakeup(unsigned cpu_id)
 {
+    /* wait until CPU is in halted state (in case it is not there, yet) */
+    while (IS_MASK_CLEAR(stack[cpu_id].info.flags, SMP_FLAG_HALTED)) {
+        udelay(500);
+    }
+    /* remove flag */
     MASK_CLEAR(stack[cpu_id].info.flags, SMP_FLAG_HALT);
     udelay(5);
+    /* send IPI until it is up */
     while (IS_MASK_SET(stack[cpu_id].info.flags, SMP_FLAG_HALTED)) {
         send_ipi(cpu_id, 128);
-        udelay(5);
+        udelay(500);
     }
 }
 

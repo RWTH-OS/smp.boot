@@ -183,9 +183,11 @@ void main()
         printf("* L2$: %#uB\n", hw_info.cpuid_cache[2].size);
         if (hw_info.cpuid_cache[3].size > 0) 
             printf("* L3$: %#uB\n", hw_info.cpuid_cache[3].size);
+        printf("* maxphyaddr: %u\n", hw_info.maxphyaddr);
         printf("*****************************************\n");
 
     }
+    print_lapic();
 
 #if OFFER_MENU
 

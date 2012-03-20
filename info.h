@@ -41,6 +41,7 @@ typedef struct {
     uint32_t cpuid_family;
     uint32_t cpuid_cachelinesize;
     uint32_t cpuid_lapic_id;
+    uint32_t maxphyaddr;
     vendor_t cpu_vendor;
     union {
         char c[48];

@@ -567,7 +567,7 @@ int mm_init_ap()
     __asm__ volatile ("mov %%eax, %%cr3" : : "a"(pd1));     /* set cr3 to page-directory */
     __asm__ volatile ("mov %%cr0, %%eax "
             "\n\t or $0x80000000, %%eax "
-            "\n\t mov %%eax, %%cr0" ::: "eax");          /*  activate paging with cr0[31] */
+            "\n\t mov %%eax, %%cr0" ::: "eax");          /*  activate paging with cr0[31] := 1 */
 #endif
     return 0;
 }

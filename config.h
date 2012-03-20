@@ -65,13 +65,13 @@
 #define VERBOSE_APIC        0
 #define VERBOSE_SYNC        0
 #define VERBOSE_MM          0
-#define VERBOSE_ISR         0
+#define VERBOSE_ISR         1
 #define VERBOSE_PIT         0
 #define VERBOSE_SMM         0
 #define VERBOSE_PCI         0
 #define VERBOSE_KEYBOARD    0
 #define VERBOSE_DRIVER      0
-#define VERBOSE_TESTS       0
+#define VERBOSE_TESTS       2
 #define VERBOSE_MAIN        0
 /*
  * OFFER_MENU - menu selection of kernel activities

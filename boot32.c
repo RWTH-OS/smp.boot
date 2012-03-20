@@ -131,6 +131,13 @@ static void cpu_features()
         hw_info.cpuid_processor_name.u32[11] = edx;
     }
 
+    if (hw_info.cpuid_high_max >= 0x80000008) {
+        cpuid(0x80000004);
+        hw_info.maxphyaddr = eax & 0xFF;
+    } else {
+        hw_info.maxphyaddr = 36;
+    }
+
     *pStatus = 0x0F00 + 'e';
 
     /*

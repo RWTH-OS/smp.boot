@@ -6,14 +6,20 @@
 #define IFV   if (VERBOSE > 0 || VERBOSE_APIC > 0)
 #define IFVV  if (VERBOSE > 1 || VERBOSE_APIC > 1)
 
+#define LAPIC_MSR_APIC_BASE 0x1B
 #define LAPIC_REG_ID        0x0020
 #define LAPIC_REG_VERSION   0x0030
 #define LAPIC_REG_EOI       0x00B0
 #define LAPIC_REG_SPURIOUS  0x00F0
+#define LAPIC_LVT_CMCI      0x02F0
+#define LAPIC_LVT_TIMER     0x0320
+#define LAPIC_LVT_THERMAL   0x0330
+#define LAPIC_LVT_PERF      0x0340
+#define LAPIC_LVT_LINT0     0x0350
+#define LAPIC_LVT_LINT1     0x0360
+#define LAPIC_LVT_ERROR     0x0370
 #define LAPIC_ICR_LOW       0x0300
 #define LAPIC_ICR_HIGH      0x0310
-#define LAPIC_LVT_TIMER     0x0320
-#define LAPIC_LVT_ERROR     0x0370
 
 static ptr_t localAPIC =   0xfee00000UL;
 static ptr_t ioAPIC_base = 0xfec00000UL;
@@ -112,6 +118,40 @@ void apic_eoi(void)
 
 extern stack_t stack[MAX_CPU];
 
+void config_apic(unsigned id)
+{
+    /* To initialise the BSP's local APIC, set the enable bit in the spurious
+     * interrupt vector register and set the error interrupt vector in the
+     * local vector table.  */
+    set_localAPIC(LAPIC_REG_SPURIOUS, (1<<8), (1<<8));
+
+    if (id > 0) {
+        /*
+         * is this needed?!
+         */
+        write_localAPIC(LAPIC_REG_ID, (id&0x7F)<<24);
+    }
+
+    /*
+     * according to http://www.osdever.net/tutorials/view/multiprocessing-support-for-hobby-oses-explained
+     * the spurios int vector can be ignored (use 0x1F for now...)
+     * and the lowest 4 bits are hardwired to 1 (only 0x?F can be used)
+     */
+    write_localAPIC(LAPIC_LVT_ERROR, 0x1F);       /* 0x1F: temporary vector (all other bits: 0) */
+
+    /*
+     * deactivate (mask) all LVT entries (except ERROR)
+     */
+    set_localAPIC(LAPIC_LVT_TIMER, 1<<16, 1<<16);
+    set_localAPIC(LAPIC_LVT_CMCI, 1<<16, 1<<16);
+    set_localAPIC(LAPIC_LVT_LINT0, 1<<16, 1<<16);
+    set_localAPIC(LAPIC_LVT_LINT1, 1<<16, 1<<16);
+    //set_localAPIC(LAPIC_LVT_ERROR, 1<<16, 1<<16);
+    set_localAPIC(LAPIC_LVT_PERF, 1<<16, 1<<16);
+    set_localAPIC(LAPIC_LVT_THERMAL, 1<<16, 1<<16);
+
+}
+
 void apic_init()
 {
     uint16_t u;
@@ -138,23 +178,11 @@ void apic_init()
      */
 
     /* Presence: CPUID.01h:EDX[bit 9] (checked already in start.asm) */
-
-    /* To initialise the BSP's local APIC, set the enable bit in the spurious
-     * interrupt vector register and set the error interrupt vector in the
-     * local vector table.  */
-    set_localAPIC(LAPIC_REG_SPURIOUS, (1<<8), (1<<8));
+    config_apic(0);
 
     IFVV printf("local APIC version: 0x%x  max LVT entry: %u\n", 
             read_localAPIC(LAPIC_REG_VERSION) && 0xFF, 
             ((read_localAPIC(LAPIC_REG_VERSION)>>16) && 0xFF)+1);
-
-    /*
-     * according to http://www.osdever.net/tutorials/view/multiprocessing-support-for-hobby-oses-explained
-     * the spurios int vector can be ignored (use 0x1F for now...)
-     * and the lowest 4 bits are hardwired to 1 (only 0x?F can be used)
-     */
-    write_localAPIC(LAPIC_LVT_ERROR, 0x1F);       /* 0x1F: temporary vector (all other bits: 0) */
-
 
     /* 
      * start APs 
@@ -242,38 +270,63 @@ void apic_init()
 
 void apic_init_ap(unsigned id)
 {
-
-    /* support only VERSION >= 0x10 */
-
-    /* deactivate PIC */
-    //outportb(0xA1, 0xFF);
-    //outportb(0x21, 0xFF);
-
     /* 
      * activate local APIC 
      */
 
     /* Presence: CPUID.01h:EDX[bit 9] (checked already in start.asm) */
-
-    /* To initialise the BSP's local APIC, set the enable bit in the spurious
-     * interrupt vector register and set the error interrupt vector in the
-     * local vector table.  */
-    set_localAPIC(LAPIC_REG_SPURIOUS, (1<<8), (1<<8));
-
-    /*
-     * is this needed?!
-     */
-    write_localAPIC(LAPIC_REG_ID, (id&0x7F)<<24);
+    config_apic(id);
 
     IFVV printf("local APIC version: 0x%x  max LVT entry: %u\n", 
             read_localAPIC(LAPIC_REG_VERSION) && 0xFF, 
             ((read_localAPIC(LAPIC_REG_VERSION)>>16) && 0xFF)+1);
-
-    /*
-     * according to http://www.osdever.net/tutorials/view/multiprocessing-support-for-hobby-oses-explained
-     * the spurios int vector can be ignored (use 0x1F for now...)
-     * and the lowest 4 bits are hardwired to 1 (only 0x?F can be used)
-     */
-    write_localAPIC(LAPIC_LVT_ERROR, 0x1F);       /* 0x1F: temporary vector (all other bits: 0) */
 }
+
+
+/*
+ * debug: print lapic values
+ */
+void print_lapic(void)
+{
+    uint32_t u32;
+    uint64_t u64;
+    uint32_t max_lvt = 0;
+
+    u64 = rdmsr(LAPIC_MSR_APIC_BASE);
+    printf("[APIC %u] MSR_APIC_BASE: 0x%x BSP=%u glb.enable=%u base addr=0x%x\n", 
+            CPU_ID, (ptr_t)u64, (ptr_t)((u64>>8)&1), (ptr_t)((u64>>11)&1),
+            (ptr_t)(u64 & (((1ull<<(hw_info.maxphyaddr-12))-1)<<12)));
+
+    u32 = read_localAPIC(LAPIC_REG_ID);
+    printf("[APIC %u] REG_ID = 0x%x\n", CPU_ID, u32>>24);
+
+    u32 = read_localAPIC(LAPIC_REG_VERSION);
+    max_lvt = ((u32>>16) & 0xFF) + 1;
+    printf("[APIC %u] REG_VERSION = 0x%x version=0x%x max-lvt=%u\n", CPU_ID, u32, u32&0xFF, max_lvt);
+
+    u32 = read_localAPIC(LAPIC_REG_SPURIOUS);
+    printf("[APIC %u] REG_SPURIOUS = 0x%x\n", CPU_ID, u32);
+
+    u32 = read_localAPIC(LAPIC_LVT_TIMER);
+    printf("[APIC %u] LVT_TIMER  = 0x%x mask=%u vector=%u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+
+    u32 = read_localAPIC(LAPIC_LVT_CMCI);
+    printf("[APIC %u] LVT_CMCI   = 0x%x mask=%u vector=%u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+
+    u32 = read_localAPIC(LAPIC_LVT_LINT0);
+    printf("[APIC %u] LVT_LINT0  = 0x%x mask=%u vector=%u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+
+    u32 = read_localAPIC(LAPIC_LVT_LINT1);
+    printf("[APIC %u] LVT_LINT1  = 0x%x mask=%u vector=%u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+
+    u32 = read_localAPIC(LAPIC_LVT_ERROR);
+    printf("[APIC %u] LVT_ERROR  = 0x%x mask=%u vector=%u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+
+    u32 = read_localAPIC(LAPIC_LVT_PERF);
+    printf("[APIC %u] LVT_PERF   = 0x%x mask=%u vector=%u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+
+    u32 = read_localAPIC(LAPIC_LVT_THERMAL);
+    printf("[APIC %u] LVT_THERMAL= 0x%x mask=%u vector=%u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+
+} 
 
