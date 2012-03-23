@@ -18,7 +18,7 @@
 
 #include "cpu.h"
 #include "sync.h"
-#include "info.h"
+#include "info_struct.h"
 #include "driver.h"
 
 

@@ -18,7 +18,7 @@
 
 #include "stddef.h"
 #include "system.h"
-#include "info.h"
+#include "info_struct.h"
 #include "time.h"
 #include "smp.h"
 #include "sync.h"

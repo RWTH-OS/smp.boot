@@ -8,7 +8,7 @@
 #include "bda_struct.h"
 #include "acpi_struct.h"
 #include "mps_struct.h"
-#include "info.h"
+#include "info_struct.h"
 #include "lib.h"
 
 #include "config.h"

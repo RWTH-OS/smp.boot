@@ -169,25 +169,24 @@ void main()
     IFVV printf("CPU %d/%d entering in main()\n", my_cpu_info()->cpu_id, cpu_online);
 
     if (my_cpu_info()->cpu_id == 0) {
-        printf("*****************************************\n");
-        printf("* CPU Vendor: %s \n", vendor_string[hw_info.cpu_vendor]);
-        printf("* CPU Name: '%s' \n", hw_info.cpuid_processor_name.c);
-        printf("* max CPUID fn: 0x%x, 0x%x\n", hw_info.cpuid_max, hw_info.cpuid_high_max);
-        printf("* Nbr of threads/package: %u \n", hw_info.cpuid_threads_per_package);
-        printf("* Cache-Line Size: %u \n", (ptr_t)hw_info.cpuid_cachelinesize);
-        printf("* L1$: %#uB %c + %#uB %c\n", 
+            printf("*****************************************\n");
+            printf("* CPU Vendor: %s \n", vendor_string[hw_info.cpu_vendor]);
+            printf("* CPU Name: '%s' \n", hw_info.cpuid_processor_name.c);
+        IFV printf("* max CPUID fn: 0x%x, 0x%x\n", hw_info.cpuid_max, hw_info.cpuid_high_max);
+        IFV printf("* Nbr of threads/package: %u \n", hw_info.cpuid_threads_per_package);
+            printf("* Cache-Line Size: %u \n", (ptr_t)hw_info.cpuid_cachelinesize);
+            printf("* L1$: %#uB %c + %#uB %c\n", 
                 hw_info.cpuid_cache[0].size, 
                 hw_info.cpuid_cache[0].type, 
                 hw_info.cpuid_cache[1].size,
                 hw_info.cpuid_cache[1].type); 
-        printf("* L2$: %#uB\n", hw_info.cpuid_cache[2].size);
+            printf("* L2$: %#uB\n", hw_info.cpuid_cache[2].size);
         if (hw_info.cpuid_cache[3].size > 0) 
             printf("* L3$: %#uB\n", hw_info.cpuid_cache[3].size);
-        printf("* maxphyaddr: %u\n", hw_info.maxphyaddr);
-        printf("*****************************************\n");
+        IFV printf("* maxphyaddr: %u\n", hw_info.maxphyaddr);
+            printf("*****************************************\n");
 
     }
-    print_lapic();
 
 #if OFFER_MENU
 
@@ -196,8 +195,10 @@ void main()
 
     if (CPU_ID == 0) {
 #       if OFFER_MENU >= 2
+            /* enforce menu */
             mode = mode_menu;
 #       else
+            /* ask for any key within 5 seconds */
             int i;
             keyboard_clear_buf();
             printf("To interrupt default mode and get a menu, press any key within 5 Sek.\b\b\b\b\b\b");
@@ -220,6 +221,7 @@ void main()
             {1, "default"}, 
             {2, "tests >"}, 
             {3, "benchmarks >"}, 
+            {4, "info >"}, 
             {999, "exit"}, 
             {0,0},
         };
@@ -236,6 +238,9 @@ void main()
                     break;
                 case 3 :
                     payload_benchmark_menu();
+                    break;
+                case 4 :
+                    info_menu();
                     break;
                 case 999 :
                     break;

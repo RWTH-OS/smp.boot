@@ -16,7 +16,7 @@
  * =====================================================================================
  */
 
-#include "info.h"
+#include "info_struct.h"
 #include "smp.h"
 
 void udelay(unsigned long us)

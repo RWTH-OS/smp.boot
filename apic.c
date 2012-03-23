@@ -57,8 +57,11 @@ uint32_t read_ioAPIC(unsigned id, uint32_t offset)
     // CLI (store previous value)
     if_backup = cli();
 
+    mfence();
     *ioAPIC_Adr = offset;
+    mfence();
     result = *ioAPIC_Data;
+    mfence();
 
     // restore IF to previous value
     if (if_backup) sti();
@@ -73,11 +76,17 @@ void write_ioAPIC(unsigned id, uint32_t offset, uint32_t value)
 
     if_backup = cli();
 
+    mfence();
     *ioAPIC_Adr = offset;
+    mfence();
     *ioAPIC_Data = value;
+    mfence();
 
     if (if_backup) sti();
 }
+
+
+
 #define ICR_LVL_ASSERT          (1u <<14)
 #define ICR_DLV_STATUS          (1u <<12)
 #define ICR_MODE_FIXED          (0u <<8)
@@ -286,7 +295,7 @@ void apic_init_ap(unsigned id)
 /*
  * debug: print lapic values
  */
-void print_lapic(void)
+void print_apic(void)
 {
     uint32_t u32;
     uint64_t u64;
@@ -298,35 +307,63 @@ void print_lapic(void)
             (ptr_t)(u64 & (((1ull<<(hw_info.maxphyaddr-12))-1)<<12)));
 
     u32 = read_localAPIC(LAPIC_REG_ID);
-    printf("[APIC %u] REG_ID = 0x%x\n", CPU_ID, u32>>24);
+    printf("[APIC %u] REG_ID     = 0x%08x\n", CPU_ID, u32>>24);
 
     u32 = read_localAPIC(LAPIC_REG_VERSION);
     max_lvt = ((u32>>16) & 0xFF) + 1;
-    printf("[APIC %u] REG_VERSION = 0x%x version=0x%x max-lvt=%u\n", CPU_ID, u32, u32&0xFF, max_lvt);
+    printf("[APIC %u] REG_VERSION= 0x%08x version=0x%x max-lvt=%u\n", CPU_ID, u32, u32&0xFF, max_lvt);
 
     u32 = read_localAPIC(LAPIC_REG_SPURIOUS);
-    printf("[APIC %u] REG_SPURIOUS = 0x%x\n", CPU_ID, u32);
+    printf("[APIC %u] REG_SPURIOUS=0x%08x        vector=%03u\n", CPU_ID, u32, u32%0xFF);
 
     u32 = read_localAPIC(LAPIC_LVT_TIMER);
-    printf("[APIC %u] LVT_TIMER  = 0x%x mask=%u vector=%u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+    printf("[APIC %u] LVT_TIMER  = 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
 
     u32 = read_localAPIC(LAPIC_LVT_CMCI);
-    printf("[APIC %u] LVT_CMCI   = 0x%x mask=%u vector=%u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+    printf("[APIC %u] LVT_CMCI   = 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
 
     u32 = read_localAPIC(LAPIC_LVT_LINT0);
-    printf("[APIC %u] LVT_LINT0  = 0x%x mask=%u vector=%u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+    printf("[APIC %u] LVT_LINT0  = 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
 
     u32 = read_localAPIC(LAPIC_LVT_LINT1);
-    printf("[APIC %u] LVT_LINT1  = 0x%x mask=%u vector=%u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+    printf("[APIC %u] LVT_LINT1  = 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
 
     u32 = read_localAPIC(LAPIC_LVT_ERROR);
-    printf("[APIC %u] LVT_ERROR  = 0x%x mask=%u vector=%u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+    printf("[APIC %u] LVT_ERROR  = 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
 
     u32 = read_localAPIC(LAPIC_LVT_PERF);
-    printf("[APIC %u] LVT_PERF   = 0x%x mask=%u vector=%u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+    printf("[APIC %u] LVT_PERF   = 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
 
     u32 = read_localAPIC(LAPIC_LVT_THERMAL);
-    printf("[APIC %u] LVT_THERMAL= 0x%x mask=%u vector=%u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+    printf("[APIC %u] LVT_THERMAL= 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
 
+    if (CPU_ID == 0) {
+        /* I/O-Apic */
+        unsigned u, v;
+        unsigned max_redir = 0;
+
+        for (u=0; u < hw_info.ioapic_cnt; u++) {
+            printf("[IO-APIC %u] @ 0x%08x\n", u, hw_info.ioapic[u].adr);
+            u32 = read_ioAPIC(u, 0x00);
+            printf("[IO-APIC %u] ID = 0x%08x  id: \n", u, u32, (u32>>24)&0x0F);
+            u32 = read_ioAPIC(u, 0x01);
+            max_redir = (u32 >> 16) % 0xFF;
+            printf("[IO-APIC %u] VERSION = 0x%08x version:%x max.redir:%u\n", u, u32, u32%0xFF, max_redir);
+            u32 = read_ioAPIC(u, 0x02);
+            printf("[IO-APIC %u] Arbitr. ID = 0x%08x\n", u, u32);
+            for (v = 0; v < max_redir; v++) {
+                u32 = (uint64_t)read_ioAPIC(u, 0x11 + (2*v));
+                /* higher 4 Bytes */
+                printf("[IO-APIC %u] rdir %2u - dest.:%x ", u, v, u32>>24);
+                   
+                u32 = read_ioAPIC(u, 0x10 + (2*v));
+                /* lower 4 Bytes */
+                printf("mask:%u vector: 0x%02x\n", (u32>>16)&1, u32&0xFF);
+            }
+
+        }
+
+
+    }
 } 
 

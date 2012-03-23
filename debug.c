@@ -17,7 +17,7 @@
  */
 
 #include "stddef.h"
-#include "info.h"
+#include "info_struct.h"
 #include "system.h"
 #include "lib.h"
 #include "cpu.h"

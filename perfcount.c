@@ -19,7 +19,7 @@
 #include "perfcount.h"
 #include "system.h"
 #include "cpu.h"
-#include "info.h"
+#include "info_struct.h"
 
 static uint32_t __perfcount_perfevtsel_nehalem[4] = {0x186u, 0x187u, 0x188u, 0x189u};
 static uint32_t __perfcount_pmc_nehalem[4]        = {0x0C1u, 0x0C2u, 0x0C3u, 0x0C4u};

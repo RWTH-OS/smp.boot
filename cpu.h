@@ -98,6 +98,11 @@ inline static unsigned cli(void) {
     return (flags & (1<<9));
 }
 
+inline static void mfence(void) 
+{
+    __asm__ volatile ("mfence");
+}
+
 inline static void cpuid(uint32_t func, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx) {
     __asm__ volatile ("cpuid" : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx) : "a"(func));
 }

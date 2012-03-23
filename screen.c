@@ -385,11 +385,16 @@ void printf (const char *format, ...)
           char *p;
           int len = 0;
           unsigned hash = 0;
+          char prefix = ' ';
           unsigned bi_pref_idx = 0;
 
           c = *format++;
-          if (c == '#') {
+          if (len == 0 && c == '#') {
               hash = 1;
+              c = *format++;
+          }
+          if (len == 0 && c == '0') {
+              prefix = '0';
               c = *format++;
           }
           while (c >= '0' && c <= '9') {
@@ -448,7 +453,7 @@ void printf (const char *format, ...)
             string:
               len -= strlen(p);
               while (len > 0) {
-                  putch(' ');
+                  putch(prefix);
                   len--;
               }
               while (*p)

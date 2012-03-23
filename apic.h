@@ -23,6 +23,6 @@ void apic_eoi(void);
 void send_ipi(uint8_t to, uint8_t vector);
 void apic_init();
 void apic_init_ap(unsigned id);
-void print_lapic(void);
+void print_apic(void);
 
 #endif // APIC_H

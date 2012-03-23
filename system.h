@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 #include "config.h"
-#include "info.h"
+#include "info_struct.h"
 #include "time.h"
 
 /* Verbosity: if not defined here, modules may define their own */
