@@ -63,6 +63,7 @@ void init_video_scrollback(void);
 void video_scrollback(void);
 #endif
 void itoa (char *buf, int base, long d);
+void printf_nomutex(const char *format, ...);
 void printf (const char *format, ...);
     //// __attribute__ (( format(printf, 1, 2) ));  <-- this is a bad idea, simply because we're not really compatible...
 

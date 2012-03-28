@@ -146,7 +146,7 @@ void config_apic(unsigned id)
      * the spurios int vector can be ignored (use 0x1F for now...)
      * and the lowest 4 bits are hardwired to 1 (only 0x?F can be used)
      */
-    write_localAPIC(LAPIC_LVT_ERROR, 0x1F);       /* 0x1F: temporary vector (all other bits: 0) */
+    write_localAPIC(LAPIC_LVT_ERROR, 0x2F);       /* 0x1F: temporary vector (all other bits: 0) */
 
     /*
      * deactivate (mask) all LVT entries (except ERROR)
@@ -300,6 +300,7 @@ void print_apic(void)
     uint32_t u32;
     uint64_t u64;
     uint32_t max_lvt = 0;
+    unsigned u;
 
     u64 = rdmsr(LAPIC_MSR_APIC_BASE);
     printf("[APIC %u] MSR_APIC_BASE: 0x%x BSP=%u glb.enable=%u base addr=0x%x\n", 
@@ -336,6 +337,20 @@ void print_apic(void)
 
     u32 = read_localAPIC(LAPIC_LVT_THERMAL);
     printf("[APIC %u] LVT_THERMAL= 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+
+    printf("[APIC %u] ISR ", CPU_ID);
+    for (u = 0x100; u <= 0x170; u += 0x10) {
+        u32 = read_localAPIC(u);
+        printf("%08x", u32);
+    }
+    printf("\n");
+
+    printf("[APIC %u] IRR ", CPU_ID);
+    for (u = 0x200; u <= 0x270; u += 0x10) {
+        u32 = read_localAPIC(u);
+        printf("%08x", u32);
+    }
+    printf("\n");
 
     if (CPU_ID == 0) {
         /* I/O-Apic */

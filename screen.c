@@ -362,19 +362,13 @@ mutex_t mutex_printf = MUTEX_INITIALIZER;
  *          could be the __builtin_va_list that does not work --without-builtins...
  *
  */
-void printf (const char *format, ...)
+
+static void vprintf(const char *format, __builtin_va_list ap)
 {
-  __builtin_va_list ap;
   int c;
   char buf[20];
   unsigned long value;
   char bi_prefix[] = {' ', 'k', 'M', 'G', 'T'};
-
-  __builtin_va_start(ap, format);
-
-# ifndef EARLY
-  if (cpu_online > 1) mutex_lock(&mutex_printf);
-# endif
 
   while ((c = *format++) != 0)
     {
@@ -467,10 +461,32 @@ void printf (const char *format, ...)
             }
         }
     }
-    __builtin_va_end(ap);
+}
+
+void printf_nomutex(const char *format, ...)
+{
+  __builtin_va_list ap;
+  __builtin_va_start(ap, format);
+  vprintf(format, ap);
+  __builtin_va_end(ap);
+}
+
+void printf (const char *format, ...)
+{
+  __builtin_va_list ap;
+  __builtin_va_start(ap, format);
+
 # ifndef EARLY
-  if (cpu_online > 1) mutex_unlock(&mutex_printf);
+  mutex_lock(&mutex_printf);
 # endif
+
+  vprintf(format, ap);
+
+
+# ifndef EARLY
+  mutex_unlock(&mutex_printf);
+# endif
+  __builtin_va_end(ap);
 }
 
 

@@ -212,7 +212,11 @@ void tests_ipi(void)
     unsigned if_backup;
 
     if_backup = sti();
+
+    //udelay(2*1000*1000);
     barrier(&global_barrier);
+    //udelay(2*1000*1000);
+
     if (cpu_online > 1) {
 
         if (myid == 0) {

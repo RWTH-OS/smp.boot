@@ -37,6 +37,7 @@ extern void isr29();
 extern void isr30();
 extern void isr31();
 
+extern void isr47();
 extern void isr128();
 
 
@@ -87,6 +88,7 @@ void isr_install()
     idt_set_gate(30, (ptr_t)isr30, GDT_Code_Sel, 0x8E);
     idt_set_gate(31, (ptr_t)isr31, GDT_Code_Sel, 0x8E);
 
+    idt_set_gate(0x2F, (ptr_t)isr47, GDT_Code_Sel, 0x8E);
     idt_set_gate(0x80, (ptr_t)isr128, GDT_Code_Sel, 0x8E);
 
 }
@@ -130,11 +132,11 @@ char *exception_messages[] =
     "Reserved"
 };
 
+#define printf printf_nomutex
 extern volatile unsigned cpu_online;
 void int_handler(struct regs *r)
 {
     unsigned bak = cpu_online;
-    cpu_online = 0; // set CPU-ONLINE to 0 to disable mutex in printf, restore later
 
     if (r->int_no < 32) {
         printf("|\n");
@@ -178,6 +180,10 @@ void int_handler(struct regs *r)
         IFV printf("| CPU %u\n", my_cpu_info()->cpu_id);
         IFV printf("| Interrupt: %u / 0x%x\n", r->int_no, r->int_no);
         IFV printf("\\----------------------------------------\n");
+    }
+    switch (r->int_no) {
+        case 0x3F : break;
+        case 0x80 : break;
     }
     /*
      * EOI
