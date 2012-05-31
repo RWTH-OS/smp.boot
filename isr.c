@@ -39,6 +39,16 @@ extern void isr31();
 
 extern void isr47();
 extern void isr128();
+extern void isr160();
+extern void isr161();
+extern void isr162();
+extern void isr163();
+extern void isr164();
+extern void isr165();
+extern void isr166();
+extern void isr167();
+extern void isr168();
+extern void isr169();
 
 
 /*
@@ -88,8 +98,18 @@ void isr_install()
     idt_set_gate(30, (ptr_t)isr30, GDT_Code_Sel, 0x8E);
     idt_set_gate(31, (ptr_t)isr31, GDT_Code_Sel, 0x8E);
 
-    idt_set_gate(0x2F, (ptr_t)isr47, GDT_Code_Sel, 0x8E);
     idt_set_gate(0x80, (ptr_t)isr128, GDT_Code_Sel, 0x8E);
+
+    idt_set_gate(0xA0, (ptr_t)isr160, GDT_Code_Sel, 0xA0);
+    idt_set_gate(0xA1, (ptr_t)isr161, GDT_Code_Sel, 0xA1);
+    idt_set_gate(0xA2, (ptr_t)isr162, GDT_Code_Sel, 0xA2);
+    idt_set_gate(0xA3, (ptr_t)isr163, GDT_Code_Sel, 0xA3);
+    idt_set_gate(0xA4, (ptr_t)isr164, GDT_Code_Sel, 0xA4);
+    idt_set_gate(0xA5, (ptr_t)isr165, GDT_Code_Sel, 0xA5);
+    idt_set_gate(0xA6, (ptr_t)isr166, GDT_Code_Sel, 0xA6);
+    idt_set_gate(0xA7, (ptr_t)isr167, GDT_Code_Sel, 0xA7);
+    idt_set_gate(0xA8, (ptr_t)isr168, GDT_Code_Sel, 0xA8);
+    idt_set_gate(0xA9, (ptr_t)isr169, GDT_Code_Sel, 0xA9);
 
 }
 

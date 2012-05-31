@@ -133,6 +133,8 @@ void config_apic(unsigned id)
      * interrupt vector register and set the error interrupt vector in the
      * local vector table.  */
     set_localAPIC(LAPIC_REG_SPURIOUS, (1<<8), (1<<8));
+    set_localAPIC(LAPIC_REG_SPURIOUS, 0xFF, 0xA0);
+
 
     if (id > 0) {
         /*
@@ -146,16 +148,25 @@ void config_apic(unsigned id)
      * the spurios int vector can be ignored (use 0x1F for now...)
      * and the lowest 4 bits are hardwired to 1 (only 0x?F can be used)
      */
-    write_localAPIC(LAPIC_LVT_ERROR, 0x2F);       /* 0x1F: temporary vector (all other bits: 0) */
 
     /*
      * deactivate (mask) all LVT entries (except ERROR)
      */
     set_localAPIC(LAPIC_LVT_TIMER, 1<<16, 1<<16);
-    set_localAPIC(LAPIC_LVT_CMCI, 1<<16, 1<<16);
-    set_localAPIC(LAPIC_LVT_LINT0, 1<<16, 1<<16);
+    //set_localAPIC(LAPIC_LVT_CMCI, 1<<16, 1<<16);
+    //set_localAPIC(LAPIC_LVT_CMCI, 0xFF, 0xA3);
+
+    //set_localAPIC(LAPIC_LVT_LINT0, 1<<16, 1<<16); // when LInt0 is masked (uncomment this line),
+                                                    // a #GP is asserted after the first sti()
+                                                    // Leave LInt0 as it is => no #GP
+                                                    // This is on QEmu.
+    set_localAPIC(LAPIC_LVT_LINT0, 0xFF, 0xA4);
+
     set_localAPIC(LAPIC_LVT_LINT1, 1<<16, 1<<16);
-    //set_localAPIC(LAPIC_LVT_ERROR, 1<<16, 1<<16);
+
+    set_localAPIC(LAPIC_LVT_ERROR, 1<<16, 0<<16);
+    set_localAPIC(LAPIC_LVT_ERROR, 0xFF, 0xA6);       /* 0x2F: temporary vector  */
+
     set_localAPIC(LAPIC_LVT_PERF, 1<<16, 1<<16);
     set_localAPIC(LAPIC_LVT_THERMAL, 1<<16, 1<<16);
 
@@ -315,28 +326,28 @@ void print_apic(void)
     printf("[APIC %u] REG_VERSION= 0x%08x version=0x%x max-lvt=%u\n", CPU_ID, u32, u32&0xFF, max_lvt);
 
     u32 = read_localAPIC(LAPIC_REG_SPURIOUS);
-    printf("[APIC %u] REG_SPURIOUS=0x%08x        vector=%03u\n", CPU_ID, u32, u32%0xFF);
+    printf("[APIC %u] REG_SPURIOUS=0x%08x        vector=%03u\n", CPU_ID, u32, u32&0xFF);
 
     u32 = read_localAPIC(LAPIC_LVT_TIMER);
-    printf("[APIC %u] LVT_TIMER  = 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+    printf("[APIC %u] LVT_TIMER  = 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32&0xFF);
 
     u32 = read_localAPIC(LAPIC_LVT_CMCI);
-    printf("[APIC %u] LVT_CMCI   = 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+    printf("[APIC %u] LVT_CMCI   = 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32&0xFF);
 
     u32 = read_localAPIC(LAPIC_LVT_LINT0);
-    printf("[APIC %u] LVT_LINT0  = 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+    printf("[APIC %u] LVT_LINT0  = 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32&0xFF);
 
     u32 = read_localAPIC(LAPIC_LVT_LINT1);
-    printf("[APIC %u] LVT_LINT1  = 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+    printf("[APIC %u] LVT_LINT1  = 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32&0xFF);
 
     u32 = read_localAPIC(LAPIC_LVT_ERROR);
-    printf("[APIC %u] LVT_ERROR  = 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+    printf("[APIC %u] LVT_ERROR  = 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32&0xFF);
 
     u32 = read_localAPIC(LAPIC_LVT_PERF);
-    printf("[APIC %u] LVT_PERF   = 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+    printf("[APIC %u] LVT_PERF   = 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32&0xFF);
 
     u32 = read_localAPIC(LAPIC_LVT_THERMAL);
-    printf("[APIC %u] LVT_THERMAL= 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32%0xFF);
+    printf("[APIC %u] LVT_THERMAL= 0x%08x mask=%u vector=%03u\n", CPU_ID, u32, (u32>>16)&1, u32&0xFF);
 
     printf("[APIC %u] ISR ", CPU_ID);
     for (u = 0x100; u <= 0x170; u += 0x10) {
@@ -363,7 +374,7 @@ void print_apic(void)
             printf("[IO-APIC %u] ID = 0x%08x  id: \n", u, u32, (u32>>24)&0x0F);
             u32 = read_ioAPIC(u, 0x01);
             max_redir = (u32 >> 16) % 0xFF;
-            printf("[IO-APIC %u] VERSION = 0x%08x version:%x max.redir:%u\n", u, u32, u32%0xFF, max_redir);
+            printf("[IO-APIC %u] VERSION = 0x%08x version:%x max.redir:%u\n", u, u32, u32&0xFF, max_redir);
             u32 = read_ioAPIC(u, 0x02);
             printf("[IO-APIC %u] Arbitr. ID = 0x%08x\n", u, u32);
             for (v = 0; v < max_redir; v++) {

@@ -1,4 +1,3 @@
-
 CFILES=$(shell ls *.c | grep -v boot32.c )
 O32FILES=$(CFILES:.c=.o32)
 O64FILES=$(CFILES:.c=.o64)
