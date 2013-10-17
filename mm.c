@@ -438,9 +438,20 @@ int mm_init()
 
 
 #   if __x86_64__
+    /*
+     * In 64 bit mode, some basic page tables were set up in start64.asm:paging64.
+     * Here, we just need the address of the first level page table to add more pages.
+     */
+
     /* read address of page table PML4 (first level) from register cr3 */
     __asm__ volatile ("mov %%cr3, %%rax" : "=a"(pd1));
+
 #   else    /* 32 bit */
+
+    /*
+     * In 32 bit mode, the protected mode is activated without paging.
+     * Therefore, we initialize the basic page tables now and activate paging.
+     */
 
     pd1 = (pd1_entry_t*)0x1000;
     memset(pd1, 0, PAGE_SIZE);
@@ -480,6 +491,8 @@ int mm_init()
             "\n\t or $0x80000000, %%eax "
             "\n\t mov %%eax, %%cr0" ::: "eax");          /*  activate paging with cr0[31] */
 #   endif   /*  64/32 bit */
+
+
 
     IFVV printf("MM: pd1 = 0x%x\n", (ptr_t)pd1);
 
@@ -604,6 +617,10 @@ void *heap_alloc(unsigned nbr_pages, unsigned flags)
     return res;
 }
 
+/**
+ * head_reconfig()   : change flags of pages at adr:size
+ * (used for benchmarks with different cache configuration)
+ */
 void heap_reconfig(void *adr, size_t size, unsigned flags)
 {
     unsigned map_flags = 0;

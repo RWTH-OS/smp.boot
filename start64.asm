@@ -75,6 +75,8 @@ setup:                  ; now 32-bit specific set up
     mov ax, 0x0F00+'3'
     mov [0xB8002], ax
 
+paging64:
+
     ; prepare page tables
     ; first, set entries to 0
     mov edi, 0x1000             ; page tables are put here.
