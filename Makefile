@@ -35,7 +35,10 @@ SMP=2
 # default command line for QEMU
 CMDLINE=test
 
-C32FLAGS=$(CFLAGS)
+C32FLAGS=$(CFLAGS) -ffreestanding
+# note: appears to be required with GCC >= 4.8.2 (at least reported with 4.8.2 (Ubuntu 4.8.2-l9ubuntul)),
+#       with 4.8.1 on OpenSUSE 13.1 this option was not required.
+#       Thanks to Gabriel-Alexander Reschke
 C64FLAGS=$(CFLAGS) -ffreestanding -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mno-sse3 -mno-3dnow
 # extra Parameters for 64 bit C code
 # -ffreestanding
